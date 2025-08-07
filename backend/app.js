@@ -522,6 +522,28 @@ db.prepare(`
   (4, 'מוצ״ש', 'מוצאי שבת - שבת 17:00 עד ראשון 09:00')
 `).run();
 
+// Add missing columns to existing shift_types table if they don't exist
+try {
+  db.prepare('ALTER TABLE shift_types ADD COLUMN description TEXT').run();
+  console.log('✓ Added description column to shift_types table');
+} catch (error) {
+  console.log('description column already exists in shift_types table');
+}
+
+try {
+  db.prepare('ALTER TABLE shift_types ADD COLUMN guides_required INTEGER DEFAULT 2').run();
+  console.log('✓ Added guides_required column to shift_types table');
+} catch (error) {
+  console.log('guides_required column already exists in shift_types table');
+}
+
+try {
+  db.prepare('ALTER TABLE shift_types ADD COLUMN roles_required TEXT').run();
+  console.log('✓ Added roles_required column to shift_types table');
+} catch (error) {
+  console.log('roles_required column already exists in shift_types table');
+}
+
 // Insert default shift types (using existing schema)
 db.prepare(`
   INSERT OR IGNORE INTO shift_types (id, name, description, guides_required, roles_required) VALUES
