@@ -1,4 +1,4 @@
-# fly.toml app configuration file generated for sigalit3 on 2025-08-07T07:46:22+03:00
+# fly.toml app configuration file generated for sigalit3 on 2025-08-07T07:51:52+03:00
 #
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
@@ -9,8 +9,12 @@ primary_region = 'lhr'
 [build]
 
 [env]
-  NODE_ENV = "production"
-  PORT = "4000"
+  NODE_ENV = 'production'
+  PORT = '4000'
+
+[[mounts]]
+  source = 'sigalit_data'
+  destination = '/app/data'
 
 [http_service]
   internal_port = 4000
@@ -20,16 +24,12 @@ primary_region = 'lhr'
   min_machines_running = 0
   processes = ['app']
 
-[[http_service.checks]]
-  grace_period = "10s"
-  interval = "30s"
-  method = "GET"
-  timeout = "5s"
-  path = "/health"
-
-[mounts]
-  source = "sigalit_data"
-  destination = "/app/data"
+  [[http_service.checks]]
+    interval = '30s'
+    timeout = '5s'
+    grace_period = '10s'
+    method = 'GET'
+    path = '/health'
 
 [[vm]]
   memory = '1gb'

@@ -1,17 +1,35 @@
-# Use Node.js 20 Alpine for better-sqlite3 compatibility
-FROM node:20-alpine
-
-# Set working directory
-WORKDIR /app
+# Build stage
+FROM node:20-alpine AS builder
 
 # Install build dependencies
 RUN apk add --no-cache python3 make g++
 
+# Set working directory
+WORKDIR /app
+
 # Copy package files
 COPY backend/package*.json ./
 
-# Install dependencies
-RUN npm ci --only=production
+# Install all dependencies (including dev dependencies for building)
+RUN npm ci
+
+# Copy backend source code
+COPY backend/ ./
+
+# Production stage
+FROM node:20-alpine AS production
+
+# Install runtime dependencies
+RUN apk add --no-cache python3 make g++
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files
+COPY backend/package*.json ./
+
+# Install only production dependencies and rebuild native modules
+RUN npm ci --only=production && npm rebuild better-sqlite3
 
 # Copy backend source code
 COPY backend/ ./
