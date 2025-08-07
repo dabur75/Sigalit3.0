@@ -6,6 +6,7 @@ app = "sigalit3"
 primary_region = "lhr"
 
 [build]
+  dockerfile = "Dockerfile"
 
 [env]
   NODE_ENV = "production"

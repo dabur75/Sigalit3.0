@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Sigalit 3.0 Deployment Script for Fly.io
+# Sigalit 3.0 Full-Stack Deployment Script for Fly.io
 
 echo "🚀 Deploying Sigalit 3.0 to Fly.io..."
 
@@ -25,5 +25,10 @@ flyctl volumes create sigalit_data --size 1 --region lhr || echo "Volume already
 echo "🚀 Deploying application..."
 flyctl deploy
 
-echo "✅ Deployment complete!"
-echo "🌐 Your app should be available at: https://sigalit3.fly.dev"
+echo "✅ Full-stack deployment complete!"
+echo "🌐 Your complete application is available at: https://sigalit3.fly.dev"
+echo "📱 Frontend pages:"
+echo "   - Login: https://sigalit3.fly.dev/login"
+echo "   - Dashboard: https://sigalit3.fly.dev/dashboard"
+echo "   - Schedule: https://sigalit3.fly.dev/schedule"
+echo "   - Reports: https://sigalit3.fly.dev/reports"

@@ -13,6 +13,9 @@ RUN npm ci --only=production
 # Copy backend source code
 COPY backend/ ./
 
+# Copy frontend files to serve as static content
+COPY frontend/ ./public/
+
 # Create directory for database
 RUN mkdir -p /app/data
 

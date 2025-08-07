@@ -13,6 +13,46 @@ app.use(cors());
 // Parse JSON bodies
 app.use(express.json());
 
+// Serve static files from public directory (frontend)
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Serve frontend files
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'login.html'));
+});
+
+app.get('/login', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'login.html'));
+});
+
+app.get('/dashboard', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
+});
+
+app.get('/schedule', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'schedule.html'));
+});
+
+app.get('/scheduler', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'scheduler.html'));
+});
+
+app.get('/reports', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'reports.html'));
+});
+
+app.get('/guides', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'guides.html'));
+});
+
+app.get('/tasks', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'tasks.html'));
+});
+
+app.get('/constraints', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'constraints.html'));
+});
+
 db.prepare(`
   CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
