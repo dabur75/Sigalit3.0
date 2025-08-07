@@ -14,7 +14,7 @@
   "license": "ISC",
   "description": "",
   "engines": {
-    "node": "18.x"
+    "node": "20.x"
   },
   "dependencies": {
     "better-sqlite3": "^12.2.0",

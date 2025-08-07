@@ -1,8 +1,11 @@
-# Use Node.js 18 Alpine for smaller image size
-FROM node:18-alpine
+# Use Node.js 20 Alpine for better-sqlite3 compatibility
+FROM node:20-alpine
 
 # Set working directory
 WORKDIR /app
+
+# Install build dependencies
+RUN apk add --no-cache python3 make g++
 
 # Copy package files
 COPY backend/package*.json ./
