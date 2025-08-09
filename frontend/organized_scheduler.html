@@ -2252,7 +2252,7 @@
                 cellHtml += `
                     <div class="guide-item-display guide-conan-friday guide-${fridayConanGuide.toLowerCase()}">
                         <span class="guide-role-label">כונן שישי/שבת (עד 17:00)</span>
-                        <span class="guide-name">${fridayConanGuide}</span>
+                        <span class="guide-name">${getFirstName(fridayConanGuide)}</span>
                     </div>
                 `;
             }
@@ -2271,7 +2271,7 @@
                 cellHtml += `
                     <div class="guide-item-display ${guide1Class} guide-${day.guide1_name.toLowerCase()}">
                         <span class="guide-role-label">${guide1Role}</span>
-                        <span class="guide-name">${day.guide1_name}</span>
+                        <span class="guide-name">${getFirstName(day.guide1_name)}</span>
                     </div>
                 `;
             }
@@ -2281,7 +2281,7 @@
                 cellHtml += `
                     <div class="guide-item-display ${guide2Class} guide-${day.guide2_name.toLowerCase()}">
                         <span class="guide-role-label">${day.guide2_role}</span>
-                        <span class="guide-name">${day.guide2_name}</span>
+                        <span class="guide-name">${getFirstName(day.guide2_name)}</span>
                     </div>
                 `;
             }
@@ -2770,6 +2770,28 @@
             }
             
             console.log(`Override ${checkbox.checked ? 'enabled' : 'disabled'} for guide ${guideId}`);
+        }
+
+        // =====================================================
+        // HELPER FUNCTIONS
+        // =====================================================
+        
+        function getCurrentUserData() {
+            return {
+                role: localStorage.getItem('role') || "מדריך",
+                guide: localStorage.getItem('guide') || "",
+                name: localStorage.getItem('name'),
+                userId: localStorage.getItem('userId')
+            };
+        }
+        
+        // פונקציה לחילוץ השם הפרטי מהשם המלא
+        function getFirstName(fullName) {
+            if (!fullName) return "";
+            
+            // חילץ את המילה הראשונה (השם הפרטי)
+            const nameParts = fullName.trim().split(' ');
+            return nameParts[0];
         }
 
         // =====================================================

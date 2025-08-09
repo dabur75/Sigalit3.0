@@ -459,7 +459,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 async function fetchAllGuides() {
-    const res = await fetch('http://localhost:4000/api/guides');
+    const res = await fetch(`${(location.port==='8080')?'http://localhost:4000':''}/api/users`);
     allGuides = await res.json();
 }
 async function fetchAllRules() {
@@ -669,7 +669,7 @@ function renderHeaderUser() {
 // =============== LOAD DATA ===============
 window.onload = () => {
     Promise.all([
-        fetch('http://localhost:4000/api/guides').then(res => res.json()),
+        fetch(`${(location.port==='8080')?'http://localhost:4000':''}/api/users`).then(res => res.json()),
         fetch('http://localhost:4000/api/constraints').then(res => res.json()),
         fetch('http://localhost:4000/api/fixed-constraints').then(res => res.json()),
         fetch('http://localhost:4000/api/vacations').then(res => res.json())
@@ -748,7 +748,7 @@ async function generateDaysList() {
     // טען נתונים נחוצים
     if (!allGuides.length) await fetchAllGuides();
     if (!guides.length) {
-        const res = await fetch('http://localhost:4000/api/guides');
+        const res = await fetch(`${(location.port==='8080')?'http://localhost:4000':''}/api/users`);
         guides = await res.json();
     }
     await fetchConstraintsAndVacations();

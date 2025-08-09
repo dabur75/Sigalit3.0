@@ -116,6 +116,22 @@ CREATE TABLE referrals (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Doctor referrals table
+CREATE TABLE doctor_referrals (
+    id SERIAL PRIMARY KEY,
+    patient VARCHAR(255) NOT NULL,
+    reason TEXT NOT NULL,
+    doctor VARCHAR(255) NOT NULL,
+    date DATE NOT NULL,
+    status VARCHAR(50) DEFAULT 'פתוח',
+    created_by VARCHAR(100),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    closed_at TIMESTAMP,
+    closed_by VARCHAR(100),
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_by VARCHAR(100)
+);
+
 -- Schedule draft table
 CREATE TABLE schedule_draft (
     id SERIAL PRIMARY KEY,
@@ -369,6 +385,11 @@ CREATE INDEX idx_audit_log_timestamp ON audit_log(timestamp);
 CREATE INDEX idx_audit_log_user ON audit_log(user_id);
 
 CREATE INDEX idx_guide_availability_guide_date ON guide_availability(guide_id, date);
+
+-- Doctor referrals indexes
+CREATE INDEX idx_doctor_referrals_date ON doctor_referrals(date);
+CREATE INDEX idx_doctor_referrals_status ON doctor_referrals(status);
+CREATE INDEX idx_doctor_referrals_created_by ON doctor_referrals(created_by);
 
 -- Create triggers for automatic timestamp updates
 CREATE OR REPLACE FUNCTION update_updated_at_column()

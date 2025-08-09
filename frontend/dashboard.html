@@ -162,6 +162,16 @@
             </form>
         </div>
 
+        <!-- משימות משוייכות אליי -->
+        <div class="block">
+            <h2>משימות משוייכות אליי</h2>
+            <div id="task-stats" style="margin-bottom:10px; display:flex; gap:10px; font-size:12px;">
+                <span id="my-open-tasks-count" style="background:#4891ca; color:white; padding:4px 8px; border-radius:4px;">פתוחות: 0</span>
+                <span id="my-completed-tasks-count" style="background:#3db66b; color:white; padding:4px 8px; border-radius:4px;">הושלמו: 0</span>
+            </div>
+            <ul id="my-tasks-list" style="list-style:none; padding:0;"></ul>
+        </div>
+
         <!-- חלונית הזזת משימה -->
         <div class="move-date-popup" id="moveDatePopup">
             <div class="move-date-popup-inner">
@@ -291,12 +301,12 @@
 
         // ========================== TASKS ===============================
         async function fetchTasks() {
-            const res = await fetch('http://localhost:4000/api/tasks?open_only=true');
+            const res = await fetch(`${API_BASE_URL}/api/tasks?open_only=true`);
             return await res.json();
         }
         
         async function fetchAllTasks() {
-            const res = await fetch('http://localhost:4000/api/tasks/all');
+            const res = await fetch(`${API_BASE_URL}/api/tasks/all`);
             return await res.json();
         }
         async function renderTasks() {
@@ -311,7 +321,7 @@
                 ul.innerHTML += `<li>
                     <div>
                       <b>${task.text}</b>
-                      <span style="font-size:13px;color:#557;"> (${task.creator_name || "מערכת"}, ${task.shift_date || "לא משויך"})</span>
+                      <span style="font-size:13px;color:#557;"> (${task.creator_name || localStorage.getItem('name') || "מערכת"}, ${task.shift_date || "לא משויך"})</span>
                     </div>
                     <div class="task-actions">
                       <button class="btn" style="background:#3db66b;" onclick="completeTask(${task.id})">בוצע</button>
@@ -322,14 +332,36 @@
             });
         }
         renderTasks();
+        renderMyTasks();
 
         document.getElementById('add-task-form').onsubmit = async function(e) {
             e.preventDefault();
             const text = document.getElementById('task-input').value.trim();
             if (!text) return;
-            let creator_id = localStorage.getItem('userId') || null;
+            
+            // Get user ID safely - only use if it's a valid number
+            let creator_id = localStorage.getItem('userId');
+            creator_id = (creator_id && !isNaN(creator_id)) ? parseInt(creator_id) : null;
+            
+            // Check if user ID exists in the system
+            if (creator_id) {
+                try {
+                    const userCheck = await fetch(`${API_BASE_URL}/api/users`);
+                    const users = await userCheck.json();
+                    const userExists = users.some(user => user.id === creator_id);
+                    if (!userExists) {
+                        console.log(`User ID ${creator_id} not found, clearing localStorage`);
+                        localStorage.removeItem('userId');
+                        creator_id = null;
+                    }
+                } catch (error) {
+                    console.log('Error checking user ID, using null');
+                    creator_id = null;
+                }
+            }
+            
             let today = new Date().toISOString().slice(0,10);
-            await fetch('http://localhost:4000/api/tasks', {
+            await fetch(`${API_BASE_URL}/api/tasks`, {
                 method: 'POST',
                 headers: {'Content-Type':'application/json'},
                 body: JSON.stringify({ text, creator_id, shift_date: today, status: "פתוחה", created_at: new Date().toISOString() })
@@ -339,8 +371,9 @@
         };
 
         async function completeTask(id) {
-            let closer_id = localStorage.getItem('userId') || null;
-            await fetch('http://localhost:4000/api/tasks/'+id, {
+            let closer_id = localStorage.getItem('userId');
+            closer_id = (closer_id && !isNaN(closer_id)) ? parseInt(closer_id) : null;
+            await fetch(`${API_BASE_URL}/api/tasks/`+id, {
                 method:'PUT',
                 headers:{'Content-Type':'application/json'},
                 body: JSON.stringify({ 
@@ -350,13 +383,15 @@
                 })
             });
             renderTasks();
+            renderMyTasks();
         }
         window.completeTask = completeTask;
 
         async function cancelTask(id) {
             if (!confirm('האם אתה בטוח שברצונך לבטל משימה זו?')) return;
-            let closer_id = localStorage.getItem('userId') || null;
-            await fetch('http://localhost:4000/api/tasks/'+id, {
+            let closer_id = localStorage.getItem('userId');
+            closer_id = (closer_id && !isNaN(closer_id)) ? parseInt(closer_id) : null;
+            await fetch(`${API_BASE_URL}/api/tasks/`+id, {
                 method:'PUT',
                 headers:{'Content-Type':'application/json'},
                 body: JSON.stringify({ 
@@ -368,6 +403,58 @@
             renderTasks();
         }
         window.cancelTask = cancelTask;
+
+        // משימות משוייכות אליי
+        async function renderMyTasks() {
+            const currentUserId = localStorage.getItem('userId');
+            if (!currentUserId) {
+                const list = document.getElementById('my-tasks-list');
+                list.innerHTML = "<li style='color:#888; margin:8px 0;'>יש להתחבר כדי לראות משימות משוייכות</li>";
+                return;
+            }
+            
+            const API_BASE_URL = (location.port === '8080') ? 'http://localhost:4000' : '';
+            try {
+                // Fetch open tasks
+                const openTasksRes = await fetch(`${API_BASE_URL}/api/tasks/assigned/${currentUserId}?open_only=true`);
+                const openTasks = await openTasksRes.json();
+                
+                // Fetch task statistics
+                const statsRes = await fetch(`${API_BASE_URL}/api/tasks/stats?userId=${currentUserId}`);
+                const stats = await statsRes.json();
+                
+                // Update statistics display
+                document.getElementById('my-open-tasks-count').textContent = `פתוחות: ${stats.open_tasks || 0}`;
+                document.getElementById('my-completed-tasks-count').textContent = `הושלמו: ${stats.completed_tasks || 0}`;
+                
+                const list = document.getElementById('my-tasks-list');
+                if (!openTasks.length) {
+                    list.innerHTML = "<li style='color:#888; margin:8px 0;'>אין משימות משוייכות אליי</li>";
+                    return;
+                }
+                
+                list.innerHTML = "";
+                openTasks.forEach(task => {
+                    list.innerHTML += `
+                        <li style="background:#f8f9fa; margin:6px 0; padding:8px; border-radius:6px; border-left:3px solid #4891ca;">
+                            <div style="font-weight:bold;">${task.text}</div>
+                            <div style="font-size:12px; color:#666;">
+                                תאריך: ${task.shift_date || 'לא מוגדר'} | 
+                                יוצר: ${task.creator_name || 'מערכת'}
+                            </div>
+                            <div style="margin-top:6px;">
+                                <button class="btn" style="background:#3db66b; padding:4px 8px; font-size:12px;" onclick="completeTask(${task.id})">בוצע</button>
+                                <button class="btn" style="background:#f2c53a; color:#1d1d1d; padding:4px 8px; font-size:12px; margin-right:4px;" onclick="openMovePopup(${task.id})">העבר יום</button>
+                            </div>
+                        </li>
+                    `;
+                });
+            } catch (error) {
+                console.error('Error fetching my tasks:', error);
+                const list = document.getElementById('my-tasks-list');
+                list.innerHTML = "<li style='color:#e74c3c; margin:8px 0;'>שגיאה בטעינת המשימות</li>";
+            }
+        }
 
         async function showTaskHistory() {
             const tasks = await fetchAllTasks();
@@ -423,7 +510,7 @@
         window.moveTaskToNewDate = async function() {
             const newDate = document.getElementById('moveDateInput').value;
             if (!newDate) return alert("בחר תאריך יעד");
-            await fetch('http://localhost:4000/api/tasks/'+moveTaskId, {
+            await fetch(`${API_BASE_URL}/api/tasks/`+moveTaskId, {
                 method:'PUT',
                 headers:{'Content-Type':'application/json'},
                 body: JSON.stringify({ shift_date: newDate })
@@ -444,7 +531,7 @@
         }
 
         async function renderOnShift() {
-            const res = await fetch('http://localhost:4000/api/schedule');
+            const res = await fetch(`${API_BASE_URL}/api/schedule`);
             const schedule = await res.json();
             const today = new Date();
             const todayStr = today.toISOString().slice(0,10);
@@ -685,6 +772,9 @@
 
     });
     
+    // API Base URL - dynamic for dev/prod
+    const API_BASE_URL = (location.port === '8080') ? 'http://localhost:4000' : '';
+    
     // הפניות לרופא
 document.addEventListener("DOMContentLoaded", function() {
     const referralDateInput = document.getElementById('referral-date-input');
@@ -714,7 +804,7 @@ document.addEventListener("DOMContentLoaded", function() {
     };
 
     async function loadReferrals(dateStr) {
-        const res = await fetch(`http://localhost:4000/api/doctor-referrals?date=${dateStr}`);
+        const res = await fetch(`${API_BASE_URL}/api/doctor-referrals?date=${dateStr}`);
         const referrals = await res.json();
         if (!referrals.length) {
             referralList.innerHTML = `<li style="color:#b2b2b2;">אין הפניות לרופא בתאריך זה</li>`;
@@ -747,7 +837,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
         if (!patient || !reason || !doctor || !date) return;
 
-        await fetch('http://localhost:4000/api/doctor-referrals', {
+        await fetch(`${API_BASE_URL}/api/doctor-referrals`, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({
@@ -768,7 +858,7 @@ document.addEventListener("DOMContentLoaded", function() {
 });
 
 async function completeReferral(id) {
-    const res = await fetch('http://localhost:4000/api/doctor-referrals');
+    const res = await fetch(`${API_BASE_URL}/api/doctor-referrals`);
     const all = await res.json();
     const ref = all.find(r => r.id === id);
     if (!ref) return;
@@ -777,7 +867,7 @@ async function completeReferral(id) {
     ref.closedAt = new Date().toISOString();
     ref.closedBy = localStorage.getItem("guide") || "מערכת";
 
-    await fetch(`http://localhost:4000/api/doctor-referrals/${id}`, {
+    await fetch(`${API_BASE_URL}/api/doctor-referrals/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(ref)
@@ -802,14 +892,16 @@ async function moveReferralToNewDate() {
     const newDate = document.getElementById('moveReferralDateInput').value;
     if (!newDate) return alert("בחר תאריך יעד");
 
-    const res = await fetch('http://localhost:4000/api/doctor-referrals');
+    const res = await fetch(`${API_BASE_URL}/api/doctor-referrals`);
     const all = await res.json();
     const ref = all.find(r => r.id === moveReferralId);
     if (!ref) return;
 
     ref.date = newDate;
+    ref.updatedAt = new Date().toISOString();
+    ref.updatedBy = localStorage.getItem("guide") || "מערכת";
 
-    await fetch(`http://localhost:4000/api/doctor-referrals/${ref.id}`, {
+    await fetch(`${API_BASE_URL}/api/doctor-referrals/${moveReferralId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(ref)
@@ -825,7 +917,7 @@ let userIdToName = {};
 let currentUserId = Number(localStorage.getItem('userId'));
 
 async function fetchAllUsers() {
-    const res = await fetch('http://localhost:4000/api/guides');
+    const res = await fetch(`${API_BASE_URL}/api/users`);
     allUsers = await res.json();
     userIdToName = {};
     allUsers.forEach(u => userIdToName[Number(u.id)] = u.name);
@@ -833,14 +925,14 @@ async function fetchAllUsers() {
 
 async function fetchConversations() {
     if (!currentUserId) return [];
-    const res = await fetch(`http://localhost:4000/api/conversations?user=${currentUserId}`);
+    const res = await fetch(`${API_BASE_URL}/api/conversations?user=${currentUserId}`);
     return await res.json();
 }
 function getOtherParticipant(conv) {
     return conv.participants.find(p => p !== currentUserId);
 }
 async function fetchConversationMessages(convId) {
-    const res = await fetch(`http://localhost:4000/api/conversations/${convId}/messages`);
+    const res = await fetch(`${API_BASE_URL}/api/conversations/${convId}/messages`);
     return await res.json();
 }
 
@@ -860,7 +952,7 @@ newConvSelect.onchange = async function() {
     const otherId = Number(newConvSelect.value);
     if (!otherId) return;
     // Create or get conversation
-    const res = await fetch('http://localhost:4000/api/conversations', {
+    const res = await fetch(`${API_BASE_URL}/api/conversations`, {
         method: 'POST',
         headers: {'Content-Type':'application/json'},
         body: JSON.stringify({ participants: [currentUserId, otherId] })
@@ -963,7 +1055,7 @@ async function openConversationModal(conv) {
             const input = document.getElementById('modal-msg-text');
             const text = input.value.trim();
             if (!text) return;
-            await fetch(`http://localhost:4000/api/conversations/${currentModalConv.id}/messages`, {
+            await fetch(`${API_BASE_URL}/api/conversations/${currentModalConv.id}/messages`, {
                 method: 'POST',
                 headers: {'Content-Type':'application/json'},
                 body: JSON.stringify({ from: currentUserId, text })
@@ -1023,7 +1115,7 @@ if (modalSendForm) {
         const from = localStorage.getItem('userId') || localStorage.getItem('name') || 'מערכת';
         const fromName = localStorage.getItem('name') || 'משתמש';
         const to = getOtherParticipant(currentModalConv, fromName);
-        await fetch(`http://localhost:4000/api/conversations/${currentModalConv.id}/messages`, {
+        await fetch(`${API_BASE_URL}/api/conversations/${currentModalConv.id}/messages`, {
             method: 'POST',
             headers: {'Content-Type':'application/json'},
             body: JSON.stringify({ from, to, text, fromName })

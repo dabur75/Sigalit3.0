@@ -5,6 +5,7 @@
     <title>שיבוץ חודשי - סיגלית</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="header-functions.js"></script>
+    <script src="sigalit-chat.js"></script>
     <style>
         /* Container spacing for header and footer */
         body {
@@ -2685,8 +2686,16 @@
             try {
                 const response = await fetch(`${API_BASE}/schedule/enhanced/${year}/${month}`);
                 const schedule = await response.json();
-                console.log('Schedule loaded:', schedule);
-                return schedule;
+                // Normalize dates to local YYYY-MM-DD to match calendar generation
+                const normalized = (schedule || []).map(day => {
+                    const dt = new Date(day.date);
+                    const y = dt.getFullYear();
+                    const m = String(dt.getMonth() + 1).padStart(2, '0');
+                    const d = String(dt.getDate()).padStart(2, '0');
+                    return { ...day, date: `${y}-${m}-${d}` };
+                });
+                console.log('Schedule loaded (normalized):', normalized);
+                return normalized;
             } catch (error) {
                 console.error('Error fetching schedule:', error);
                 showNotification('שגיאה בטעינת לוח השנה', 'error');
@@ -2781,6 +2790,28 @@
                 showNotification('שגיאה בשמירת הטיוטה', 'error');
                 return null;
             }
+        }
+
+        // =====================================================
+        // HELPER FUNCTIONS
+        // =====================================================
+        
+        function getCurrentUserData() {
+            return {
+                role: localStorage.getItem('role') || "מדריך",
+                guide: localStorage.getItem('guide') || "",
+                name: localStorage.getItem('name'),
+                userId: localStorage.getItem('userId')
+            };
+        }
+        
+        // פונקציה לחילוץ השם הפרטי מהשם המלא
+        function getFirstName(fullName) {
+            if (!fullName) return "";
+            
+            // חילץ את המילה הראשונה (השם הפרטי)
+            const nameParts = fullName.trim().split(' ');
+            return nameParts[0];
         }
 
         // =====================================================
@@ -2920,17 +2951,17 @@
             const isFriday = dayOfWeek === 5; // Friday is day 5
             const isSaturday = dayOfWeek === 6; // Saturday is day 6
             
-            // Check if this is a closed Saturday weekend
+                // Check if this is a closed weekend (flag on Friday)
             let isClosedSaturdayWeekend = false;
             let fridayConanGuide = null;
             
             if (isSaturday) {
-                // Check if the previous Friday is marked as closed Saturday
+                // Check if the previous Friday is marked as closed weekend
                 const fridayDate = new Date(day.date);
                 fridayDate.setDate(fridayDate.getDate() - 1);
-                const fridayString = fridayDate.toISOString().split('T')[0];
+                const fridayString = `${fridayDate.getFullYear()}-${String(fridayDate.getMonth()+1).padStart(2,'0')}-${String(fridayDate.getDate()).padStart(2,'0')}`;
                 
-                // Check if Friday has closed Saturday setting
+                // Check if Friday has closed weekend setting
                 const fridayCheckbox = document.querySelector(`input[data-date="${fridayString}"]`);
                 if (fridayCheckbox && fridayCheckbox.checked) {
                     isClosedSaturdayWeekend = true;
@@ -2950,7 +2981,7 @@
                 cellHtml += `
                     <div class="guide-item-display guide-conan-friday guide-${fridayConanGuide.toLowerCase()}">
                         <span class="guide-role-label">כונן שישי/שבת (עד 17:00)</span>
-                        <span class="guide-name">${fridayConanGuide}</span>
+                        <span class="guide-name">${getFirstName(fridayConanGuide)}</span>
                     </div>
                 `;
             }
@@ -2969,7 +3000,7 @@
                 cellHtml += `
                     <div class="guide-item-display ${guide1Class} guide-${day.guide1_name.toLowerCase()}">
                         <span class="guide-role-label">${guide1Role}</span>
-                        <span class="guide-name">${day.guide1_name}</span>
+                        <span class="guide-name">${getFirstName(day.guide1_name)}</span>
                     </div>
                 `;
             }
@@ -2979,7 +3010,7 @@
                 cellHtml += `
                     <div class="guide-item-display ${guide2Class} guide-${day.guide2_name.toLowerCase()}">
                         <span class="guide-role-label">${day.guide2_role}</span>
-                        <span class="guide-name">${day.guide2_name}</span>
+                        <span class="guide-name">${getFirstName(day.guide2_name)}</span>
                     </div>
                 `;
             }
@@ -2997,7 +3028,7 @@
                     <div class="weekend-type-control">
                         <label class="weekend-checkbox">
                             <input type="checkbox" onchange="toggleWeekendType('${day.date}', this.checked)" data-date="${day.date}">
-                            <span class="checkbox-label">שבת סגורה</span>
+                            <span class="checkbox-label">סופ"ש סגור</span>
                         </label>
                     </div>
                 `;
@@ -3580,7 +3611,8 @@
                 // Load current month schedule for weekly rules
                 const [year, month] = currentMonth.split('-');
                 const monthSchedule = await fetchMonthlySchedule(year, month);
-                window.currentMonthSchedule = monthSchedule; // Cache for weekly rules
+                // Ensure cached schedule has normalized YYYY-MM-DD dates
+                window.currentMonthSchedule = monthSchedule;
                 
                 if (availability) {
                     updateSidePanelWithAvailability(availability);
@@ -4208,7 +4240,7 @@
                 
                 const result = await response.json();
                 if (result.success) {
-                    showNotification(isClosed ? 'שבת סגורה נקבעה' : 'שבת פתוחה נקבעה', 'success');
+                    showNotification(isClosed ? 'סופ"ש סגור נקבע' : 'סופ"ש פתוח נקבע', 'success');
                     // Reload the month to update availability
                     const [year, month] = currentMonth.split('-');
                     await loadMonthSchedule(year, month);
@@ -4485,8 +4517,8 @@
                         continue;
                     }
                     
-                    // Special handling for closed Saturday
-                    if (weekendType === 'שבת סגורה' && weekday === 'שבת') {
+                    // Special handling for closed weekend: Saturday shows Friday's כונן + מוצ"ש
+                    if (weekendType === 'סופ"ש סגור' && weekday === 'שבת') {
                         // Get the previous day's on-call guide
                         const previousDate = new Date(date);
                         previousDate.setDate(previousDate.getDate() - 1);
@@ -4622,7 +4654,7 @@
 
         function getRequiredGuidesForDay(weekendType, weekday) {
             // Closed Saturday = 1 on-call guide
-            if (weekendType === 'שבת סגורה') {
+            if (weekendType === 'סופ"ש סגור') {
                 return { requiredGuides: 1, roles: ['כונן'] };
             }
             
@@ -4632,7 +4664,7 @@
             }
             
             // Open Saturday/Holiday = 2 guides (regular + overlap)
-            if (weekendType === 'שבת פתוחה' || isHoliday(weekendType)) {
+            if (weekendType === 'סופ"ש פתוח' || isHoliday(weekendType)) {
                 return { requiredGuides: 2, roles: ['רגיל', 'חפיפה'] };
             }
             
@@ -4692,7 +4724,7 @@
             // Rule: No consecutive days (except on-call on closed Saturday)
             if (diffDays <= 1) {
                 // Check if this is an on-call assignment on a closed Saturday
-                if (weekendType === 'שבת סגורה') {
+                if (weekendType === 'סופ"ש סגור') {
                     return false; // Allow consecutive days for on-call on closed Saturday
                 }
                 return true; // Violation for other cases

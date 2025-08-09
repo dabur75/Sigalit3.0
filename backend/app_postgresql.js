@@ -1,3 +1,4 @@
+// Placeholder: constraints endpoint is defined after app initialization
 const express = require('express');
 const cors = require('cors');
 const fs = require('fs');
@@ -7,6 +8,16 @@ const PORT = process.env.PORT || 4000;
 
 // PostgreSQL connection
 const { pool, testConnection } = require('./database/postgresql');
+
+// Initialize AI Agent
+let aiAgent = null;
+try {
+  const SigalitAI = require('./ai-agent');
+  aiAgent = new SigalitAI(pool);
+  console.log('🤖 AI Agent initialized successfully');
+} catch (error) {
+  console.log('⚠️ AI Agent not available:', error.message);
+}
 
 // Enable CORS
 app.use(cors());
@@ -81,6 +92,44 @@ app.get('/constraints', (req, res) => {
   res.setHeader('Pragma', 'no-cache');
   res.setHeader('Expires', '0');
   sendFrontendOrPublic(res, 'constraints.html');
+});
+
+// Get constraints for a single guide and month (basic placeholder for now)
+app.get('/api/constraints/guide/:name/:month', async (req, res) => {
+  try {
+    const { name, month } = req.params; // month is YYYY-MM
+    // Find guide by name
+    const userResult = await pool.query('SELECT id FROM users WHERE name = $1', [name]);
+    const user = userResult.rows[0];
+    if (!user) {
+      return res.status(404).json({ error: 'Guide not found', constraints: [] });
+    }
+
+    // Monthly constraints
+    const constraintsResult = await pool.query(
+      `SELECT date, details FROM constraints WHERE user_id = $1 AND to_char(date, 'YYYY-MM') = $2 ORDER BY date`,
+      [user.id, month]
+    );
+
+    // Fixed constraints (weekly)
+    const fixedResult = await pool.query(
+      `SELECT weekday, details FROM fixed_constraints WHERE user_id = $1`,
+      [user.id]
+    );
+
+    const constraints = [];
+    constraintsResult.rows.forEach(r => {
+      constraints.push({ type: 'monthly', icon: '⛔', title: 'אילוץ חודשי', dates: r.date, details: r.details });
+    });
+    fixedResult.rows.forEach(r => {
+      constraints.push({ type: 'fixed', icon: '📅', title: 'אילוץ קבוע', dates: r.weekday, details: r.details });
+    });
+
+    res.json({ success: true, constraints });
+  } catch (error) {
+    console.error('Error fetching guide constraints:', error);
+    res.status(500).json({ error: 'Failed to fetch guide constraints' });
+  }
 });
 
 // ============================================================================
@@ -202,6 +251,18 @@ app.post('/api/tasks', async (req, res) => {
       return res.status(400).json({ error: 'Missing task text' });
     }
     
+    // Validate creator_id exists in users table if provided
+    let validatedCreatorId = null;
+    if (creator_id) {
+      const userCheck = await pool.query('SELECT id FROM users WHERE id = $1', [creator_id]);
+      if (userCheck.rows.length === 0) {
+        console.log(`Warning: creator_id ${creator_id} not found in users table, using null`);
+        validatedCreatorId = null;
+      } else {
+        validatedCreatorId = creator_id;
+      }
+    }
+    
     const result = await pool.query(`
       INSERT INTO tasks (text, created_at, creator_id, assigned_to_id, status, shift_date, notes)
       VALUES ($1, $2, $3, $4, $5, $6, $7)
@@ -209,7 +270,7 @@ app.post('/api/tasks', async (req, res) => {
     `, [
       text,
       created_at || new Date().toISOString(),
-      creator_id || null,
+      validatedCreatorId,
       assigned_to_id || null,
       status || 'פתוח',
       shift_date || null,
@@ -335,6 +396,125 @@ app.delete('/api/tasks/:id', async (req, res) => {
   } catch (error) {
     console.error('Error deleting task:', error);
     res.status(500).json({ error: 'Failed to delete task' });
+  }
+});
+
+// Get tasks assigned to a specific user
+app.get('/api/tasks/assigned/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { status, open_only } = req.query;
+    
+    let whereClause = 'WHERE t.assigned_to_id = $1';
+    let params = [userId];
+    
+    if (open_only === 'true') {
+      whereClause += ' AND t.status NOT IN (\'בוצע\', \'סגורה\', \'בוטלה\')';
+    } else if (status) {
+      whereClause += ' AND t.status = $2';
+      params.push(status);
+    }
+    
+    const result = await pool.query(`
+      SELECT 
+        t.*,
+        u1.name as creator_name,
+        u2.name as assigned_to_name,
+        u3.name as closed_by_name
+      FROM tasks t
+      LEFT JOIN users u1 ON t.creator_id = u1.id
+      LEFT JOIN users u2 ON t.assigned_to_id = u2.id
+      LEFT JOIN users u3 ON t.closed_by_id = u3.id
+      ${whereClause}
+      ORDER BY t.created_at DESC
+    `, params);
+    
+    // Convert dates to Israeli format
+    const formattedRows = result.rows.map(row => ({
+      ...row,
+      shift_date: row.shift_date ? new Date(row.shift_date).toLocaleDateString('he-IL') : null,
+      created_at: row.created_at ? new Date(row.created_at).toLocaleDateString('he-IL') : null,
+      closed_at: row.closed_at ? new Date(row.closed_at).toLocaleDateString('he-IL') : null
+    }));
+    
+    res.json(formattedRows);
+  } catch (error) {
+    console.error('Error fetching assigned tasks:', error);
+    res.status(500).json({ error: 'Failed to fetch assigned tasks' });
+  }
+});
+
+// Get tasks by assignee (for coordinators to see who has what tasks)
+app.get('/api/tasks/by-assignee', async (req, res) => {
+  try {
+    const { status, open_only } = req.query;
+    
+    let whereClause = 'WHERE t.assigned_to_id IS NOT NULL';
+    let params = [];
+    
+    if (open_only === 'true') {
+      whereClause += ' AND t.status NOT IN (\'בוצע\', \'סגורה\', \'בוטלה\')';
+    } else if (status) {
+      whereClause += ' AND t.status = $1';
+      params.push(status);
+    }
+    
+    const result = await pool.query(`
+      SELECT 
+        t.*,
+        u1.name as creator_name,
+        u2.name as assigned_to_name,
+        u3.name as closed_by_name
+      FROM tasks t
+      LEFT JOIN users u1 ON t.creator_id = u1.id
+      LEFT JOIN users u2 ON t.assigned_to_id = u2.id
+      LEFT JOIN users u3 ON t.closed_by_id = u3.id
+      ${whereClause}
+      ORDER BY t.assigned_to_id, t.created_at DESC
+    `, params);
+    
+    // Convert dates to Israeli format
+    const formattedRows = result.rows.map(row => ({
+      ...row,
+      shift_date: row.shift_date ? new Date(row.shift_date).toLocaleDateString('he-IL') : null,
+      created_at: row.created_at ? new Date(row.created_at).toLocaleDateString('he-IL') : null,
+      closed_at: row.closed_at ? new Date(row.closed_at).toLocaleDateString('he-IL') : null
+    }));
+    
+    res.json(formattedRows);
+  } catch (error) {
+    console.error('Error fetching tasks by assignee:', error);
+    res.status(500).json({ error: 'Failed to fetch tasks by assignee' });
+  }
+});
+
+// Get task statistics for dashboard
+app.get('/api/tasks/stats', async (req, res) => {
+  try {
+    const { userId } = req.query;
+    
+    let whereClause = '';
+    let params = [];
+    
+    if (userId) {
+      whereClause = 'WHERE t.assigned_to_id = $1';
+      params.push(userId);
+    }
+    
+    const result = await pool.query(`
+      SELECT 
+        COUNT(*) as total_tasks,
+        COUNT(CASE WHEN status NOT IN ('בוצע', 'סגורה', 'בוטלה') THEN 1 END) as open_tasks,
+        COUNT(CASE WHEN status = 'בוצע' THEN 1 END) as completed_tasks,
+        COUNT(CASE WHEN status = 'בוטלה' THEN 1 END) as cancelled_tasks
+      FROM tasks t
+      ${whereClause}
+    `, params);
+    
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error fetching task statistics:', error);
+    res.status(500).json({ error: 'Failed to fetch task statistics' });
   }
 });
 
@@ -1308,6 +1488,8 @@ app.post('/api/login', async (req, res) => {
     console.log('🔐 Login attempt:', req.body);
     const { username, password } = req.body;
     
+    console.log('🔍 Searching for user with name:', username, 'and password:', password);
+    
     const result = await pool.query(`
       SELECT id, name, role, house_id, email, phone, is_active, accessible_houses
       FROM users 
@@ -1334,7 +1516,7 @@ app.post('/api/login', async (req, res) => {
       res.json(response);
     } else {
       console.log('❌ Login failed - invalid credentials');
-      res.status(401).json({ success: false, error: 'Invalid credentials' });
+      res.status(401).json({ success: false, error: 'משתמש לא נמצא' });
     }
   } catch (error) {
     console.error('❌ Error in login:', error);
@@ -1372,6 +1554,111 @@ app.get('/api/users', async (req, res) => {
   } catch (error) {
     console.error('Error fetching users:', error);
     res.status(500).json({ error: 'Failed to fetch users' });
+  }
+});
+
+// Get enhanced users with statistics
+app.get('/api/users/enhanced', async (req, res) => {
+  try {
+    const { role } = req.query;
+    let query = `
+      SELECT id, name, role, house_id, email, phone, is_active, created_at, updated_at
+      FROM users
+    `;
+    let params = [];
+    
+    if (role) {
+      query += ` WHERE role = $1`;
+      params.push(role);
+    }
+    
+    query += ` ORDER BY role, name`;
+    
+    const result = await pool.query(query, params);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching enhanced users:', error);
+    res.status(500).json({ error: 'Failed to fetch enhanced users' });
+  }
+});
+
+// Get specific user by ID
+app.get('/api/users/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await pool.query(`
+      SELECT id, name, role, house_id, email, phone, is_active, created_at, updated_at
+      FROM users
+      WHERE id = $1
+    `, [id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error fetching user:', error);
+    res.status(500).json({ error: 'Failed to fetch user' });
+  }
+});
+
+// Create new user (users API)
+app.post('/api/users', async (req, res) => {
+  try {
+    const { name, role, house_id, email, phone, password, percent } = req.body;
+    const result = await pool.query(`
+      INSERT INTO users (name, role, house_id, email, phone, password, is_active, created_at, updated_at)
+      VALUES ($1, $2, $3, $4, $5, $6, true, NOW(), NOW())
+      RETURNING *
+    `, [name, role, house_id || null, email || null, phone || null, password || null]);
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error creating user:', error);
+    res.status(500).json({ error: 'Failed to create user' });
+  }
+});
+
+// Update user (users API)
+app.put('/api/users/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, role, house_id, email, phone, password, is_active } = req.body;
+    const result = await pool.query(`
+      UPDATE users
+      SET name = COALESCE($1, name),
+          role = COALESCE($2, role),
+          house_id = COALESCE($3, house_id),
+          email = COALESCE($4, email),
+          phone = COALESCE($5, phone),
+          password = COALESCE($6, password),
+          is_active = COALESCE($7, is_active),
+          updated_at = NOW()
+      WHERE id = $8
+      RETURNING *
+    `, [name || null, role || null, house_id || null, email || null, phone || null, password || null, is_active, id]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error updating user:', error);
+    res.status(500).json({ error: 'Failed to update user' });
+  }
+});
+
+// Delete user (users API)
+app.delete('/api/users/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await pool.query(`DELETE FROM users WHERE id = $1`, [id]);
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting user:', error);
+    res.status(500).json({ error: 'Failed to delete user' });
   }
 });
 
@@ -1442,7 +1729,42 @@ app.delete('/api/guides/:id', async (req, res) => {
 // PHASE 1: CORE API ENDPOINTS - MIGRATED TO POSTGRESQL
 // ============================================================================
 
-// Get all guides with enhanced statistics
+// Get users with enhanced statistics (supports optional role filter)
+app.get('/api/users/enhanced', async (req, res) => {
+  try {
+    const { role } = req.query; // optional
+    const roleFilter = role ? `WHERE u.role = $1 AND u.is_active = true` : `WHERE u.is_active = true`;
+    const params = role ? [role] : [];
+    const result = await pool.query(`
+      SELECT 
+        u.id,
+        u.name,
+        u.role,
+        u.house_id as house,
+        u.email,
+        u.phone,
+        u.is_active as status,
+        u.created_at,
+        u.updated_at,
+        COALESCE(u.accessible_houses, '{}'::jsonb) as metadata,
+        COUNT(s.id) as total_shifts,
+        COUNT(CASE WHEN s.guide1_role = 'מדריך ראשי' THEN 1 END) as lead_shifts,
+        COUNT(CASE WHEN s.guide2_role = 'מדריך שני' THEN 1 END) as second_shifts
+      FROM users u
+      LEFT JOIN schedule s ON u.id = s.guide1_id OR u.id = s.guide2_id
+      ${roleFilter}
+      GROUP BY u.id, u.name, u.role, u.house_id, u.email, u.phone, u.is_active, u.created_at, u.updated_at, u.accessible_houses
+      ORDER BY u.name
+    `, params);
+    
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching enhanced users:', error);
+    res.status(500).json({ error: 'Failed to fetch users' });
+  }
+});
+
+// Back-compat: guides enhanced -> users enhanced filtered by מדריך
 app.get('/api/guides/enhanced', async (req, res) => {
   try {
     const result = await pool.query(`
@@ -1469,7 +1791,7 @@ app.get('/api/guides/enhanced', async (req, res) => {
     
     res.json(result.rows);
   } catch (error) {
-    console.error('Error fetching guides:', error);
+    console.error('Error fetching enhanced guides:', error);
     res.status(500).json({ error: 'Failed to fetch guides' });
   }
 });
@@ -1506,15 +1828,70 @@ app.get('/api/schedule/:year/:month', async (req, res) => {
 // Create manual assignment
 app.post('/api/schedule/manual', async (req, res) => {
   try {
-    const { date, guide1_id, guide2_id, role1, role2, notes } = req.body;
-    
-    const result = await pool.query(`
-      INSERT INTO schedule (date, guide1_id, guide2_id, role1, role2, notes, created_at, updated_at)
-      VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+    const { date, guide1_id, guide2_id, type, created_by = null } = req.body;
+
+    if (!date) {
+      return res.status(400).json({ error: 'date is required' });
+    }
+
+    const jsDate = new Date(date);
+    if (isNaN(jsDate.getTime())) {
+      return res.status(400).json({ error: 'invalid date' });
+    }
+
+    const hebrewWeekdays = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
+    const dow = jsDate.getDay();
+    const weekday = hebrewWeekdays[dow];
+    const scheduleType = (dow === 5 || dow === 6) ? 'weekend' : 'weekday';
+
+    // Derive roles from the provided assignment type
+    let guide1_role = null;
+    let guide2_role = null;
+    if (type === 'כונן') {
+      guide1_role = 'כונן';
+    } else if (type === 'רגיל') {
+      guide1_role = 'רגיל';
+    } else if (type === 'חפיפה') {
+      guide1_role = 'רגיל';
+      guide2_role = 'חפיפה';
+    } else if (type === 'מוצ״ש') {
+      guide1_role = 'מוצ״ש';
+    }
+
+    // Normalize to YYYY-MM-DD for date-only store
+    const yyyy = jsDate.getFullYear();
+    const mm = String(jsDate.getMonth() + 1).padStart(2, '0');
+    const dd = String(jsDate.getDate()).padStart(2, '0');
+    const dateOnly = `${yyyy}-${mm}-${dd}`;
+
+    // Upsert by date (replace any existing record for the date)
+    await pool.query('DELETE FROM schedule WHERE date::date = $1::date', [dateOnly]);
+
+    const insert = await pool.query(`
+      INSERT INTO schedule (
+        date, weekday, type, 
+        guide1_id, guide2_id, 
+        guide1_role, guide2_role,
+        is_manual, is_locked,
+        created_by, created_at, updated_at,
+        house_id
+      ) VALUES (
+        $1::date, $2, $3,
+        $4, $5,
+        $6, $7,
+        true, false,
+        $8, NOW(), NOW(),
+        'dror'
+      )
       RETURNING *
-    `, [date, guide1_id, guide2_id, role1, role2, notes]);
-    
-    res.json(result.rows[0]);
+    `, [
+      dateOnly, weekday, scheduleType,
+      guide1_id || null, guide2_id || null,
+      guide1_role, guide2_role,
+      created_by
+    ]);
+
+    res.json({ success: true, assignment: insert.rows[0] });
   } catch (error) {
     console.error('Error creating manual assignment:', error);
     res.status(500).json({ error: 'Failed to create assignment' });
@@ -1722,7 +2099,14 @@ function calculateTrafficLightStatusPG(guide, workload, date) {
 // Get weekend type for a date
 app.get('/api/weekend-type/:date', async (req, res) => {
   try {
-    const { date } = req.params;
+    let { date } = req.params;
+    // Normalize: weekend flag is stored on Friday. If asked for Saturday, read Friday.
+    const dow = new Date(date).getDay(); // 0=Sun ... 6=Sat
+    if (dow === 6) {
+      const d = new Date(date + 'T00:00:00');
+      d.setDate(d.getDate() - 1);
+      date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
     const result = await pool.query(`
       SELECT is_closed FROM weekend_types WHERE date = $1
     `, [date]);
@@ -1738,10 +2122,17 @@ app.get('/api/weekend-type/:date', async (req, res) => {
 // Set weekend type for a date
 app.post('/api/weekend-type/:date', async (req, res) => {
   try {
-    const { date } = req.params;
+    let { date } = req.params;
     const { is_closed } = req.body;
     
     const is_closed_bool = is_closed === 1 || is_closed === true;
+    // Normalize: always store on Friday. If Saturday provided, shift back one day.
+    const dow = new Date(date).getDay();
+    if (dow === 6) {
+      const d = new Date(date + 'T00:00:00');
+      d.setDate(d.getDate() - 1);
+      date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
     
     const result = await pool.query(`
       INSERT INTO weekend_types (date, is_closed, created_at)
@@ -2425,12 +2816,18 @@ async function prepareSchedulingDataPG(year, month) {
     WHERE EXTRACT(YEAR FROM date) = $1 AND EXTRACT(MONTH FROM date) = $2
   `, [year, month]);
   weekendRowsResult.rows.forEach(row => {
-    weekendTypes[row.date.toISOString().split('T')[0]] = row.is_closed; // Keep as boolean
+    const fridayStr = formatDateLocal(row.date);
+    weekendTypes[fridayStr] = row.is_closed; // Store Friday explicitly
+    // Mirror closed weekend to Saturday in-memory (terminology: closed/open weekend affects both days)
+    if (row.is_closed === true) {
+      const saturdayStr = addDaysLocal(fridayStr, 1);
+      weekendTypes[saturdayStr] = true;
+    }
   });
   
   // Generate all days in month
   const days = getAllDaysInMonth(year, month).map(date => {
-    const dateStr = date.toISOString().split('T')[0];
+    const dateStr = formatDateLocal(date);
     const weekday = getHebrewWeekday(date.getDay());
     const weekendType = weekendTypes[dateStr] || null;
     
@@ -2466,7 +2863,7 @@ async function prepareSchedulingDataPG(year, month) {
   const manualAssignments = {};
   existingSchedule.forEach(assignment => {
     if (assignment.is_manual) {
-      manualAssignments[assignment.date.toISOString().split('T')[0]] = assignment;
+      manualAssignments[formatDateLocal(assignment.date)] = assignment;
       
       // Update statistics for manual assignments
       if (assignment.guide1_id) {
@@ -2502,6 +2899,20 @@ function getHebrewWeekday(dayIndex) {
   return weekdays[dayIndex];
 }
 
+// Date helpers to avoid timezone off-by-one errors
+function formatDateLocal(dateObj) {
+  const y = dateObj.getFullYear();
+  const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+  const d = String(dateObj.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function addDaysLocal(dateStr, deltaDays) {
+  const base = new Date(dateStr + 'T00:00:00'); // local midnight
+  base.setDate(base.getDate() + deltaDays);
+  return formatDateLocal(base);
+}
+
 // ============================================================================
 // PHASE 2: DAY-BY-DAY ASSIGNMENT - POSTGRESQL VERSION
 // ============================================================================
@@ -2521,59 +2932,101 @@ async function assignDayOptimalPG(dayInfo, context) {
   
   console.log(`Day ${date} requirements:`, requirements);
   
-  // Handle special case: closed Saturday weekend
-  if (requirements.isClosedSaturday) {
+  // Handle special case: closed weekend
+  if (requirements.isClosedWeekend || requirements.isClosedSaturday) {
+    // For Friday, use the original logic
+    if (weekdayNum === 5) { // Friday
+      return await handleClosedSaturdayWeekendPG(dayInfo, context);
+    }
+    
     // For Saturday, we need to handle it differently
     if (weekdayNum === 6) { // Saturday
       // Find the standby guide that was assigned for Friday
-      const fridayDate = new Date(date);
-      fridayDate.setDate(fridayDate.getDate() - 1);
-      const fridayDateStr = fridayDate.toISOString().split('T')[0];
+      const fridayDateStr = addDaysLocal(date, -1);
       
-      // Find the standby guide from Friday
-      const fridayAssignment = context.assignments?.find(a => 
-        a.date === fridayDateStr && a.linkedSaturday === date
-      );
-      
-      if (fridayAssignment && fridayAssignment.standbyGuideId) {
-        const standbyGuide = context.guides.find(g => g.id === fridayAssignment.standbyGuideId);
-        
-        // Find motzash guide (different from standby guide)
-        const motzashAvailable = await Promise.all(
-          context.guides.map(async guide => {
-            if (guide.id === standbyGuide.id) return null; // Skip standby guide
-            const availability = await validateGuideAvailabilityPG(guide, date, context);
-            return { ...guide, availability };
-          })
-        );
-        
-        const availableForMotzash = motzashAvailable
-          .filter(guide => guide && guide.availability.available)
-          .sort((a, b) => a.availability.score - b.availability.score);
-        
-        if (availableForMotzash.length > 0) {
-          const motzashGuide = availableForMotzash[0];
-          
-          return {
-            date: date,
-            weekday: weekday,
-            type: 'כונן+מוצ״ש',
-            guide1_id: standbyGuide.id,
-            guide1_name: standbyGuide.name,
-            guide1_role: 'כונן',
-            guide2_id: motzashGuide.id,
-            guide2_name: motzashGuide.name,
-            guide2_role: 'מוצ״ש',
-            is_manual: false,
-            is_locked: false,
-            created_by: null
-          };
+      // Find the standby guide from Friday - check multiple sources
+      let fridayAssignment = context.manualAssignments[fridayDateStr];
+      if (!fridayAssignment) {
+        fridayAssignment = context.assignments?.find(a => a.date === fridayDateStr);
+      }
+      if (!fridayAssignment) {
+        // If we can't find the Friday assignment, we need to create it first
+        console.log(`Friday assignment not found for ${fridayDateStr}, creating it now`);
+        const fridayInfo = {
+          date: fridayDateStr,
+          weekday: getHebrewWeekday(5), // Friday
+          weekdayNum: 5,
+          weekendType: true // Closed Saturday
+        };
+        const fridayAssignmentResult = await handleClosedSaturdayWeekendPG(fridayInfo, context);
+        if (fridayAssignmentResult) {
+          // Add to context for future reference
+          if (!context.assignments) context.assignments = [];
+          context.assignments.push(fridayAssignmentResult);
+          fridayAssignment = fridayAssignmentResult;
         }
       }
+      
+      if (fridayAssignment && fridayAssignment.guide1_id) {
+        const standbyGuide = context.guides.find(g => g.id === fridayAssignment.guide1_id);
+        
+        if (standbyGuide) {
+          // Find motzash guide (different from standby guide)
+          const motzashAvailable = await Promise.all(
+            context.guides.map(async guide => {
+              if (guide.id === standbyGuide.id) return null; // Skip standby guide
+              const availability = await validateGuideAvailabilityPG(guide, date, context);
+              return { ...guide, availability };
+            })
+          );
+          
+          const availableForMotzash = motzashAvailable
+            .filter(guide => guide && guide.availability.available)
+            .sort((a, b) => a.availability.score - b.availability.score);
+          
+          if (availableForMotzash.length > 0) {
+            const motzashGuide = availableForMotzash[0];
+            
+            console.log(`Saturday closed weekend assignment: standby=${standbyGuide.name}, motzash=${motzashGuide.name}`);
+            
+            return {
+              date: date,
+              weekday: weekday,
+              type: 'מוצ״ש',
+              guide1_id: standbyGuide.id,
+              guide1_name: standbyGuide.name,
+              guide1_role: 'כונן',
+              guide2_id: motzashGuide.id,
+              guide2_name: motzashGuide.name,
+              guide2_role: 'מוצ״ש',
+              is_manual: false,
+              is_locked: false,
+              created_by: null
+            };
+          } else {
+            console.log(`No available motzash guide for closed Saturday ${date}`);
+            // Return just the standby guide if no motzash available
+            return {
+              date: date,
+              weekday: weekday,
+              type: 'כונן',
+              guide1_id: standbyGuide.id,
+              guide1_name: standbyGuide.name,
+              guide1_role: 'כונן',
+              guide2_id: null,
+              guide2_name: null,
+              guide2_role: null,
+              is_manual: false,
+              is_locked: false,
+              created_by: null
+            };
+          }
+        }
+      } else {
+        console.log(`No Friday assignment found for closed Saturday ${date}`);
+        // Fall back to regular assignment if no Friday assignment
+      }
     }
-    
-    // For Friday, use the original logic
-    return await handleClosedSaturdayWeekendPG(dayInfo, context);
   }
   
   // Get available guides with scores
@@ -2613,35 +3066,34 @@ async function assignDayOptimalPG(dayInfo, context) {
 function getDayRequirementsPG(dayInfo, context) {
   const { date, weekday, weekdayNum, weekendType } = dayInfo;
   
-  // Check if this is a closed Saturday Friday
+  // Closed weekend Friday (flag stored on Friday)
   if (weekdayNum === 5) { // Friday
-    const saturdayDate = new Date(date);
-    saturdayDate.setDate(saturdayDate.getDate() + 1);
-    const saturdayDateStr = saturdayDate.toISOString().split('T')[0];
-    const saturdayWeekendType = context.weekendTypes[saturdayDateStr];
-    
-    if (saturdayWeekendType === true) { // PostgreSQL stores boolean
+    const fridayDateStr = date; // already YYYY-MM-DD
+    const isClosedOnFriday = context.weekendTypes[fridayDateStr] === true;
+    if (isClosedOnFriday) {
+      const saturdayDateStr = addDaysLocal(fridayDateStr, 1);
       return {
         guidesNeeded: 1,
         roles: ['כונן'],
-        type: 'standby',
-        isClosedSaturdayFriday: true,
+        type: 'standby', // כונן
+        isClosedWeekendFriday: true,
         linkedSaturday: saturdayDateStr
       };
     }
   }
   
-  // Check if this is a closed Saturday
+  // Closed weekend Saturday (flag is on Friday)
   if (weekdayNum === 6) { // Saturday
-    // Check if this Saturday is closed
-    const isClosed = context.weekendTypes[date] === true;
-    if (isClosed) {
+    const fridayDateStr = addDaysLocal(date, -1);
+    const isClosedFromFriday = context.weekendTypes[fridayDateStr] === true;
+    if (isClosedFromFriday) {
       return {
-        guidesNeeded: 2, // conan from Friday + motzash
+        guidesNeeded: 2, // Friday כונן continues + add מוצ״ש
         roles: ['כונן', 'מוצ״ש'],
-        type: 'closed_saturday',
-        isClosedSaturday: true,
-        requiresMotzash: true
+        type: 'closed_weekend_saturday',
+        isClosedWeekend: true,
+        requiresMotzash: true,
+        linkedFriday: fridayDateStr
       };
     }
   }
@@ -2657,11 +3109,7 @@ function getDayRequirementsPG(dayInfo, context) {
 
 async function handleClosedSaturdayWeekendPG(fridayInfo, context) {
   const { date: fridayDate } = fridayInfo;
-  
-  // Get Saturday date
-  const saturdayDate = new Date(fridayDate);
-  saturdayDate.setDate(saturdayDate.getDate() + 1);
-  const saturdayDateStr = saturdayDate.toISOString().split('T')[0];
+  const saturdayDateStr = addDaysLocal(fridayDate, 1);
   
   console.log(`Handling closed Saturday weekend: ${fridayDate} -> ${saturdayDateStr}`);
   
@@ -2682,8 +3130,39 @@ async function handleClosedSaturdayWeekendPG(fridayInfo, context) {
     .filter(guide => guide.availability.available)
     .sort((a, b) => a.availability.score - b.availability.score);
   
+  console.log(`Available standby guides for ${fridayDate}: ${availableForStandby.length}/${context.guides.length}`);
+  availableForStandby.forEach((guide, index) => {
+    console.log(`  ${index + 1}. ${guide.name} (score: ${guide.availability.score}, reason: ${guide.availability.reason})`);
+  });
+  
   if (availableForStandby.length === 0) {
     console.log(`No available standby guides for closed Saturday ${fridayDate}`);
+    // Try to find any available guide, even if they've reached standby limit
+    const anyAvailable = fridayAvailable
+      .filter(guide => guide.availability.available || guide.availability.reason === 'כבר עבד כונן פעמיים החודש')
+      .sort((a, b) => a.availability.score - b.availability.score);
+    
+    if (anyAvailable.length > 0) {
+      console.log(`Using guide despite standby limit: ${anyAvailable[0].name}`);
+      const standbyGuide = anyAvailable[0];
+      
+      return {
+        date: fridayDate,
+        weekday: getHebrewWeekday(new Date(fridayDate).getDay()),
+        type: 'כונן',
+        guide1_id: standbyGuide.id,
+        guide1_name: standbyGuide.name,
+        guide1_role: 'כונן',
+        guide2_id: null,
+        guide2_name: null,
+        guide2_role: null,
+        is_manual: false,
+        is_locked: false,
+        created_by: null,
+        linkedSaturday: saturdayDateStr,
+        warning: 'Guide assigned despite standby limit'
+      };
+    }
     return null;
   }
   
@@ -2704,8 +3183,7 @@ async function handleClosedSaturdayWeekendPG(fridayInfo, context) {
     is_manual: false,
     is_locked: false,
     created_by: null,
-    linkedSaturday: saturdayDateStr,
-    standbyGuideId: standbyGuide.id, // For Saturday processing
+    linkedSaturday: saturdayDateStr
   };
 }
 
@@ -2985,14 +3463,13 @@ async function selectOptimalGuidesPG(availableGuides, requirements, context, dat
   
   const { guidesNeeded, roles, type } = requirements;
   
-  // Handle closed Saturday (Saturday day)
-  if (type === 'closed_saturday') {
+  // Handle closed weekend (Saturday day)
+  if (type === 'closed_weekend_saturday') {
     // Find the standby guide from Friday
-    const fridayDate = new Date(date);
-    fridayDate.setDate(fridayDate.getDate() - 1);
-    const fridayDateStr = fridayDate.toISOString().split('T')[0];
+    const fridayDateStr = addDaysLocal(date, -1);
     
-    const fridayAssignment = context.manualAssignments[fridayDateStr];
+    // Look for Friday assignment in both manual assignments and existing assignments
+    let fridayAssignment = context.manualAssignments[fridayDateStr] || context.assignments?.find(a => a.date === fridayDateStr);
     let standbyGuide = null;
     
     if (fridayAssignment && fridayAssignment.guide1_id) {
@@ -3003,6 +3480,7 @@ async function selectOptimalGuidesPG(availableGuides, requirements, context, dat
     const motzashCandidates = availableGuides.filter(g => g.id !== standbyGuide?.id);
     const motzashGuide = motzashCandidates[0];
     
+    // Build assignment with two roles: כונן + מוצ"ש
     return {
       date: date,
       weekday: getHebrewWeekday(new Date(date).getDay()),
@@ -3019,7 +3497,7 @@ async function selectOptimalGuidesPG(availableGuides, requirements, context, dat
     };
   }
   
-  // Handle standby assignment (Friday for closed Saturday) with no_conan rule validation
+  // Handle standby assignment (Friday for closed weekend) with no_conan rule validation
   if (type === 'standby') {
     // Filter out guides with no_conan rule
     const validStandbyGuides = availableGuides.filter(guide => {
@@ -3205,14 +3683,36 @@ function updateGuideStatsForAssignmentPG(stats, date, role) {
 async function saveAssignmentsToDatabasePG(assignments, year, month, guides) {
   console.log(`💾 Saving ${assignments.length} assignments to database`);
   
-  // Delete existing assignments for the month
+  // Delete existing auto assignments for the month, but preserve manual ones
   await pool.query(`
     DELETE FROM schedule 
-    WHERE EXTRACT(YEAR FROM date) = $1 AND EXTRACT(MONTH FROM date) = $2
+    WHERE EXTRACT(YEAR FROM date) = $1 
+      AND EXTRACT(MONTH FROM date) = $2
+      AND (is_manual IS NULL OR is_manual = false)
   `, [year, month]);
+
+  // Ensure the schedule_id_seq is ahead of the current MAX(id) to avoid PK collisions
+  await pool.query(
+    "SELECT setval('schedule_id_seq', COALESCE((SELECT MAX(id) FROM schedule), 0) + 1, false)"
+  );
+
+  // Defensive guard: never write auto assignment if a manual assignment exists for that date
+  const manualDatesResult = await pool.query(`
+    SELECT date::date AS date_only
+    FROM schedule
+    WHERE EXTRACT(YEAR FROM date) = $1
+      AND EXTRACT(MONTH FROM date) = $2
+      AND is_manual = true
+  `, [year, month]);
+  const manualDateSet = new Set(manualDatesResult.rows.map(r => r.date_only.toISOString().split('T')[0]));
   
   // Insert new assignments
   for (const assignment of assignments) {
+    // Skip if there's a manual assignment for this date
+    if (manualDateSet.has(assignment.date)) {
+      console.log(`↪︎ Skipping ${assignment.date} insert because a manual assignment exists`);
+      continue;
+    }
     // Get guide names for the assignment
     const guide1Name = assignment.guide1_id ? guides.find(g => g.id === assignment.guide1_id)?.name : null;
     const guide2Name = assignment.guide2_id ? guides.find(g => g.id === assignment.guide2_id)?.name : null;
@@ -3222,12 +3722,26 @@ async function saveAssignmentsToDatabasePG(assignments, year, month, guides) {
     const weekdays = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
     const weekdayName = weekdays[dateObj.getDay()];
     
-    // Determine type based on weekday
-    const type = (dateObj.getDay() === 5 || dateObj.getDay() === 6) ? 'weekend' : 'weekday';
+    // Preserve the semantic assignment type if provided (e.g., 'כונן', 'מוצ״ש', 'רגיל+חפיפה')
+    // Fallback to generic weekday/weekend only if assignment.type is missing
+    const type = assignment.type || ((dateObj.getDay() === 5 || dateObj.getDay() === 6) ? 'weekend' : 'weekday');
     
     await pool.query(`
-      INSERT INTO schedule (date, weekday, type, guide1_id, guide2_id, guide1_role, guide2_role, guide1_name, guide2_name, created_at, updated_at)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      INSERT INTO schedule (
+        date, weekday, type,
+        guide1_id, guide2_id,
+        guide1_role, guide2_role,
+        guide1_name, guide2_name,
+        is_manual, is_locked,
+        created_at, updated_at
+      ) VALUES (
+        $1, $2, $3,
+        $4, $5,
+        $6, $7,
+        $8, $9,
+        false, false,
+        NOW(), NOW()
+      )
     `, [
       assignment.date,
       weekdayName,
@@ -3237,9 +3751,7 @@ async function saveAssignmentsToDatabasePG(assignments, year, month, guides) {
       assignment.guide1_role,
       assignment.guide2_role,
       guide1Name,
-      guide2Name,
-      assignment.created_at,
-      assignment.updated_at
+      guide2Name
     ]);
   }
   
@@ -3289,10 +3801,17 @@ async function getWeekendType(date, weekdayNum) {
       return 'regular';
     }
     
+    // Normalize: flags are stored on Friday; if Saturday given, check Friday
+    let lookupDate = date;
+    if (weekdayNum === 6) {
+      const d = new Date(date + 'T00:00:00');
+      d.setDate(d.getDate() - 1);
+      lookupDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
     // Check weekend_types table
     const result = await pool.query(`
       SELECT is_closed FROM weekend_types WHERE date = $1
-    `, [date]);
+    `, [lookupDate]);
     
     if (result.rows.length > 0) {
       return result.rows[0].is_closed ? 'closed' : 'regular';
@@ -3552,6 +4071,273 @@ function calculateDayStatisticsPG(schedule, year, month) {
 }
 
 // ============================================================================
+// SIGALIT CHAT API ENDPOINTS
+// ============================================================================
+
+// Process chat messages with AI
+app.post('/api/ai/chat-message', async (req, res) => {
+  try {
+    const { message, context, user_id } = req.body;
+
+    // Mock AI response for now - replace with actual AI integration
+    const responses = {
+      'שלום': 'שלום! אני סיגלית, הבוט החכם של המערכת. איך אני יכולה לעזור לך היום? 😊',
+      'איך': [
+        'יש לי כמה הצעות לעזרה:',
+        '• איך ליצור לוח משמרות חדש',
+        '• איך להוסיף מדריכים',
+        '• איך להגדיר אילוצים',
+        'מה מעניין אותך?'
+      ].join('\n'),
+      'הוספה': 'כדי להוסיף מדריך חדש:\n1. לחץ על "מדריכים" בתפריט העליון\n2. לחץ על "הוסף מדריך חדש"\n3. מלא את הפרטים הנדרשים\n4. שמור',
+      'בעיה': 'איזו בעיה נתקלת? אני כאן לעזור! תאר לי מה קורה ואני אנסה לספק פתרון.',
+      'default': 'מעניין... תן לי רגע לחשוב על זה. איך אני יכולה לעזור לך עם הנושא הזה?'
+    };
+
+    // Simple intent recognition
+    let response = responses.default;
+    const lowerMessage = message.toLowerCase();
+    
+    if (lowerMessage.includes('שלום') || lowerMessage.includes('היי')) {
+      response = responses['שלום'];
+    } else if (lowerMessage.includes('איך') || lowerMessage.includes('עזרה')) {
+      response = responses['איך'];
+    } else if (lowerMessage.includes('הוספה') || lowerMessage.includes('מדריך חדש')) {
+      response = responses['הוספה'];
+    } else if (lowerMessage.includes('בעיה') || lowerMessage.includes('שגיאה')) {
+      response = responses['בעיה'];
+    }
+
+    // Add context-specific responses
+    if (context === 'scheduler') {
+      response += '\n\nראיתי שאתה בדף יצירת הלוח. האם תרצה עזרה עם הגדרת המשמרות?';
+    }
+
+    res.json({
+      success: true,
+      response,
+      suggestions: [
+        '💡 עזרה עם יצירת לוח',
+        '👥 הוספת מדריכים',
+        '⚙️ הגדרת אילוצים',
+        '📊 הצגת דוחות'
+      ],
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('Chat message error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'שגיאה בעיבוד ההודעה'
+    });
+  }
+});
+
+// Get scheduler context for smart suggestions
+app.get('/api/ai/scheduler-context', async (req, res) => {
+  try {
+    const { house_id = 1 } = req.query;
+
+    // Get current scheduler state
+    const guidesResult = await pool.query(
+      'SELECT id, name, role FROM users WHERE house_id = $1 AND (role = $2 OR role = $3) ORDER BY name',
+      [house_id, 'מדריך', 'רכז']
+    );
+
+    const constraintsResult = await pool.query(
+      'SELECT COUNT(*) as count FROM constraints WHERE house_id = $1',
+      [house_id]
+    );
+
+    const recentScheduleResult = await pool.query(
+      'SELECT COUNT(*) as count FROM schedule WHERE house_id = $1 AND date >= CURRENT_DATE - INTERVAL \'30 days\'',
+      [house_id]
+    );
+
+    const context = {
+      guides_count: guidesResult.rows.length,
+      active_constraints: parseInt(constraintsResult.rows[0].count),
+      recent_schedules: parseInt(recentScheduleResult.rows[0].count),
+      current_page: 'scheduler'
+    };
+
+    // Generate smart suggestions based on context
+    let suggestions = [];
+    
+    if (context.guides_count < 5) {
+      suggestions.push({
+        type: 'warning',
+        message: 'מספר המדריכים נמוך - כדאי להוסיף עוד מדריכים',
+        action: 'הוסף מדריכים',
+        priority: 'high'
+      });
+    }
+
+    if (context.active_constraints === 0) {
+      suggestions.push({
+        type: 'tip',
+        message: 'לא הוגדרו אילוצים - זה יעזור ליצור לוח איכותי יותר',
+        action: 'הגדר אילוצים',
+        priority: 'medium'
+      });
+    }
+
+    if (context.recent_schedules === 0) {
+      suggestions.push({
+        type: 'info',
+        message: 'זה נראה כמו השימוש הראשון שלך במערכת!',
+        action: 'צפה במדריך',
+        priority: 'low'
+      });
+    }
+
+    res.json({
+      success: true,
+      context,
+      suggestions,
+      proactive_message: suggestions.length > 0 ? 'יש לי כמה הצעות שיכולות לעזור לך!' : null
+    });
+
+  } catch (error) {
+    console.error('Scheduler context error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'שגיאה בקבלת הקשר'
+    });
+  }
+});
+
+// Generate proactive suggestions
+app.post('/api/ai/proactive-suggestions', async (req, res) => {
+  try {
+    const { action, context } = req.body;
+
+    let suggestions = [];
+
+    switch (action) {
+      case 'create_schedule':
+        suggestions = [
+          '📅 כדאי לבדוק שכל האילוצים מעודכנים',
+          '👥 וודא שכל המדריכים פעילים במערכת',
+          '⏰ המערכת תיצור לוח אוטומטי בהתבסס על ההעדפות'
+        ];
+        break;
+
+      case 'add_guide':
+        suggestions = [
+          '📝 מלא את כל השדות הנדרשים',
+          '🏠 בחר את הבית המתאים',
+          '⚙️ הגדר העדפות ואילוצים למדריך'
+        ];
+        break;
+
+      case 'view_reports':
+        suggestions = [
+          '📊 תוכל לראות סטטיסטיקות מפורטות',
+          '📈 ניתן לייצא דוחות לאקסל',
+          '🔍 השתמש בפילטרים למידע ממוקד'
+        ];
+        break;
+
+      default:
+        suggestions = [
+          '💡 אני כאן לעזור עם כל שאלה',
+          '🚀 בוא ננצל את כל היכולות של המערכת',
+          '📞 פנה אליי בכל עת לעזרה'
+        ];
+    }
+
+    res.json({
+      success: true,
+      suggestions,
+      action_context: action
+    });
+
+  } catch (error) {
+    console.error('Proactive suggestions error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'שגיאה ביצירת הצעות'
+    });
+  }
+});
+
+// Get contextual help for specific topics
+app.get('/api/ai/help/:topic', async (req, res) => {
+  try {
+    const { topic } = req.params;
+
+    const helpContent = {
+      'scheduler': {
+        title: 'עזרה - יצירת לוח משמרות',
+        content: [
+          '1. בחר את החודש והשנה הרצויים',
+          '2. וודא שכל המדריכים והאילוצים מעודכנים',
+          '3. לחץ על "צור לוח אוטומטי"',
+          '4. בדוק את התוצאה ובצע התאמות ידניות במידת הצורך',
+          '5. שמור כטיוטה או אשר כלוח סופי'
+        ],
+        tips: [
+          '💡 ככל שתגדיר יותר אילוצים, הלוח יהיה מדויק יותר',
+          '⚖️ המערכת מנסה לאזן בין המדריכים אוטומטית',
+          '🔄 אם התוצאה לא מספקת, נסה שוב - האלגוריתם משתנה'
+        ]
+      },
+      'constraints': {
+        title: 'עזרה - הגדרת אילוצים',
+        content: [
+          '1. היכנס לדף האילוצים',
+          '2. בחר את סוג האילוץ (קבוע/חופשה/העדפה)',
+          '3. בחר את המדריך והתאריכים',
+          '4. הוסף הסבר במידת הצורך',
+          '5. שמור את האילוץ'
+        ],
+        tips: [
+          '🎯 אילוצים קבועים עוברים על כל האחרים',
+          '🌴 חופשות מונעות שיבוץ באותו תקופה',
+          '⭐ העדפות מנסות לכבד אבל לא מחויבות'
+        ]
+      },
+      'guides': {
+        title: 'עזרה - ניהול מדריכים',
+        content: [
+          '1. היכנס לדף המדריכים',
+          '2. לחץ "הוסף מדריך חדש"',
+          '3. מלא שם, אימייל ופלאפון',
+          '4. בחר תפקיד (מדריך/רכז)',
+          '5. הקצה לבית הרצוי'
+        ],
+        tips: [
+          '👤 כל מדריך צריך פרטי התקשרות עדכניים',
+          '🏠 מדריך יכול להיות משויך למספר בתים',
+          '🔒 רק רכזים יכולים להוסיף מדריכים חדשים'
+        ]
+      }
+    };
+
+    const help = helpContent[topic] || {
+      title: 'עזרה כללית',
+      content: ['אני כאן לעזור! על מה תרצה לדעת יותר?'],
+      tips: ['💬 פשוט שאל אותי כל שאלה']
+    };
+
+    res.json({
+      success: true,
+      help,
+      topic
+    });
+
+  } catch (error) {
+    console.error('Help content error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'שגיאה בקבלת עזרה'
+    });
+  }
+});
+
+// ============================================================================
 // SERVER STARTUP
 // ============================================================================
 
@@ -3563,6 +4349,8 @@ async function startServer() {
       console.error('❌ Failed to connect to PostgreSQL. Exiting...');
       process.exit(1);
     }
+    
+    // AI Agent is already initialized above
     
     // Initialize default data
     await initializeDefaultTypes();
@@ -3579,5 +4367,132 @@ async function startServer() {
   }
 }
 
+// ============================================================================
+// DOCTOR REFERRALS API ENDPOINTS
+// ============================================================================
+
+// Get all doctor referrals (with optional date filter)
+app.get('/api/doctor-referrals', async (req, res) => {
+  try {
+    const { date } = req.query;
+    let query = `
+      SELECT id, patient, reason, doctor, date, status, created_by, created_at, closed_at, closed_by
+      FROM doctor_referrals
+    `;
+    let params = [];
+    
+    if (date) {
+      query += ` WHERE date = $1`;
+      params.push(date);
+    }
+    
+    query += ` ORDER BY created_at DESC`;
+    
+    const result = await pool.query(query, params);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching doctor referrals:', error);
+    // If table doesn't exist, return empty array
+    if (error.code === '42P01') {
+      res.json([]);
+    } else {
+      res.status(500).json({ error: 'Failed to fetch doctor referrals' });
+    }
+  }
+});
+
+// Create new doctor referral
+app.post('/api/doctor-referrals', async (req, res) => {
+  try {
+    const { patient, reason, doctor, date, createdBy } = req.body;
+    
+    const result = await pool.query(`
+      INSERT INTO doctor_referrals (patient, reason, doctor, date, status, created_by, created_at)
+      VALUES ($1, $2, $3, $4, 'pending', $5, NOW())
+      RETURNING *
+    `, [patient, reason, doctor, date, createdBy]);
+    
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error creating doctor referral:', error);
+    // If table doesn't exist, return mock success
+    if (error.code === '42P01') {
+      res.json({ 
+        id: Date.now(), 
+        patient, reason, doctor, date, 
+        status: 'pending', 
+        created_by: createdBy,
+        created_at: new Date().toISOString()
+      });
+    } else {
+      res.status(500).json({ error: 'Failed to create doctor referral' });
+    }
+  }
+});
+
+// Update doctor referral
+app.put('/api/doctor-referrals/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
+    
+    const result = await pool.query(`
+      UPDATE doctor_referrals 
+      SET patient = $1, reason = $2, doctor = $3, date = $4, status = $5, 
+          closed_at = $6, closed_by = $7, updated_at = NOW()
+      WHERE id = $8
+      RETURNING *
+    `, [
+      updateData.patient, updateData.reason, updateData.doctor, updateData.date,
+      updateData.status, updateData.closedAt, updateData.closedBy, id
+    ]);
+    
+    if (result.rows.length > 0) {
+      res.json(result.rows[0]);
+    } else {
+      res.status(404).json({ error: 'Referral not found' });
+    }
+  } catch (error) {
+    console.error('Error updating doctor referral:', error);
+    if (error.code === '42P01') {
+      res.json({ success: true, id: parseInt(id) });
+    } else {
+      res.status(500).json({ error: 'Failed to update doctor referral' });
+    }
+  }
+});
+
+// Delete doctor referral
+app.delete('/api/doctor-referrals/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const result = await pool.query(`
+      DELETE FROM doctor_referrals WHERE id = $1
+    `, [id]);
+    
+    if (result.rowCount > 0) {
+      res.json({ success: true });
+    } else {
+      res.status(404).json({ error: 'Referral not found' });
+    }
+  } catch (error) {
+    console.error('Error deleting doctor referral:', error);
+    if (error.code === '42P01') {
+      res.json({ success: true });
+    } else {
+      res.status(500).json({ error: 'Failed to delete doctor referral' });
+    }
+  }
+});
+
 // Start the server
 startServer();
+
+// Export functions for testing
+module.exports = {
+  runCompleteAutoSchedulingPG,
+  assignDayOptimalPG,
+  handleClosedSaturdayWeekendPG,
+  getDayRequirementsPG
+};

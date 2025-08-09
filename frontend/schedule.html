@@ -541,7 +541,7 @@
             document.getElementById('current-month-label').innerText = `${monthsHe[m-1]} ${y}`;
             Promise.all([
                 fetch(`http://localhost:4000/api/schedule?month=${y}-${pad2(m)}`).then(res=>res.json()),
-                fetch(`http://localhost:4000/api/guides/enhanced`).then(res=>res.json()),
+                fetch(`${(location.port==='8080')?'http://localhost:4000':''}/api/users/enhanced?role=%D7%9E%D7%93%D7%A8%D7%99%D7%9A`).then(res=>res.json()),
                 fetch('http://localhost:4000/api/constraints').then(res=>res.json()),
                 fetch('http://localhost:4000/api/fixed-constraints').then(res=>res.json()),
                 fetch('http://localhost:4000/api/vacations').then(res=>res.json()),
@@ -841,8 +841,8 @@
                             console.log(`Adding my-shift class to guide2: ${guide2}`);
                         }
                         
-                        let guide1Html = guide1 ? `<div class="${guide1Class}">${guide1}${isGuide1MyShift ? ' 👤' : ''}</div>` : "";
-                        let guide2Html = guide2 ? `<div class="${guide2Class}">${guide2}${isGuide2MyShift ? ' 👤' : ''}</div>` : "";
+                        let guide1Html = guide1 ? `<div class="${guide1Class}">${getFirstName(guide1)}${isGuide1MyShift ? ' 👤' : ''}</div>` : "";
+                        let guide2Html = guide2 ? `<div class="${guide2Class}">${getFirstName(guide2)}${isGuide2MyShift ? ' 👤' : ''}</div>` : "";
                         let weekendBadgeHtml = weekendLabel ? `<div class="weekend-badge ${weekendLabel === 'סגור' ? 'closed' : 'open'}">${weekendLabel}</div>` : "";
                         
                         // Extract day number from label
@@ -942,6 +942,15 @@
             
             return userData;
         }
+        
+        // פונקציה לחילוץ השם הפרטי מהשם המלא
+        function getFirstName(fullName) {
+            if (!fullName) return "";
+            
+            // חילץ את המילה הראשונה (השם הפרטי)
+            const nameParts = fullName.trim().split(' ');
+            return nameParts[0];
+        }
 
         function openDayEditor(date) {
             // This function should open the day editor
@@ -1001,5 +1010,6 @@
         }
     </script>
     <script src="header-functions.js"></script>
+    <script src="ai-assistant.js"></script>
 </body>
 </html>

@@ -524,14 +524,14 @@
                     </div>
                     <div class="stat-card">
                         <div class="stat-number" id="manual-assignments">--</div>
-                        <div class="stat-label">שיבוצים ידניים</div>
+                        <div class="stat-label">ימים לא שובצו</div>
                         <div class="stat-progress">
                             <div class="stat-progress-fill" id="manual-progress" style="width: 0%"></div>
                         </div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-number" id="auto-assignments">--</div>
-                        <div class="stat-label">שיבוצים אוטומטיים</div>
+                        <div class="stat-label">ימים עם כפילות</div>
                         <div class="stat-progress">
                             <div class="stat-progress-fill" id="auto-progress" style="width: 0%"></div>
                         </div>
@@ -558,9 +558,9 @@
                         <tr>
                             <th style="text-align: right;">מדריך</th>
                             <th>סה"כ משמרות</th>
-                            <th>ידני/אוטו</th>
-                            <th>רגיל</th>
-                            <th>חפיפה</th>
+                            <th>חול/שבת</th>
+                            <th>שעות רגיל</th>
+                            <th>שעות לילה</th>
                             <th>כונן</th>
                             <th>מוצ"ש</th>
                             <th>סופי שבוע</th>
@@ -767,16 +767,17 @@
             // Update timestamp
             updateTimestamp();
             
-            // Initialize charts after a delay to ensure Chart.js is loaded
-            setTimeout(() => {
-                console.log('Chart.js available:', typeof Chart !== 'undefined');
-                initializeCharts();
-            }, 100);
+                    // Initialize charts after a delay to ensure Chart.js is loaded
+        setTimeout(() => {
+            console.log('Chart.js available:', typeof Chart !== 'undefined');
+            destroyCharts(); // Ensure clean slate
+            initializeCharts();
+        }, 100);
         }
 
         async function loadGuides() {
             try {
-                const url = `${API_BASE_URL}/api/guides?t=${Date.now()}`;
+                const url = `${API_BASE_URL}/api/users?t=${Date.now()}`;
                 console.log('Loading guides from:', url);
                 const response = await fetch(url, {
                     method: 'GET',
@@ -832,8 +833,11 @@
                     updateCurrentPeriod(month);
                     generateAlerts(statisticsData);
                     
-                    // Reinitialize charts with new data
-                    setTimeout(initializeCharts, 100);
+                                    // Reinitialize charts with new data
+                setTimeout(() => {
+                    destroyCharts(); // Ensure clean slate
+                    initializeCharts();
+                }, 100);
                 } else {
                     showError('שגיאה בטעינת הנתונים: ' + (statisticsData.error || 'שגיאה לא ידועה'));
                 }
@@ -858,14 +862,14 @@
             // Update statistics cards
             const totalDays = new Date(data.month.split('-')[0], data.month.split('-')[1], 0).getDate();
             const assignedDays = data.day_statistics?.assigned_days || 0;
-            const manualDays = data.day_statistics?.manual_days || 0;
-            const autoDays = data.day_statistics?.auto_days || 0;
+            const unassignedDays = data.day_statistics?.unassigned_days || 0;
+            const doubleAssignedDays = data.day_statistics?.double_assigned_days || 0;
             const avgShifts = data.averages?.shifts_per_guide || 0;
             
             document.getElementById('total-days').textContent = totalDays;
             document.getElementById('assigned-days').textContent = `${assignedDays}/${totalDays}`;
-            document.getElementById('manual-assignments').textContent = manualDays;
-            document.getElementById('auto-assignments').textContent = autoDays;
+            document.getElementById('manual-assignments').textContent = unassignedDays;
+            document.getElementById('auto-assignments').textContent = doubleAssignedDays;
             document.getElementById('average-shifts').textContent = avgShifts.toFixed(1);
             
             // Calculate balance deviation
@@ -877,11 +881,11 @@
             const assignmentRate = totalDays > 0 ? (assignedDays / totalDays) * 100 : 0;
             document.getElementById('assigned-days-progress').style.width = assignmentRate + '%';
             
-            const manualRate = assignedDays > 0 ? (manualDays / assignedDays) * 100 : 0;
-            document.getElementById('manual-progress').style.width = manualRate + '%';
+            const unassignedRate = totalDays > 0 ? (unassignedDays / totalDays) * 100 : 0;
+            document.getElementById('manual-progress').style.width = unassignedRate + '%';
             
-            const autoRate = assignedDays > 0 ? (autoDays / assignedDays) * 100 : 0;
-            document.getElementById('auto-progress').style.width = autoRate + '%';
+            const doubleAssignedRate = assignedDays > 0 ? (doubleAssignedDays / assignedDays) * 100 : 0;
+            document.getElementById('auto-progress').style.width = doubleAssignedRate + '%';
             
             const avgRate = Math.min((avgShifts / 15) * 100, 100); // Assume max 15 shifts
             document.getElementById('avg-shifts-progress').style.width = avgRate + '%';
@@ -900,11 +904,11 @@
                 row.innerHTML = `
                     <td class="guide-name">${guide.name}</td>
                     <td><strong>${guide.total_shifts}</strong></td>
-                    <td>${guide.manual_shifts || 0}/${guide.auto_shifts || 0}</td>
-                    <td>${guide.regular_shifts || 0}</td>
-                    <td>${guide.overlap_shifts || 0}</td>
-                    <td>${guide.conan_shifts || 0}</td>
-                    <td>${guide.motzash_shifts || 0}</td>
+                    <td>${guide.weekday_shifts || 0}/${guide.weekend_shifts || 0}</td>
+                    <td>${guide.regular_hours || 0}</td>
+                    <td>${guide.night_hours || 0}</td>
+                    <td>${guide.conan_hours || 0}</td>
+                    <td>${guide.motzash_hours || 0}</td>
                     <td>${guide.weekend_shifts || 0}</td>
                     <td>
                         <span class="balance-indicator balance-${balanceStatus.class}">
@@ -924,11 +928,11 @@
             avgRow.innerHTML = `
                 <td class="guide-name">ממוצע</td>
                 <td><strong>${avgShifts.toFixed(1)}</strong></td>
-                <td>${(data.averages?.manual_per_guide || 0).toFixed(1)}/${(data.averages?.auto_per_guide || 0).toFixed(1)}</td>
-                <td>${(data.averages?.regular_per_guide || 0).toFixed(1)}</td>
-                <td>${(data.averages?.overlap_per_guide || 0).toFixed(1)}</td>
-                <td>${(data.averages?.conan_per_guide || 0).toFixed(1)}</td>
-                <td>${(data.averages?.motzash_per_guide || 0).toFixed(1)}</td>
+                <td>${(data.averages?.weekday_per_guide || 0).toFixed(1)}/${(data.averages?.weekend_per_guide || 0).toFixed(1)}</td>
+                <td>${(data.averages?.regular_hours_per_guide || 0).toFixed(1)}</td>
+                <td>${(data.averages?.night_hours_per_guide || 0).toFixed(1)}</td>
+                <td>${(data.averages?.conan_hours_per_guide || 0).toFixed(1)}</td>
+                <td>${(data.averages?.motzash_hours_per_guide || 0).toFixed(1)}</td>
                 <td>${(data.averages?.weekend_per_guide || 0).toFixed(1)}</td>
                 <td>-</td>
             `;
@@ -939,23 +943,50 @@
             const tbody = document.getElementById('hours-tbody');
             tbody.innerHTML = '';
             
+            // Calculate averages first
+            const totalGuides = data.guide_statistics.length;
+            const avgRegularHours = data.guide_statistics.reduce((sum, g) => sum + (g.regular_hours || 0), 0) / totalGuides;
+            const avgNightHours = data.guide_statistics.reduce((sum, g) => sum + (g.night_hours || 0), 0) / totalGuides;
+            const avgShabbatHours = data.guide_statistics.reduce((sum, g) => sum + (g.shabbat_hours || 0), 0) / totalGuides;
+            const avgConanHours = data.guide_statistics.reduce((sum, g) => sum + (g.conan_hours || 0), 0) / totalGuides;
+            const avgConanShabbatHours = data.guide_statistics.reduce((sum, g) => sum + (g.conan_shabbat_hours || 0), 0) / totalGuides;
+            const avgMotzashHours = data.guide_statistics.reduce((sum, g) => sum + (g.motzash_hours || 0), 0) / totalGuides;
+            
+            // Calculate average weighted hours (salary factor)
+            const avgWeightedHours = (avgRegularHours * 1.0) + (avgNightHours * 1.5) + (avgShabbatHours * 2.0) + 
+                                   (avgConanHours * 0.3) + (avgConanShabbatHours * 0.6) + (avgMotzashHours * 1.0);
+            
             data.guide_statistics.forEach(guide => {
                 const row = document.createElement('tr');
 
-                const percentage = data.averages?.salary_factor_per_guide > 0 ? 
-                    ((guide.salary_factor || 0) / data.averages.salary_factor_per_guide * 100) : 0;
+                // Calculate total hours and salary factor
+                const regularHours = guide.regular_hours || 0;
+                const nightHours = guide.night_hours || 0;
+                const shabbatHours = guide.shabbat_hours || 0;
+                const conanHours = guide.conan_hours || 0;
+                const conanShabbatHours = guide.conan_shabbat_hours || 0;
+                const motzashHours = guide.motzash_hours || 0;
+                
+                // Calculate weighted total hours (salary factor)
+                const totalWeightedHours = (regularHours * 1.0) + (nightHours * 1.5) + (shabbatHours * 2.0) + 
+                                          (conanHours * 0.3) + (conanShabbatHours * 0.6) + (motzashHours * 1.0);
+                
+                // Calculate total raw hours
+                const totalRawHours = regularHours + nightHours + shabbatHours + conanHours + conanShabbatHours + motzashHours;
+                
+                const percentage = avgWeightedHours > 0 ? (totalWeightedHours / avgWeightedHours * 100) : 0;
                 const percentageClass = percentage > 120 ? 'critical' : percentage < 80 ? 'warning' : 'good';
                 
                 row.innerHTML = `
                     <td class="guide-name">${guide.name}</td>
-                    <td>${guide.regular_hours || 0}</td>
-                    <td>${guide.night_hours || 0}</td>
-                    <td>${guide.shabbat_hours || 0}</td>
-                    <td>${guide.conan_hours || 0}</td>
-                    <td>${guide.conan_shabbat_hours || 0}</td>
-                    <td>${guide.motzash_hours || 0}</td>
-                    <td><strong>${guide.total_hours || 0}</strong></td>
-                    <td><strong>${(guide.salary_factor || 0).toFixed(1)}</strong></td>
+                    <td>${regularHours}</td>
+                    <td>${nightHours}</td>
+                    <td>${shabbatHours}</td>
+                    <td>${conanHours}</td>
+                    <td>${conanShabbatHours}</td>
+                    <td>${motzashHours}</td>
+                    <td><strong>${totalWeightedHours.toFixed(1)}</strong></td>
+                    <td><strong>${totalWeightedHours.toFixed(1)}</strong></td>
                     <td>
                         <span style="color: ${percentageClass === 'critical' ? '#ef4444' : percentageClass === 'warning' ? '#f59e0b' : '#10b981'}; font-weight: bold;">
                             ${percentage.toFixed(0)}%
@@ -972,14 +1003,14 @@
             avgRow.style.borderTop = '2px solid #667eea';
             avgRow.innerHTML = `
                 <td class="guide-name">ממוצע</td>
-                <td>${(data.averages?.regular_hours || 0).toFixed(1)}</td>
-                <td>${(data.averages?.night_hours || 0).toFixed(1)}</td>
-                <td>${(data.averages?.shabbat_hours || 0).toFixed(1)}</td>
-                <td>${(data.averages?.conan_hours || 0).toFixed(1)}</td>
-                <td>${(data.averages?.conan_shabbat_hours || 0).toFixed(1)}</td>
-                <td>${(data.averages?.motzash_hours || 0).toFixed(1)}</td>
-                <td><strong>${(data.averages?.total_hours || 0).toFixed(1)}</strong></td>
-                <td><strong>${(data.averages?.salary_factor_per_guide || 0).toFixed(1)}</strong></td>
+                <td>${avgRegularHours.toFixed(1)}</td>
+                <td>${avgNightHours.toFixed(1)}</td>
+                <td>${avgShabbatHours.toFixed(1)}</td>
+                <td>${avgConanHours.toFixed(1)}</td>
+                <td>${avgConanShabbatHours.toFixed(1)}</td>
+                <td>${avgMotzashHours.toFixed(1)}</td>
+                <td><strong>${avgWeightedHours.toFixed(1)}</strong></td>
+                <td><strong>${avgWeightedHours.toFixed(1)}</strong></td>
                 <td>100%</td>
             `;
             tbody.appendChild(avgRow);
@@ -1118,7 +1149,7 @@
                 typesChart = new Chart(ctx2, {
                     type: 'doughnut',
                     data: {
-                        labels: ['רגיל', 'חפיפה', 'כונן', 'מוצ״ש'],
+                        labels: ['ימי חול', 'סופי שבוע', 'כונן', 'מוצ״ש'],
                         datasets: [{
                             data: [1, 1, 1, 1],
                             backgroundColor: chartColors.primary.slice(0, 4),
@@ -1237,12 +1268,14 @@
             
             // Update shift types chart
             if (typesChart) {
-                const totalRegular = data.guide_statistics.reduce((sum, g) => sum + (g.regular_shifts || 0), 0);
-                const totalOverlap = data.guide_statistics.reduce((sum, g) => sum + (g.overlap_shifts || 0), 0);
-                const totalConan = data.guide_statistics.reduce((sum, g) => sum + (g.conan_shifts || 0), 0);
-                const totalMotzash = data.guide_statistics.reduce((sum, g) => sum + (g.motzash_shifts || 0), 0);
+                // Calculate shift types based on available data
+                const totalWeekday = data.guide_statistics.reduce((sum, g) => sum + (g.weekday_shifts || 0), 0);
+                const totalWeekend = data.guide_statistics.reduce((sum, g) => sum + (g.weekend_shifts || 0), 0);
+                const totalConan = data.guide_statistics.reduce((sum, g) => sum + (g.conan_hours > 0 ? 1 : 0), 0);
+                const totalMotzash = data.guide_statistics.reduce((sum, g) => sum + (g.motzash_hours > 0 ? 1 : 0), 0);
                 
-                typesChart.data.datasets[0].data = [totalRegular, totalOverlap, totalConan, totalMotzash];
+                typesChart.data.labels = ['ימי חול', 'סופי שבוע', 'כונן', 'מוצ״ש'];
+                typesChart.data.datasets[0].data = [totalWeekday, totalWeekend, totalConan, totalMotzash];
                 typesChart.update();
             }
             
@@ -1355,17 +1388,37 @@
         
         // Destroy charts when refreshing to prevent memory leaks
         function destroyCharts() {
-            if (shiftsChart) { shiftsChart.destroy(); shiftsChart = null; }
-            if (typesChart) { typesChart.destroy(); typesChart = null; }
-            if (trendChart) { trendChart.destroy(); trendChart = null; }
-            if (weeklyChart) { weeklyChart.destroy(); weeklyChart = null; }
+            try {
+                if (shiftsChart) { 
+                    shiftsChart.destroy(); 
+                    shiftsChart = null; 
+                }
+                if (typesChart) { 
+                    typesChart.destroy(); 
+                    typesChart = null; 
+                }
+                if (trendChart) { 
+                    trendChart.destroy(); 
+                    trendChart = null; 
+                }
+                if (weeklyChart) { 
+                    weeklyChart.destroy(); 
+                    weeklyChart = null; 
+                }
+            } catch (error) {
+                console.warn('Error destroying charts:', error);
+                // Reset chart variables even if destroy fails
+                shiftsChart = null;
+                typesChart = null;
+                trendChart = null;
+                weeklyChart = null;
+            }
         }
         
         function populateChartsTab(data) {
-            // Initialize charts if they don't exist yet
-            if (!shiftsChart || !typesChart || !trendChart || !weeklyChart) {
-                initializeCharts();
-            }
+            // Always destroy and reinitialize charts to prevent conflicts
+            destroyCharts();
+            initializeCharts();
             // Update charts with data
             updateChartsWithData(data);
         }
@@ -1517,9 +1570,8 @@
             // If charts tab is selected and we have data, initialize charts
             if (tabIndex === 3 && statisticsData) {
                 setTimeout(() => {
-                    if (!shiftsChart || !typesChart || !trendChart || !weeklyChart) {
-                        initializeCharts();
-                    }
+                    destroyCharts(); // Ensure clean slate
+                    initializeCharts();
                     updateChartsWithData(statisticsData);
                 }, 100);
             }

@@ -138,6 +138,16 @@
             font-weight: bold;
         }
         .badge.coordinator { background: #e8f5fe; color: #2186c4; }
+        
+        #coordinators-table {
+            border: 2px solid #e8f5fe;
+            border-radius: 20px;
+        }
+        
+        #coordinators-table th {
+            background: #e8f5fe;
+            color: #2186c4;
+        }
         .badge.regular { background: #e6f7ed; color: #238d4e; }
         .badge.overlap { background: #fff3cd; color: #856404; }
         .badge.oncall { background: #f8d7da; color: #721c24; }
@@ -281,6 +291,7 @@
             .stats-dropdown { min-width: 180px; padding: 8px; }
         }
     </style>
+    <script src="header-functions.js"></script>
 </head>
 <body>
     <div id="main-header"></div>
@@ -288,10 +299,11 @@
     <div class="container">
         <div class="flex-row">
             <h2>ניהול מדריכים</h2>
-            <button class="btn" onclick="showAddForm()">הוסף מדריך חדש</button>
+            <button class="btn" onclick="showAddForm()">הוסף מדריך</button>
             <span class="info">? מה זה "אחוז משרה"</span>
             <button class="icon-btn" title='הסבר על אחוז משרה' onclick="alert('אחוז משרה = יחס עבודה שבועי. 100% זה משרה מלאה, 50% זה חצי משרה וכו׳.')">ℹ️</button>
         </div>
+        <h3 style="color: #2576c4; margin: 30px 0 15px 0; font-size: 1.5rem;">מדריכים</h3>
         <table id="guides-table">
             <thead>
                 <tr>
@@ -306,6 +318,28 @@
                 </tr>
             </thead>
             <tbody id="guides-tbody">
+                <tr><td colspan="8" style="text-align:center;">טוען...</td></tr>
+            </tbody>
+        </table>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin: 40px 0 15px 0;">
+            <h3 style="color: #2576c4; margin: 0; font-size: 1.5rem;">רכזים</h3>
+            <button class="btn" onclick="showAddCoordinatorForm()" style="background: linear-gradient(94deg,#e8f5fe 0,#2186c4 100%);">הוסף רכז חדש</button>
+        </div>
+        <table id="coordinators-table">
+            <thead>
+                <tr>
+                    <th>שם פרטי</th>
+                    <th>שם משפחה</th>
+                    <th>טלפון</th>
+                    <th>אימייל</th>
+                    <th>תפקיד</th>
+                    <th>סוג שיבוץ</th>
+                    <th>אחוז משרה</th>
+                    <th>פעולות</th>
+                </tr>
+            </thead>
+            <tbody id="coordinators-tbody">
                 <tr><td colspan="8" style="text-align:center;">טוען...</td></tr>
             </tbody>
         </table>
@@ -359,12 +393,21 @@
     <div id="main-footer"></div>
 
     <script>
+    // API Base URL - dynamic for dev/prod
+    const API_BASE_URL = (location.port === '8080') ? 'http://localhost:4000' : '';
+    
     // HEADER
     fetch('header.html')
       .then(res => res.text())
       .then(html => {
         document.getElementById('main-header').innerHTML = html;
-        renderHeaderUser();
+        if (typeof renderHeaderUser === 'function') {
+          renderHeaderUser();
+        } else {
+          setTimeout(() => {
+            if (typeof renderHeaderUser === 'function') renderHeaderUser();
+          }, 200);
+        }
       });
     // FOOTER
     fetch('footer.html')
@@ -374,13 +417,13 @@
       });
     // --- קריאת נתונים ---
     async function fetchGuides() {
-        const res = await fetch('http://localhost:4000/api/guides/enhanced');
+        const res = await fetch(`${API_BASE_URL}/api/users`);
         return await res.json();
     }
     
     async function fetchGuideConstraints(guideId) {
         try {
-            const res = await fetch(`http://localhost:4000/api/constraints?user_id=${guideId}`);
+            const res = await fetch(`${API_BASE_URL}/api/constraints?user_id=${guideId}`);
             return await res.json();
         } catch (error) {
             console.error('Error fetching constraints:', error);
@@ -389,57 +432,117 @@
     }
     async function renderGuides() {
         const guides = await fetchGuides();
-        const tbody = document.getElementById('guides-tbody');
-        if (!guides.length) {
-            tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;">אין מדריכים</td></tr>`;
-            return;
-        }
-        tbody.innerHTML = "";
+        console.log('All guides from API:', guides);
+        const guidesTbody = document.getElementById('guides-tbody');
+        const coordinatorsTbody = document.getElementById('coordinators-tbody');
         const userRole = localStorage.getItem('role');
         
-        for (const g of guides) {
-            const constraints = await fetchGuideConstraints(g.id);
-            const assignmentType = g.assignment_type || 'regular';
-            const assignmentTypeText = {
-                'regular': 'רגיל',
-                'overlap': 'חפיפה', 
-                'oncall': 'כונן'
-            }[assignmentType];
-            
-            const availabilityStatus = getAvailabilityStatus(g);
-            const statsHtml = generateStatsHtml(g);
-            const constraintsHtml = generateConstraintsHtml(constraints);
-            
-            // Split name into first and last name for display
-            const nameParts = (g.name || '').split(' ');
-            const firstName = nameParts[0] || '';
-            const lastName = nameParts.slice(1).join(' ') || '';
-            
-            tbody.innerHTML += `
-            <tr>
-                <td>${firstName}</td>
-                <td>${lastName}</td>
-                <td>${g.phone || '-'}</td>
-                <td>${g.email || '-'}</td>
-                <td>
-                    <span class="badge${g.role === 'רכז' || g.role === 'רכזת' ? ' coordinator' : ''}">${g.role}</span>
-                </td>
-                <td>
-                    <span class="badge ${assignmentType}">${assignmentTypeText}</span>
-                </td>
-                <td>
-                    <input class="percent-input" type="number" value="${g.percent || 100}" min="1" max="200" onchange="updatePercent(${g.id}, this.value)" ${userRole!=='רכז'&&userRole!=='רכזת'?'disabled':''}>% 
-                </td>
-                <td class="actions">
-                    ${userRole==='רכז'||userRole==='רכזת' ? `
-                    <button class="edit-link" onclick="editGuide(${g.id})">ערוך</button>
-                    <button class="del-link" onclick="deleteGuide(${g.id}); return false;">מחק</button>
-                    <button class="icon-btn" onclick="changePassword(${g.id})" title="שנה סיסמא">🔒</button>
-                    <button class="icon-btn" onclick="manageConstraints(${g.id})" title="ניהול אילוצים">📅</button>
-                    ` : `<span style='color:#888;'>—</span>`}
-                </td>
-            </tr>
-            `;
+        // Separate guides and coordinators
+        const guidesList = guides.filter(g => g.role === 'מדריך' || g.role === 'מדריכה');
+        const coordinatorsList = guides.filter(g => g.role === 'רכז' || g.role === 'רכזת');
+        console.log('Guides list:', guidesList);
+        console.log('Coordinators list:', coordinatorsList);
+        
+        // Render guides table
+        if (!guidesList.length) {
+            guidesTbody.innerHTML = `<tr><td colspan="8" style="text-align:center;">אין מדריכים</td></tr>`;
+        } else {
+            guidesTbody.innerHTML = "";
+            for (const g of guidesList) {
+                const constraints = await fetchGuideConstraints(g.id);
+                const assignmentType = g.assignment_type || 'regular';
+                const assignmentTypeText = {
+                    'regular': 'רגיל',
+                    'overlap': 'חפיפה', 
+                    'oncall': 'כונן'
+                }[assignmentType];
+                
+                const availabilityStatus = getAvailabilityStatus(g);
+                const statsHtml = generateStatsHtml(g);
+                const constraintsHtml = generateConstraintsHtml(constraints);
+                
+                // Split name into first and last name for display
+                const nameParts = (g.name || '').split(' ');
+                const firstName = nameParts[0] || '';
+                const lastName = nameParts.slice(1).join(' ') || '';
+                
+                guidesTbody.innerHTML += `
+                <tr>
+                    <td>${firstName}</td>
+                    <td>${lastName}</td>
+                    <td>${g.phone || '-'}</td>
+                    <td>${g.email || '-'}</td>
+                    <td>
+                        <span class="badge">${g.role}</span>
+                    </td>
+                    <td>
+                        <span class="badge ${assignmentType}">${assignmentTypeText}</span>
+                    </td>
+                    <td>
+                        <input class="percent-input" type="number" value="${g.percent || 100}" min="1" max="200" onchange="updatePercent(${g.id}, this.value)" ${userRole!=='רכז'&&userRole!=='רכזת'?'disabled':''}>% 
+                    </td>
+                    <td class="actions">
+                        ${userRole==='רכז'||userRole==='רכזת' ? `
+                        <button class="edit-link" onclick="editGuide(${g.id})">ערוך</button>
+                        <button class="del-link" onclick="deleteGuide(${g.id}); return false;">מחק</button>
+                        <button class="icon-btn" onclick="changePassword(${g.id})" title="שנה סיסמא">🔒</button>
+                        <button class="icon-btn" onclick="manageConstraints(${g.id})" title="ניהול אילוצים">📅</button>
+                        ` : `<span style='color:#888;'>—</span>`}
+                    </td>
+                </tr>
+                `;
+            }
+        }
+        
+        // Render coordinators table
+        if (!coordinatorsList.length) {
+            coordinatorsTbody.innerHTML = `<tr><td colspan="8" style="text-align:center;">אין רכזים</td></tr>`;
+        } else {
+            coordinatorsTbody.innerHTML = "";
+            for (const g of coordinatorsList) {
+                const constraints = await fetchGuideConstraints(g.id);
+                const assignmentType = g.assignment_type || 'regular';
+                const assignmentTypeText = {
+                    'regular': 'רגיל',
+                    'overlap': 'חפיפה', 
+                    'oncall': 'כונן'
+                }[assignmentType];
+                
+                const availabilityStatus = getAvailabilityStatus(g);
+                const statsHtml = generateStatsHtml(g);
+                const constraintsHtml = generateConstraintsHtml(constraints);
+                
+                // Split name into first and last name for display
+                const nameParts = (g.name || '').split(' ');
+                const firstName = nameParts[0] || '';
+                const lastName = nameParts.slice(1).join(' ') || '';
+                
+                coordinatorsTbody.innerHTML += `
+                <tr>
+                    <td>${firstName}</td>
+                    <td>${lastName}</td>
+                    <td>${g.phone || '-'}</td>
+                    <td>${g.email || '-'}</td>
+                    <td>
+                        <span class="badge coordinator">${g.role}</span>
+                    </td>
+                    <td>
+                        <span class="badge ${assignmentType}">${assignmentTypeText}</span>
+                    </td>
+                    <td>
+                        <input class="percent-input" type="number" value="${g.percent || 100}" min="1" max="200" onchange="updatePercent(${g.id}, this.value)" ${userRole!=='רכז'&&userRole!=='רכזת'?'disabled':''}>% 
+                    </td>
+                    <td class="actions">
+                        ${userRole==='רכז'||userRole==='רכזת' ? `
+                        <button class="edit-link" onclick="editGuide(${g.id})">ערוך</button>
+                        <button class="del-link" onclick="deleteGuide(${g.id}); return false;">מחק</button>
+                        <button class="icon-btn" onclick="changePassword(${g.id})" title="שנה סיסמא">🔒</button>
+                        <button class="icon-btn" onclick="manageConstraints(${g.id})" title="ניהול אילוצים">📅</button>
+                        ` : `<span style='color:#888;'>—</span>`}
+                    </td>
+                </tr>
+                `;
+            }
         }
     }
     renderGuides();
@@ -447,9 +550,15 @@
     // -- ניהול טופס הוספה/עריכה --
     function showAddForm() {
         openGuideForm();
+        document.getElementById('form-title').textContent = 'הוסף מדריך';
+    }
+    
+    function showAddCoordinatorForm() {
+        openGuideForm(null, 'רכז');
+        document.getElementById('form-title').textContent = 'הוסף רכז';
     }
     function editGuide(id) {
-        fetch('http://localhost:4000/api/guides')
+        fetch(`${API_BASE_URL}/api/users`)
         .then(r=>r.json())
         .then(guides=>{
             const guide = guides.find(g=>g.id==id);
@@ -457,7 +566,7 @@
             openGuideForm(guide);
         });
     }
-    function openGuideForm(guide=null) {
+    function openGuideForm(guide=null, defaultRole='מדריך') {
         document.getElementById('guide-form-modal').style.display='flex';
         document.getElementById('form-title').textContent = guide ? 'ערוך מדריך' : 'הוסף מדריך';
         
@@ -473,7 +582,7 @@
         
         document.getElementById('phone').value = guide ? guide.phone : '';
         document.getElementById('email').value = guide ? guide.email : '';
-        document.getElementById('role').value = guide ? guide.role : 'מדריך';
+        document.getElementById('role').value = guide ? guide.role : defaultRole;
         document.getElementById('assignment_type').value = guide ? (guide.assignment_type || 'regular') : 'regular';
         document.getElementById('percent').value = guide ? (guide.percent||100) : 100;
         document.getElementById('password').value = ''; // מתחיל ריק תמיד
@@ -498,7 +607,7 @@
             else if (guide && guide.password) g.password = guide.password; // אם עריכה ולא שינו - שמור ישנה
 
             if (guide) { // עדכון
-                await fetch('http://localhost:4000/api/guides/'+guide.id, {
+                await fetch(`${API_BASE_URL}/api/users/`+guide.id, {
                     method:'PUT',
                     headers:{'Content-Type':'application/json'},
                     body:JSON.stringify(g)
@@ -508,11 +617,14 @@
                     alert("נא לבחור סיסמה");
                     return;
                 }
-                await fetch('http://localhost:4000/api/guides', {
+                console.log('Adding new guide/coordinator:', g);
+                const response = await fetch(`${API_BASE_URL}/api/users`, {
                     method:'POST',
                     headers:{'Content-Type':'application/json'},
                     body:JSON.stringify(g)
                 });
+                const result = await response.json();
+                console.log('Response:', result);
             }
             closeGuideForm();
             renderGuides();
@@ -522,18 +634,25 @@
         document.getElementById('guide-form-modal').style.display='none';
     }
     async function deleteGuide(id) {
-        if (!confirm("למחוק את המדריך?")) return;
-        await fetch('http://localhost:4000/api/guides/'+id, {method:'DELETE'});
+        console.log('Attempting to delete user id:', id);
+        if (!confirm("למחוק את המשתמש?")) return;
+        const resp = await fetch(`${API_BASE_URL}/api/users/`+id, {method:'DELETE'});
+        if (resp.status === 404) {
+            alert('משתמש לא נמצא (יתכן שכבר נמחק). מרענן נתונים.');
+        } else if (!resp.ok) {
+            const t = await resp.text();
+            alert('שגיאה במחיקה: ' + t);
+        }
         renderGuides();
     }
     async function updatePercent(id, val) {
         val = Number(val);
         if (!val) return;
-        let guides = await fetch('http://localhost:4000/api/guides').then(r=>r.json());
+        let guides = await fetch(`${API_BASE_URL}/api/users`).then(r=>r.json());
         let guide = guides.find(g=>g.id==id);
         if (guide) {
             guide.percent = val;
-            await fetch('http://localhost:4000/api/guides/'+id, {
+            await fetch(`${API_BASE_URL}/api/users/`+id, {
                 method:'PUT',
                 headers:{'Content-Type':'application/json'},
                 body:JSON.stringify(guide)
@@ -645,6 +764,5 @@
         }
     }
     </script>
-    <script src="header-functions.js"></script>
 </body>
 </html>
