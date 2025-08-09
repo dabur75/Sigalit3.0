@@ -1,0 +1,19 @@
+{
+  "name": "sigalit-frontend",
+  "version": "1.0.0",
+  "description": "Frontend for Sigalit scheduling system",
+  "main": "index.js",
+  "scripts": {
+    "start": "npx http-server -p $PORT",
+    "dev": "npx http-server -p 8080"
+  },
+  "engines": {
+    "node": "18.x"
+  },
+  "dependencies": {
+    "http-server": "^14.1.1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+} 
