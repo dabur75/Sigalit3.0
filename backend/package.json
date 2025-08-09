@@ -4,21 +4,20 @@
   "main": "app.js",
   "type": "commonjs",
   "scripts": {
-    "start": "node app_postgresql.js",
-    "dev": "SERVE_FROM_FRONTEND=true node app_postgresql.js",
-    "build": "node ../scripts/sync-frontend.js",
+    "start": "node app.js",
+    "dev": "SERVE_FROM_FRONTEND=true node app.js",
+    "build": "echo 'Production build - static files included'",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": ["scheduling", "hebrew", "residential-homes", "guide-management"],
+  "author": "Sigalit Pro Team",
   "license": "ISC",
-  "description": "",
+  "description": "Sigalit - Smart Guide Scheduling System for Residential Homes",
   "engines": {
     "node": "20.x"
   },
   "dependencies": {
     "axios": "^1.7.9",
-    "better-sqlite3": "^12.2.0",
     "cors": "^2.8.5",
     "csv-parser": "^3.2.0",
     "express": "^5.1.0",
