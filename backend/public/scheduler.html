@@ -2319,7 +2319,8 @@
 
         <!-- Main Content -->
         <div class="main-content">
-            <table class="schedule-table">
+            <!-- Mock static table (kept for design reference only). Hidden to avoid flicker before dynamic render. -->
+            <table class="schedule-table" id="main-schedule-table" style="visibility: hidden;">
                 <thead>
                     <tr>
                         <th>ראשון</th>
@@ -2331,7 +2332,7 @@
                         <th>שבת</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody id="calendarBody">
                     <tr>
                         <td>
                             <div class="day-number">1</div>
@@ -2692,8 +2693,13 @@
             try {
                 const response = await fetch(`${API_BASE}/schedule/enhanced/${year}/${month}`);
                 const schedule = await response.json();
-                console.log('Schedule loaded:', schedule);
-                return schedule;
+                // Normalize all date fields to YYYY-MM-DD using date_str when available
+                const normalized = Array.isArray(schedule) ? schedule.map(d => {
+                    const ds = d.date_str || (d.date || '').split('T')[0];
+                    return { ...d, date: ds };
+                }) : schedule;
+                console.log('Schedule loaded (normalized):', normalized);
+                return normalized;
             } catch (error) {
                 console.error('Error fetching schedule:', error);
                 showNotification('שגיאה בטעינת לוח השנה', 'error');
@@ -2795,8 +2801,10 @@
         // =====================================================
 
         function updateCalendarWithSchedule(schedule) {
-            const calendarBody = document.querySelector('.schedule-table tbody');
+            const calendarBody = document.querySelector('#calendarBody');
+            const tableEl = document.getElementById('main-schedule-table');
             if (!calendarBody) return;
+            if (tableEl) tableEl.style.visibility = 'hidden';
 
             // Clear existing content
             calendarBody.innerHTML = '';
@@ -2811,21 +2819,18 @@
             
             weeks.forEach(week => {
                 const row = document.createElement('tr');
-                
                 week.forEach(day => {
                     const cell = document.createElement('td');
-                    
                     if (day) {
                         cell.innerHTML = createDayCell(day);
                     } else {
                         cell.innerHTML = '<div class="day-number">-</div>';
                     }
-                    
                     row.appendChild(cell);
                 });
-                
                 calendarBody.appendChild(row);
             });
+            if (tableEl) tableEl.style.visibility = 'visible';
         }
 
         function generateCalendarDays(year, month, schedule) {
@@ -2897,9 +2902,17 @@
         
             // Consistent weekday helper: interpret date string at local midnight
             function getDayOfWeekLocal(dateStr) {
-                // Use local midnight to avoid timezone shifts
                 const d = new Date(dateStr + 'T00:00:00');
-                return d.getDay(); // 0=Sun .. 6=Sat
+                return d.getDay();
+            }
+
+            function addDaysLocal(dateStr, deltaDays) {
+                const base = new Date(dateStr + 'T00:00:00');
+                base.setDate(base.getDate() + deltaDays);
+                const y = base.getFullYear();
+                const m = String(base.getMonth() + 1).padStart(2, '0');
+                const d = String(base.getDate()).padStart(2, '0');
+                return `${y}-${m}-${d}`;
             }
 
             function groupScheduleByWeeks(schedule) {
@@ -2977,7 +2990,9 @@
             }
             
             // Show regular assignments (excluding the conan guide if it's already shown)
-            if (day.guide1_name && (!isClosedSaturdayWeekend || day.guide1_name !== fridayConanGuide)) {
+            // Guard: never show Motzash on Friday cells (should appear on Saturday only)
+            const guide1IsMotzashOnFriday = isFriday && day.guide1_role && day.guide1_role.includes('מוצ״ש');
+            if (day.guide1_name && (!isClosedSaturdayWeekend || day.guide1_name !== fridayConanGuide) && !guide1IsMotzashOnFriday) {
                 let guide1Class = isManual ? 'guide-overlap' : 'guide-regular';
                 let guide1Role = day.guide1_role;
                 
@@ -2995,7 +3010,8 @@
                 `;
             }
             
-            if (day.guide2_name) {
+            const guide2IsMotzashOnFriday = isFriday && day.guide2_role && day.guide2_role.includes('מוצ״ש');
+            if (day.guide2_name && !guide2IsMotzashOnFriday) {
                 const guide2Class = isManual ? 'guide-overlap' : 'guide-regular';
                 cellHtml += `
                     <div class="guide-item-display ${guide2Class} guide-${day.guide2_name.toLowerCase()}">
@@ -3943,9 +3959,7 @@
                             if (result.is_closed === 1) {
                                 console.log('This is a closed Saturday Friday, auto-assigning conan to Saturday');
                                 // This is a closed Saturday Friday, automatically assign the conan to Saturday
-                                const saturdayDate = new Date(currentDate);
-                                saturdayDate.setDate(saturdayDate.getDate() + 1);
-                                const saturdayString = saturdayDate.toISOString().split('T')[0];
+                                const saturdayString = addDaysLocal(currentDate, 1);
                                 console.log('Saturday date:', saturdayString);
                                 
                                 // For closed Saturday, we only register the conan guide from Friday
@@ -3982,9 +3996,7 @@
                         // If we're clearing Saturday assignments, check if we need to remove conan from Friday too
                         console.log('Clearing Saturday assignments, checking if conan needs to be removed from Friday');
                         try {
-                            const fridayDate = new Date(currentDate);
-                            fridayDate.setDate(fridayDate.getDate() - 1);
-                            const fridayString = fridayDate.toISOString().split('T')[0];
+                            const fridayString = addDaysLocal(currentDate, -1);
                             
                             const response = await fetch(`${API_BASE}/weekend-type/${fridayString}`);
                             const result = await response.json();
@@ -4022,9 +4034,7 @@
                         // If we're adding a מוצ״ש guide to Saturday, make sure the conan from Friday is preserved
                         console.log('Adding מוצ״ש guide to Saturday, ensuring conan from Friday is preserved');
                         try {
-                            const fridayDate = new Date(currentDate);
-                            fridayDate.setDate(fridayDate.getDate() - 1);
-                            const fridayString = fridayDate.toISOString().split('T')[0];
+                            const fridayString = addDaysLocal(currentDate, -1);
                             
                             const response = await fetch(`${API_BASE}/weekend-type/${fridayString}`);
                             const result = await response.json();
@@ -4050,9 +4060,7 @@
                         // If we're clearing Saturday assignments, check if we need to remove conan from Friday too
                         console.log('Clearing Saturday assignments, checking if conan needs to be removed from Friday');
                         try {
-                            const fridayDate = new Date(currentDate);
-                            fridayDate.setDate(fridayDate.getDate() - 1);
-                            const fridayString = fridayDate.toISOString().split('T')[0];
+                            const fridayString = addDaysLocal(currentDate, -1);
                             
                             const response = await fetch(`${API_BASE}/weekend-type/${fridayString}`);
                             const result = await response.json();
@@ -4147,9 +4155,7 @@
                 await saveManualAssignment(fridayDate, null, null, null);
                 
                 // Remove from Saturday
-                const saturdayDate = new Date(fridayDate);
-                saturdayDate.setDate(saturdayDate.getDate() + 1);
-                const saturdayString = saturdayDate.toISOString().split('T')[0];
+                const saturdayString = addDaysLocal(fridayDate, 1);
                 await saveManualAssignment(saturdayString, null, null, null);
                 
                 console.log('Conan guide removed from both Friday and Saturday');
@@ -4306,28 +4312,16 @@
             }
         }
 
-        // Enhanced auto-scheduling function
+        // Backend-owned auto-scheduling trigger
         async function runAutoScheduling() {
             try {
                 showNotification('מתחיל שיבוץ אוטומטי...', 'info');
                 
                 const [year, month] = currentMonth.split('-');
                 console.log('Running auto-scheduling for:', { year, month });
-                
-                // Show configuration dialog
-                const config = await showAutoSchedulingConfig();
-                if (!config) {
-                    showNotification('שיבוץ אוטומטי בוטל', 'info');
-                    return;
-                }
-                
-                // Run enhanced auto-scheduling
-                const response = await fetch(`${API_BASE}/schedule/auto-schedule-enhanced/${year}/${month}`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(config)
+                // Call new backend endpoint per docs plan
+                const response = await fetch(`${API_BASE}/schedule/auto/${year}/${month}?overwrite=true`, {
+                    method: 'POST'
                 });
                 
                 const result = await response.json();
@@ -4388,87 +4382,11 @@
             }
         }
 
-        // Show auto-scheduling configuration dialog
-        function showAutoSchedulingConfig() {
-            return new Promise((resolve) => {
-                const modal = document.createElement('div');
-                modal.className = 'modal';
-                modal.innerHTML = `
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h2>הגדרות שיבוץ אוטומטי</h2>
-                            <span class="close" onclick="this.parentElement.parentElement.parentElement.remove(); resolve(null);">&times;</span>
-                        </div>
-                        <div class="modal-body">
-                            <div class="config-section">
-                                <h3>אילוצים בסיסיים</h3>
-                                <div class="config-group">
-                                    <label class="config-checkbox">
-                                        <input type="checkbox" id="preserve_manual" checked>
-                                        שמור שיבוצים ידניים (מומלץ)
-                                    </label>
-                                </div>
-                                
-                                <div class="config-group">
-                                    <label class="config-checkbox">
-                                        <input type="checkbox" id="balance_workload" checked>
-                                        איזון עומסים אוטומטי
-                                    </label>
-                                </div>
-                            </div>
-                            
-                            <div class="config-section">
-                                <h3>הגבלות מתקדמות</h3>
-                                <div class="config-group">
-                                    <label for="max_conan">מספר כוננויות מקסימלי לחודש:</label>
-                                    <select id="max_conan">
-                                        <option value="1">1 כוננות</option>
-                                        <option value="2" selected>2 כוננויות</option>
-                                        <option value="3">3 כוננויות</option>
-                                    </select>
-                                </div>
-                                
-                                <div class="config-group">
-                                    <label class="config-checkbox">
-                                        <input type="checkbox" id="dry_run">
-                                        הרצה ניסיונית (לא שומר שינויים)
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="modal-footer">
-                            <button class="btn btn-secondary" onclick="this.closest('.modal').remove(); resolve(null);">ביטול</button>
-                            <button class="btn btn-primary" onclick="submitAutoSchedulingConfig()">התחל שיבוץ</button>
-                        </div>
-                    </div>
-                `;
-                
-                document.body.appendChild(modal);
-                
-                // Handle form submission
-                window.submitAutoSchedulingConfig = () => {
-                    const config = {
-                        preserve_manual: document.getElementById('preserve_manual').checked,
-                        balance_workload: document.getElementById('balance_workload').checked,
-                        max_conan_per_guide: parseInt(document.getElementById('max_conan').value),
-                        dry_run: document.getElementById('dry_run').checked
-                    };
-                    
-                    modal.remove();
-                    resolve(config);
-                };
-                
-                // Close modal when clicking outside
-                modal.addEventListener('click', (e) => {
-                    if (e.target === modal) {
-                        modal.remove();
-                        resolve(null);
-                    }
-                });
-            });
-        }
+        // Auto settings dialog removed; logic resides on server
 
         async function runAutoSchedulingAlgorithm(year, month, guides, currentSchedule, weekendTypes) {
+            // Legacy client auto algorithm removed; backend is source of truth
+            return { schedule: [], warnings: [] };
             try {
                 const days = getAllDaysInMonth(year, month);
                 const schedule = [];
@@ -4489,8 +4407,24 @@
                 for (const day of days) {
                     const date = day.date;
                     const weekday = day.weekday;
-                    const weekendType = weekendTypes[date] || null;
+                    const dow = getDayOfWeekLocal(date); // 0=Sun .. 6=Sat
                     
+                    // Determine closed-weekend flags strictly as Fri–Sat pair
+                    let isClosedFriday = false;
+                    let isClosedSaturday = false;
+                    if (dow === 5) {
+                        // Friday itself or its Saturday linked
+                        const saturday = new Date(date + 'T00:00:00');
+                        saturday.setDate(saturday.getDate() + 1);
+                        const sStr = `${saturday.getFullYear()}-${String(saturday.getMonth()+1).padStart(2,'0')}-${String(saturday.getDate()).padStart(2,'0')}`;
+                        isClosedFriday = weekendTypes[date] === 'סופ״ש סגור' || weekendTypes[sStr] === 'סופ״ש סגור';
+                    } else if (dow === 6) {
+                        const friday = new Date(date + 'T00:00:00');
+                        friday.setDate(friday.getDate() - 1);
+                        const fStr = `${friday.getFullYear()}-${String(friday.getMonth()+1).padStart(2,'0')}-${String(friday.getDate()).padStart(2,'0')}`;
+                        isClosedSaturday = weekendTypes[fStr] === 'סופ״ש סגור';
+                    }
+
                     // Check if there's a manual assignment (sacred - don't change)
                     const existingAssignment = currentSchedule.find(s => s.date === date);
                     if (existingAssignment && existingAssignment.is_manual) {
@@ -4506,8 +4440,8 @@
                         continue;
                     }
                     
-                    // Special handling for closed Saturday
-                    if (weekendType === 'סופ״ש סגור' && weekday === 'שבת') {
+                    // Special handling for closed Saturday (based on Friday flag)
+                    if (dow === 6 && isClosedSaturday) {
                         // Get the previous day's on-call guide
                         const previousDate = new Date(date);
                         previousDate.setDate(previousDate.getDate() - 1);
@@ -4544,7 +4478,7 @@
                     }
                     
                     // Special handling for Saturday night (מוצ״ש) after closed Saturday
-                    if (weekendType === 'מוצ״ש' && weekday === 'שבת') {
+                    if (dow === 6 && isClosedSaturday) {
                         // Get the current day's on-call guide (should be the same as Friday)
                         const currentAssignment = schedule.find(s => s.date === date) || 
                                                  currentSchedule.find(s => s.date === date);
@@ -4592,7 +4526,14 @@
                     }
                     
                     // Determine required guides and roles based on day type
-                    const { requiredGuides, roles } = getRequiredGuidesForDay(weekendType, weekday);
+                    let requiredGuides, roles;
+                    if (dow === 5 && isClosedFriday) {
+                        requiredGuides = 1; roles = ['כונן'];
+                    } else if (dow === 6 && isClosedSaturday) {
+                        requiredGuides = 2; roles = ['כונן', 'מוצ״ש'];
+                    } else {
+                        requiredGuides = 2; roles = ['רגיל', 'חפיפה'];
+                    }
                     
                     // Get available guides for this day
                     const availableGuides = await getAvailableGuidesForDay(date, guides, guideStats, currentSchedule, weekendType);
@@ -4604,7 +4545,7 @@
                     const assignment = {
                         date: date,
                         weekday: weekday,
-                        type: weekendType || 'רגיל',
+                        type: (dow === 5 && isClosedFriday) ? 'כונן' : (dow === 6 && isClosedSaturday) ? 'סופ״ש סגור' : 'רגיל',
                         guide1_id: selectedGuides[0]?.id || null,
                         guide1_name: selectedGuides[0]?.name || null,
                         guide1_role: roles[0] || null,
@@ -4852,17 +4793,21 @@
         }
 
         function getAllDaysInMonth(year, month) {
+            // Build days using local midnight strings to avoid timezone drift
             const days = [];
-            const date = new Date(year, month - 1, 1);
-            
-            while (date.getMonth() === month - 1) {
+            const first = new Date(`${year}-${String(month).padStart(2,'0')}-01T00:00:00`);
+            let d = new Date(first);
+            while (d.getMonth() === first.getMonth()) {
+                const y = d.getFullYear();
+                const m = String(d.getMonth()+1).padStart(2,'0');
+                const dd = String(d.getDate()).padStart(2,'0');
+                const iso = `${y}-${m}-${dd}`;
                 days.push({
-                    date: date.toISOString().slice(0, 10),
-                    weekday: getHebrewWeekday(date.getDay())
+                    date: iso,
+                    weekday: getHebrewWeekday(d.getDay())
                 });
-                date.setDate(date.getDate() + 1);
+                d.setDate(d.getDate()+1);
             }
-            
             return days;
         }
 

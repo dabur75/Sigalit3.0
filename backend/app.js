@@ -4,6 +4,8 @@ const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
 const app = express();
+// Scheduler service import (single source of truth)
+const { runCompleteAutoSchedulingPG } = require('./services/scheduler');
 const PORT = process.env.PORT || 4000;
 
 // PostgreSQL connection
@@ -1790,6 +1792,7 @@ app.get('/api/schedule/:year/:month', async (req, res) => {
     const result = await pool.query(`
       SELECT 
         s.*,
+        to_char(s.date, 'YYYY-MM-DD') as date_str,
         u1.name as guide1_name,
         u2.name as guide2_name,
         CASE 
@@ -1877,6 +1880,49 @@ app.post('/api/schedule/manual', async (req, res) => {
       guide1_role, guide2_role,
       created_by
     ]);
+
+    // If it's a Friday conan on a closed weekend, mirror the conan to Saturday as a manual assignment
+    if (dow === 5 && guide1_id && (type === 'כונן' || guide1_role === 'כונן')) {
+      // Check weekend_types for this Friday
+      try {
+        const wt = await pool.query('SELECT is_closed FROM weekend_types WHERE date = $1::date', [dateOnly]);
+        const isClosed = wt.rows[0]?.is_closed === true;
+        if (isClosed) {
+          // Compute Saturday (local) as YYYY-MM-DD without timezone drift
+          const base = new Date(dateOnly + 'T00:00:00');
+          base.setDate(base.getDate() + 1);
+          const satY = base.getFullYear();
+          const satM = String(base.getMonth() + 1).padStart(2, '0');
+          const satD = String(base.getDate()).padStart(2, '0');
+          const saturdayOnly = `${satY}-${satM}-${satD}`;
+
+          const satDow = new Date(base).getDay();
+          const satWeekday = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'][satDow];
+
+          // Upsert Saturday: remove any existing row for that date then insert conan
+          await pool.query('DELETE FROM schedule WHERE date::date = $1::date', [saturdayOnly]);
+          await pool.query(`
+            INSERT INTO schedule (
+              date, weekday, type,
+              guide1_id, guide2_id,
+              guide1_role, guide2_role,
+              is_manual, is_locked,
+              created_by, created_at, updated_at,
+              house_id
+            ) VALUES (
+              $1::date, $2, 'weekend',
+              $3, NULL,
+              'כונן', NULL,
+              true, false,
+              $4, NOW(), NOW(),
+              'dror'
+            )
+          `, [saturdayOnly, satWeekday, guide1_id, created_by]);
+        }
+      } catch (e) {
+        console.warn('Weekend mirror to Saturday failed (non-fatal):', e.message);
+      }
+    }
 
     res.json({ success: true, assignment: insert.rows[0] });
   } catch (error) {
@@ -2391,9 +2437,10 @@ app.delete('/api/schedule/clear-month', async (req, res) => {
 app.get('/api/schedule/enhanced/:year/:month', async (req, res) => {
   try {
     const { year, month } = req.params;
-    const result = await pool.query(`
+  const result = await pool.query(`
       SELECT 
         s.*,
+        to_char(s.date, 'YYYY-MM-DD') as date_str,
         u1.name as guide1_name,
         u2.name as guide2_name,
         wt.is_closed as weekend_closed,
@@ -2726,6 +2773,39 @@ app.post('/api/schedule/auto-schedule-enhanced', async (req, res) => {
   }
 });
 
+// New simplified endpoint aligned with docs plan: POST /api/schedule/auto/:year/:month
+app.post('/api/schedule/auto/:year/:month', async (req, res) => {
+  try {
+    const { year, month } = req.params;
+    const overwrite = String(req.query.overwrite || '').toLowerCase() === 'true';
+
+    console.log(`🚀 [/api/schedule/auto] Starting auto-scheduling for ${year}-${month} overwrite=${overwrite}`);
+
+    // Current implementation always overwrites auto-assignments while preserving manual.
+    // The overwrite flag is reserved for future behavior tuning.
+    const result = await runCompleteAutoSchedulingPG(parseInt(year), parseInt(month));
+
+    if (result.success) {
+      res.json({
+        success: true,
+        message: `Auto-scheduling completed: ${result.stats.assigned} assignments created`,
+        stats: result.stats,
+        warnings: result.warnings,
+        assignments: result.assignments
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        error: result.error,
+        warnings: result.warnings || []
+      });
+    }
+  } catch (error) {
+    console.error('Error in /api/schedule/auto:', error);
+    res.status(500).json({ error: 'Auto-scheduling failed', details: error.message });
+  }
+});
+
 // Legacy endpoint for backwards compatibility
 app.post('/api/schedule/auto-schedule/:year/:month', async (req, res) => {
   try {
@@ -2763,70 +2843,7 @@ app.post('/api/schedule/auto-schedule/:year/:month', async (req, res) => {
 // MAIN AUTO-SCHEDULING FUNCTION - COMPLETE POSTGRESQL VERSION
 // ============================================================================
 
-async function runCompleteAutoSchedulingPG(year, month, options = {}) {
-  try {
-    console.log(`Initializing complete auto-scheduling for ${year}-${month}`);
-    
-    // Phase 1: Prepare all data
-    const context = await prepareSchedulingDataPG(year, month);
-    console.log(`Loaded ${context.guides.length} guides, ${context.days.length} days`);
-    
-    // Phase 2: Process each day
-    const assignments = [];
-    const warnings = [];
-    
-    // Initialize assignments array in context
-    context.assignments = assignments;
-    
-    for (const dayInfo of context.days) {
-      console.log(`Processing ${dayInfo.date} (${dayInfo.weekday})`);
-      
-      try {
-        const assignment = await assignDayOptimalPG(dayInfo, context);
-        if (assignment) {
-          assignments.push(assignment);
-          updateContextWithAssignmentPG(context, assignment);
-          console.log(`✓ Assigned ${dayInfo.date}: ${assignment.guide1_name || 'none'} + ${assignment.guide2_name || 'none'}`);
-        } else {
-          warnings.push({
-            type: 'assignment_failed',
-            date: dayInfo.date,
-            message: `Failed to assign guides for ${dayInfo.date}`
-          });
-          console.log(`✗ Failed to assign ${dayInfo.date}`);
-        }
-      } catch (error) {
-        console.error(`Error assigning ${dayInfo.date}:`, error);
-        warnings.push({
-          type: 'assignment_error',
-          date: dayInfo.date,
-          message: `Error assigning ${dayInfo.date}: ${error.message}`
-        });
-      }
-    }
-    
-    // Phase 3: Save to database
-    await saveAssignmentsToDatabasePG(assignments, year, month, context.guides);
-    
-    // Phase 4: Generate statistics
-    const stats = generateFinalStatisticsPG(context, assignments);
-    
-    return {
-      success: true,
-      assignments,
-      warnings,
-      stats
-    };
-    
-  } catch (error) {
-    console.error('Error in complete auto-scheduling:', error);
-    return {
-      success: false,
-      error: error.message,
-      warnings: []
-    };
-  }
-}
+/* NOTE: Scheduler implementation lives in services/scheduler.js and is imported above. */
 
 // ============================================================================
 // PHASE 1: DATA PREPARATION - POSTGRESQL VERSION
