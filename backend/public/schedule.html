@@ -665,11 +665,11 @@
 
         // Function to check if a Friday is part of a closed Saturday weekend
         function getFridayWeekendType(fridayDate) {
-            // Calculate the next day (Saturday)
-            const friday = new Date(fridayDate);
+            // Calculate the next day (Saturday) using local midnight to avoid UTC rollovers
+            const friday = new Date(fridayDate + 'T00:00:00');
             const saturday = new Date(friday);
             saturday.setDate(friday.getDate() + 1);
-            const saturdayDate = saturday.toISOString().slice(0, 10);
+            const saturdayDate = `${saturday.getFullYear()}-${String(saturday.getMonth()+1).padStart(2,'0')}-${String(saturday.getDate()).padStart(2,'0')}`;
             
             // Check if the Saturday is closed
             const saturdayWeekendType = getWeekendType(saturdayDate);

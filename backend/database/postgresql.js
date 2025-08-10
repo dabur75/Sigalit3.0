@@ -1,17 +1,27 @@
 const { Pool } = require('pg');
 
 // PostgreSQL connection pool configuration
-const pool = new Pool({
-    host: process.env.DB_HOST || 'localhost',
-    database: process.env.DB_NAME || 'sigalit_pg',
-    user: process.env.DB_USER || 'sigalit_user',
-    password: process.env.DB_PASSWORD || 'sigalit_password',
-    port: process.env.DB_PORT || 5432,
-    max: 20, // Maximum number of clients in the pool
-    idleTimeoutMillis: 30000, // Close idle clients after 30 seconds
-    connectionTimeoutMillis: 2000, // Return an error after 2 seconds if connection could not be established
-    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
-});
+const poolConfig = process.env.DATABASE_URL ? 
+    {
+        connectionString: process.env.DATABASE_URL,
+        max: 20,
+        idleTimeoutMillis: 30000,
+        connectionTimeoutMillis: 5000,
+        ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+    } : 
+    {
+        host: process.env.DB_HOST || 'localhost',
+        database: process.env.DB_NAME || 'sigalit_pg',
+        user: process.env.DB_USER || 'sigalit_user',
+        password: process.env.DB_PASSWORD || 'sigalit_password',
+        port: process.env.DB_PORT || 5432,
+        max: 20,
+        idleTimeoutMillis: 30000,
+        connectionTimeoutMillis: 5000,
+        ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+    };
+
+const pool = new Pool(poolConfig);
 
 // Test the connection
 pool.on('connect', (client) => {

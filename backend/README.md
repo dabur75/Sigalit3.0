@@ -1,36 +1,63 @@
 # 🏠 Sigalit - Smart Guide Scheduling System
 
-## 🚀 Production Deployment (Railway)
+## 🚀 Production Deployment (Fly.io)
 
-### Quick Deploy to Railway
+### Prerequisites
 
-1. **Connect Repository:**
+1. **Install Fly CLI:**
    ```bash
-   # Push to GitHub (if not already)
-   git add .
-   git commit -m "Production ready v1.0"
-   git push origin main
+   # macOS
+   brew install flyctl
+   
+   # Or download from https://fly.io/docs/getting-started/installing-flyctl/
    ```
 
-2. **Deploy on Railway:**
-   - Go to [railway.app](https://railway.app)
-   - Click "Deploy from GitHub repo"
-   - Select this repository
-   - Railway will auto-detect the Node.js project
+2. **Login to Fly.io:**
+   ```bash
+   fly auth login
+   ```
 
-3. **Add PostgreSQL Database:**
-   - In Railway dashboard, click "Add Service"
-   - Select "PostgreSQL"
-   - Railway will auto-provision and connect the database
+### Quick Deploy to Fly.io
 
-4. **Environment Variables:**
-   Railway will automatically set:
-   - `DATABASE_URL` (PostgreSQL connection)
-   - `PORT` (Railway provides)
+1. **Initialize Fly App:**
+   ```bash
+   # In the backend directory
+   cd backend
+   fly apps create sigalit-scheduling --generate-name
+   ```
+
+2. **Create PostgreSQL Database:**
+   ```bash
+   # Create dedicated PostgreSQL cluster
+   fly postgres create --name sigalit-db --region fra
    
-   Optional variables to set:
-   - `NODE_ENV=production`
-   - `AI_AGENT_ENABLED=true`
+   # Attach database to your app
+   fly postgres attach --app sigalit-scheduling sigalit-db
+   ```
+
+3. **Set Environment Variables:**
+   ```bash
+   fly secrets set NODE_ENV=production
+   fly secrets set AI_AGENT_ENABLED=true
+   # DATABASE_URL is automatically set when attaching postgres
+   ```
+
+4. **Deploy:**
+   ```bash
+   fly deploy
+   ```
+
+### Environment Variables
+
+Fly.io will automatically set:
+- `DATABASE_URL` (PostgreSQL connection when attached)
+- `PORT` (Fly.io provides)
+
+Optional secrets to set:
+- `NODE_ENV=production`
+- `AI_AGENT_ENABLED=true`
+- `CLAUDE_API_KEY=your_key` (for future LLM integration)
+- `OPENAI_API_KEY=your_key` (for future LLM integration)
 
 ### 📊 Features Included
 
@@ -60,10 +87,7 @@ Migration files:
 # Install dependencies
 npm install
 
-# Run in development mode
-npm run dev
-
-# Start production server
+# Start server (dev/prod identical for static assets)
 npm start
 ```
 
@@ -73,7 +97,7 @@ npm start
 backend/
 ├── app.js                 # Main application (PostgreSQL)
 ├── package.json           # Dependencies and scripts
-├── public/               # Frontend files (HTML/CSS/JS)
+├── public/               # Frontend files (HTML/CSS/JS) - SINGLE SOURCE OF TRUTH
 ├── ai-agent/            # AI recommendation system
 ├── database/            # PostgreSQL connection
 ├── migration/           # Database schemas
@@ -94,16 +118,18 @@ For advanced LLM integration (ChatGPT/Claude), see `LLM_ENHANCEMENT_PLAN.md`.
 
 ### 🌐 Production URLs
 
-After deployment, Railway provides:
-- **App URL**: `https://your-app-name.railway.app`
-- **Database**: Internal PostgreSQL connection
-- **Monitoring**: Railway dashboard with logs and metrics
+After deployment, Fly.io provides:
+- **App URL**: `https://sigalit-scheduling.fly.dev`
+- **Database**: Dedicated PostgreSQL cluster
+- **Monitoring**: Fly.io dashboard with logs and metrics
+- **Regions**: Deployed in Frankfurt (fra) for optimal Israel access
 
 ### 📞 Support
 
 - **CLAUDE.md** - Development guidelines and commands
 - **LLM_ENHANCEMENT_PLAN.md** - Future AI enhancements
-- **Railway Dashboard** - Logs, metrics, and environment management
+- **Fly.io Dashboard** - Logs, metrics, and app management
+- **PostgreSQL Cluster** - Dedicated database monitoring
 
 ---
 

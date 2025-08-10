@@ -27,25 +27,12 @@ app.use(express.json());
 
 
 
-// Serve static files - dev can serve from frontend/, prod serves from public/
-const serveFromFrontend = process.env.SERVE_FROM_FRONTEND === 'true';
-if (serveFromFrontend) {
-  app.use(express.static(path.join(__dirname, '..', 'frontend')));
-}
+// Serve static files from public/ directory (single-frontend policy)
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Helper to serve a file from frontend/ if exists, otherwise from backend/public/
-function sendFrontendOrPublic(res, filename) {
-  const frontendPath = path.join(__dirname, '..', 'frontend', filename);
-  const publicPath = path.join(__dirname, 'public', filename);
-  try {
-    if (serveFromFrontend && fs.existsSync(frontendPath)) {
-      return res.sendFile(frontendPath);
-    }
-  } catch (err) {
-    // no-op, fallback below
-  }
-  return res.sendFile(publicPath);
+// Helper to serve files from public/ directory
+function sendFile(res, filename) {
+  return res.sendFile(path.join(__dirname, 'public', filename));
 }
 
 // Serve frontend files
@@ -53,45 +40,45 @@ app.get('/', (req, res) => {
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
   res.setHeader('Pragma', 'no-cache');
   res.setHeader('Expires', '0');
-  sendFrontendOrPublic(res, 'login.html');
+  sendFile(res, 'login.html');
 });
 
 app.get('/login', (req, res) => {
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
   res.setHeader('Pragma', 'no-cache');
   res.setHeader('Expires', '0');
-  sendFrontendOrPublic(res, 'login.html');
+  sendFile(res, 'login.html');
 });
 
 app.get('/dashboard', (req, res) => {
-  sendFrontendOrPublic(res, 'dashboard.html');
+  sendFile(res, 'dashboard.html');
 });
 
 app.get('/schedule', (req, res) => {
-  sendFrontendOrPublic(res, 'schedule.html');
+  sendFile(res, 'schedule.html');
 });
 
 app.get('/scheduler', (req, res) => {
-  sendFrontendOrPublic(res, 'scheduler.html');
+  sendFile(res, 'scheduler.html');
 });
 
 app.get('/reports', (req, res) => {
-  sendFrontendOrPublic(res, 'reports.html');
+  sendFile(res, 'reports.html');
 });
 
 app.get('/guides', (req, res) => {
-  sendFrontendOrPublic(res, 'guides.html');
+  sendFile(res, 'guides.html');
 });
 
 app.get('/tasks', (req, res) => {
-  sendFrontendOrPublic(res, 'tasks.html');
+  sendFile(res, 'tasks.html');
 });
 
 app.get('/constraints', (req, res) => {
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
   res.setHeader('Pragma', 'no-cache');
   res.setHeader('Expires', '0');
-  sendFrontendOrPublic(res, 'constraints.html');
+  sendFile(res, 'constraints.html');
 });
 
 // Get constraints for a single guide and month (basic placeholder for now)
@@ -2119,6 +2106,35 @@ app.get('/api/weekend-type/:date', async (req, res) => {
   }
 });
 
+  // Get weekend types for a month
+  app.get('/api/weekend-types/:year/:month', async (req, res) => {
+  try {
+    const { year, month } = req.params;
+    
+    // Get all weekend types for the month (stored on Fridays)
+    const result = await pool.query(`
+      SELECT date, is_closed 
+      FROM weekend_types 
+      WHERE EXTRACT(YEAR FROM date) = $1 
+        AND EXTRACT(MONTH FROM date) = $2
+        AND EXTRACT(DOW FROM date) = 5
+      ORDER BY date
+    `, [year, month]);
+
+    // Normalize to YYYY-MM-DD using local timezone to avoid off-by-one
+    const weekendTypes = {};
+    result.rows.forEach(row => {
+      const fridayStr = formatDateLocal(new Date(row.date));
+      weekendTypes[fridayStr] = row.is_closed ? 'סופ״ש סגור' : 'סופ״ש פתוח';
+    });
+    
+    res.json({ weekendTypes });
+  } catch (error) {
+    console.error('Error fetching weekend types for month:', error);
+    res.status(500).json({ error: 'Failed to fetch weekend types for month' });
+  }
+});
+
 // Set weekend type for a date
 app.post('/api/weekend-type/:date', async (req, res) => {
   try {
@@ -2348,7 +2364,12 @@ app.get('/health', (req, res) => {
 // Clear month schedule
 app.delete('/api/schedule/clear-month', async (req, res) => {
   try {
-    const { year, month } = req.query;
+    // Accept year/month from query or JSON body
+    let { year, month } = req.query;
+    if ((!year || !month) && req.body) {
+      year = year || req.body.year;
+      month = month || req.body.month;
+    }
     
     const result = await pool.query(`
       DELETE FROM schedule 
@@ -2610,6 +2631,31 @@ app.post('/api/workflow/finalize/:month', async (req, res) => {
   } catch (error) {
     console.error('Error finalizing schedule:', error);
     res.status(500).json({ error: 'Failed to finalize schedule' });
+  }
+});
+
+// Reset workflow for a month: remove drafts, official schedules, status, history and email logs
+app.post('/api/workflow/reset/:month', async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { month } = req.params; // YYYY-MM
+    await client.query('BEGIN');
+
+    const counts = {};
+    counts.drafts_deleted = (await client.query('DELETE FROM drafts WHERE month = $1', [month])).rowCount;
+    counts.official_deleted = (await client.query('DELETE FROM official_schedules WHERE month = $1', [month])).rowCount;
+    counts.history_deleted = (await client.query('DELETE FROM schedule_history WHERE month = $1', [month])).rowCount;
+    counts.email_logs_deleted = (await client.query('DELETE FROM email_logs WHERE month = $1', [month])).rowCount;
+    counts.status_deleted = (await client.query('DELETE FROM workflow_status WHERE month = $1', [month])).rowCount;
+
+    await client.query('COMMIT');
+    res.json({ success: true, message: `Workflow reset for ${month}`, counts });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Error resetting workflow:', error);
+    res.status(500).json({ error: 'Failed to reset workflow' });
+  } finally {
+    client.release();
   }
 });
 
@@ -3783,10 +3829,13 @@ function generateFinalStatisticsPG(context, assignments) {
 
 function getAllDaysInMonth(year, month) {
   const days = [];
-  const date = new Date(year, month - 1, 1);
+  // Use local date construction to avoid timezone issues
+  const date = new Date(year, month - 1, 1, 12, 0, 0, 0); // Use noon to avoid DST issues
   
   while (date.getMonth() === month - 1) {
-    days.push(new Date(date));
+    // Create a new date object for each day to avoid reference issues
+    const dayDate = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 12, 0, 0, 0);
+    days.push(dayDate);
     date.setDate(date.getDate() + 1);
   }
   
@@ -3804,7 +3853,8 @@ async function getWeekendType(date, weekdayNum) {
     // Normalize: flags are stored on Friday; if Saturday given, check Friday
     let lookupDate = date;
     if (weekdayNum === 6) {
-      const d = new Date(date + 'T00:00:00');
+      // Use local date construction to avoid timezone issues
+      const d = new Date(date + 'T12:00:00'); // Use noon to avoid DST issues
       d.setDate(d.getDate() - 1);
       lookupDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     }
@@ -4346,14 +4396,18 @@ async function startServer() {
     // Test PostgreSQL connection
     const connectionOk = await testConnection();
     if (!connectionOk) {
-      console.error('❌ Failed to connect to PostgreSQL. Exiting...');
-      process.exit(1);
+      console.error('⚠️ PostgreSQL connection failed - starting app anyway for debugging...');
+      console.error('📝 Database-dependent features may not work until connection is fixed');
     }
     
     // AI Agent is already initialized above
     
     // Initialize default data
-    await initializeDefaultTypes();
+    if (connectionOk) {
+      await initializeDefaultTypes();
+    } else {
+      console.log('⏩ Skipping database initialization due to connection failure');
+    }
     
     // Start Express server
     app.listen(PORT, () => {

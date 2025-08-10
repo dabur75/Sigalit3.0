@@ -5,7 +5,7 @@
   "type": "commonjs",
   "scripts": {
     "start": "node app.js",
-    "dev": "SERVE_FROM_FRONTEND=true node app.js",
+    "dev": "node app.js",
     "build": "echo 'Production build - static files included'",
     "test": "echo \"Error: no test specified\" && exit 1"
   },

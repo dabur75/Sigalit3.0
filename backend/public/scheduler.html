@@ -2258,9 +2258,9 @@
                     <option value="2025-03">מרץ 2025</option>
                     <option value="2025-04">אפריל 2025</option>
                     <option value="2025-05">מאי 2025</option>
-                    <option value="2025-06" selected>יוני 2025</option>
+                    <option value="2025-06">יוני 2025</option>
                     <option value="2025-07">יולי 2025</option>
-                    <option value="2025-08">אוגוסט 2025</option>
+                    <option value="2025-08" selected>אוגוסט 2025</option>
                     <option value="2025-09">ספטמבר 2025</option>
                     <option value="2025-10">אוקטובר 2025</option>
                     <option value="2025-11">נובמבר 2025</option>
@@ -2640,7 +2640,7 @@
         // Auto-detect API base: when served from dev static server (8080) use localhost:4000, otherwise same-origin '/api'
         const API_BASE = (location.port === '8080') ? 'http://localhost:4000/api' : '/api';
         let sidePanelOpen = false;
-        let currentMonth = '2025-06';
+        let currentMonth = new Date().getFullYear() + '-' + String(new Date().getMonth() + 1).padStart(2, '0');
         let currentDate = null;
         let selectedGuides = [];
         let guidesData = [];
@@ -2652,6 +2652,13 @@
         let availableDrafts = [];
         let isFinalized = false;
         let statisticsData = null;
+
+        // Helper function to get first name from full name
+        function getFirstName(fullName) {
+            if (!fullName) return '';
+            // Split by space and take the first part
+            return fullName.split(' ')[0];
+        }
 
         // =====================================================
         // API INTEGRATION FUNCTIONS
@@ -2794,16 +2801,10 @@
             // Clear existing content
             calendarBody.innerHTML = '';
 
-            // Get current month and year from the schedule or use current selection
+            // Get current month and year from currentMonth selection
             let year, month;
-            if (schedule && schedule.length > 0) {
-                const firstDay = new Date(schedule[0].date);
-                year = firstDay.getFullYear();
-                month = firstDay.getMonth();
-            } else {
-                [year, month] = currentMonth.split('-').map(Number);
-                month = month - 1; // JavaScript months are 0-based
-            }
+            [year, month] = currentMonth.split('-').map(Number);
+            month = month - 1; // JavaScript months are 0-based
 
             // Generate calendar days for the month
             const weeks = generateCalendarDays(year, month, schedule);
@@ -2839,6 +2840,8 @@
             const firstDayOfWeek = firstDay.getDay();
             
             // Add empty cells for days before the first day of the month
+            console.log(`First day of month ${month + 1}/${year} is ${firstDay.toDateString()}, day of week: ${firstDayOfWeek}`);
+            console.log(`Adding ${firstDayOfWeek} empty cells at the start`);
             for (let i = 0; i < firstDayOfWeek; i++) {
                 currentWeek.push(null);
             }
@@ -2849,13 +2852,23 @@
                 // Use local date formatting to avoid timezone issues
                 const dateString = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                 
-                console.log(`Generated date for day ${day}: ${dateString} (${date.toDateString()})`);
+                console.log(`Generated date for day ${day}: ${dateString} (${date.toDateString()}) - Day of week: ${date.getDay()}`);
+            
+            // Debug the exact positioning
+            if (day <= 5) {
+                console.log(`  -> Day ${day} should be in column ${date.getDay()} (0=ראשון, 1=שני, 2=שלישי, 3=רביעי, 4=חמישי, 5=שישי, 6=שבת)`);
+            }
                 
                 // Find if there's schedule data for this day
-                const scheduleDay = schedule ? schedule.find(s => s.date === dateString) : null;
+                const scheduleDay = schedule ? schedule.find(s => {
+                    // Handle both ISO format (2025-08-01T21:00:00.000Z) and simple format (2025-08-01)
+                    const scheduleDate = (s.date || '').split('T')[0]; // Extract just the date part
+                    return scheduleDate === dateString;
+                }) : null;
                 
                 if (scheduleDay) {
-                    currentWeek.push(scheduleDay);
+                    // Normalize date to the grid's local date string to avoid timezone shifts
+                    currentWeek.push({ ...scheduleDay, date: dateString });
                 } else {
                     // Create empty day object
                     currentWeek.push({
@@ -2867,7 +2880,7 @@
                     });
                 }
                 
-                // If we've reached Saturday (6), start a new week
+                // If we've reached the end of a week (Saturday=6), start a new week
                 if (date.getDay() === 6) {
                     weeks.push(currentWeek);
                     currentWeek = [];
@@ -2882,12 +2895,19 @@
             return weeks;
         }
         
-        function groupScheduleByWeeks(schedule) {
+            // Consistent weekday helper: interpret date string at local midnight
+            function getDayOfWeekLocal(dateStr) {
+                // Use local midnight to avoid timezone shifts
+                const d = new Date(dateStr + 'T00:00:00');
+                return d.getDay(); // 0=Sun .. 6=Sat
+            }
+
+            function groupScheduleByWeeks(schedule) {
             const weeks = [];
             let currentWeek = [];
             
             schedule.forEach(day => {
-                const dayOfWeek = new Date(day.date).getDay();
+                const dayOfWeek = getDayOfWeekLocal(day.date);
                 
                 // Start new week on Sunday (0)
                 if (dayOfWeek === 0 && currentWeek.length > 0) {
@@ -2916,7 +2936,7 @@
             const dayNumber = new Date(day.date).getDate();
             const isManual = day.is_manual;
             const isLocked = day.is_locked;
-            const dayOfWeek = new Date(day.date).getDay();
+            const dayOfWeek = getDayOfWeekLocal(day.date);
             const isFriday = dayOfWeek === 5; // Friday is day 5
             const isSaturday = dayOfWeek === 6; // Saturday is day 6
             
@@ -2926,9 +2946,10 @@
             
             if (isSaturday) {
                 // Check if the previous Friday is marked as closed Saturday
-                const fridayDate = new Date(day.date);
-                fridayDate.setDate(fridayDate.getDate() - 1);
-                const fridayString = fridayDate.toISOString().split('T')[0];
+                // Build friday string using local midnight math to avoid UTC rollovers
+                const sat = new Date(day.date + 'T00:00:00');
+                sat.setDate(sat.getDate() - 1);
+                const fridayString = `${sat.getFullYear()}-${String(sat.getMonth()+1).padStart(2,'0')}-${String(sat.getDate()).padStart(2,'0')}`;
                 
                 // Check if Friday has closed Saturday setting
                 const fridayCheckbox = document.querySelector(`input[data-date="${fridayString}"]`);
@@ -2950,7 +2971,7 @@
                 cellHtml += `
                     <div class="guide-item-display guide-conan-friday guide-${fridayConanGuide.toLowerCase()}">
                         <span class="guide-role-label">כונן שישי/שבת (עד 17:00)</span>
-                        <span class="guide-name">${fridayConanGuide}</span>
+                        <span class="guide-name">${getFirstName(fridayConanGuide)}</span>
                     </div>
                 `;
             }
@@ -2969,7 +2990,7 @@
                 cellHtml += `
                     <div class="guide-item-display ${guide1Class} guide-${day.guide1_name.toLowerCase()}">
                         <span class="guide-role-label">${guide1Role}</span>
-                        <span class="guide-name">${day.guide1_name}</span>
+                        <span class="guide-name">${getFirstName(day.guide1_name)}</span>
                     </div>
                 `;
             }
@@ -2979,7 +3000,7 @@
                 cellHtml += `
                     <div class="guide-item-display ${guide2Class} guide-${day.guide2_name.toLowerCase()}">
                         <span class="guide-role-label">${day.guide2_role}</span>
-                        <span class="guide-name">${day.guide2_name}</span>
+                        <span class="guide-name">${getFirstName(day.guide2_name)}</span>
                     </div>
                 `;
             }
@@ -2997,7 +3018,7 @@
                     <div class="weekend-type-control">
                         <label class="weekend-checkbox">
                             <input type="checkbox" onchange="toggleWeekendType('${day.date}', this.checked)" data-date="${day.date}">
-                            <span class="checkbox-label">שבת סגורה</span>
+                            <span class="checkbox-label">סופ״ש סגור</span>
                         </label>
                     </div>
                 `;
@@ -3804,11 +3825,11 @@
                         if (result.is_closed === 1) {
                             // Closed Saturday - can have 1 additional guide (מוצ״ש) in addition to the conan from Friday
                             if (selectedGuides.length === 0) {
-                                showNotification('שבת סגורה דורשת לפחות מדריך נוסף אחד (מוצ״ש)', 'warning');
+                                showNotification('סופ״ש סגור דורש לפחות מדריך נוסף אחד (מוצ״ש)', 'warning');
                                 return;
                             }
                             if (selectedGuides.length > 1) {
-                                showNotification('שבת סגורה יכולה לקבל מדריך נוסף אחד בלבד (מוצ״ש)', 'warning');
+                                showNotification('סופ״ש סגור יכול לקבל מדריך נוסף אחד בלבד (מוצ״ש)', 'warning');
                                 return;
                             }
                             assignmentType = 'מוצ״ש';
@@ -3846,7 +3867,7 @@
                         if (result.is_closed === 1) {
                             // Closed Saturday Friday - requires exactly 1 guide (כונן)
                             if (selectedGuides.length !== 1) {
-                                showNotification('שישי לשבת סגורה דורש כונן אחד בלבד', 'warning');
+                                showNotification('שישי לסופ״ש סגור דורש כונן אחד בלבד', 'warning');
                                 return;
                             }
                             assignmentType = 'כונן';
@@ -4208,7 +4229,7 @@
                 
                 const result = await response.json();
                 if (result.success) {
-                    showNotification(isClosed ? 'שבת סגורה נקבעה' : 'שבת פתוחה נקבעה', 'success');
+                    showNotification(isClosed ? 'סופ״ש סגור נקבע' : 'סופ״ש פתוח נקבע', 'success');
                     // Reload the month to update availability
                     const [year, month] = currentMonth.split('-');
                     await loadMonthSchedule(year, month);
@@ -4486,7 +4507,7 @@
                     }
                     
                     // Special handling for closed Saturday
-                    if (weekendType === 'שבת סגורה' && weekday === 'שבת') {
+                    if (weekendType === 'סופ״ש סגור' && weekday === 'שבת') {
                         // Get the previous day's on-call guide
                         const previousDate = new Date(date);
                         previousDate.setDate(previousDate.getDate() - 1);
@@ -4622,7 +4643,7 @@
 
         function getRequiredGuidesForDay(weekendType, weekday) {
             // Closed Saturday = 1 on-call guide
-            if (weekendType === 'שבת סגורה') {
+            if (weekendType === 'סופ״ש סגור') {
                 return { requiredGuides: 1, roles: ['כונן'] };
             }
             
@@ -4889,11 +4910,21 @@
                 console.log('Clear response result:', result);
                 
                 if (result.success) {
-                    showNotification(`כל השיבוצים נוקו בהצלחה (${result.changes} שיבוצים)`, 'success');
-                    
-                    // Reload the month schedule to update the calendar
+                    showNotification(`כל השיבוצים נוקו בהצלחה (${result.deleted_count || result.changes || 0} שיבוצים)`, 'success');
+
+                    // Reset workflow back to start for this month
+                    const monthStr = `${year}-${String(month).padStart(2, '0')}`;
+                    const resetResp = await fetch(`${API_BASE}/workflow/reset/${monthStr}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                    const resetResult = await resetResp.json();
+                    console.log('Workflow reset result:', resetResult);
+
+                    // Reload the month schedule and workflow status to update the UI
                     await loadMonthSchedule(year, month);
-                    
+                    await loadWorkflowStatus(monthStr);
+
                     // Clear selected guides if any
                     selectedGuides = [];
                     updateSelectedGuidesFromArray();
@@ -5781,7 +5812,7 @@
                     
                     if (isThisGuide) {
                         // Determine CSS class based on shift type and day
-                        const dayOfWeek = new Date(dateString).getDay();
+                        const dayOfWeek = getDayOfWeekLocal(dateString);
                         const isWeekend = dayOfWeek === 5 || dayOfWeek === 6;
                         
                         if (isWeekend) {
