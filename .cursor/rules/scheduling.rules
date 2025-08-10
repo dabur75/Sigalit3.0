@@ -1,0 +1,5 @@
+# Scheduling summary (see docs/SCHEDULING_RULES.md)
+WEEKEND=Fri-Sat
+WEEKDAYS=Sun-Thu
+CLOSED_WEEKEND=Fri:Standby; Sat:Standby+Motzash (flag on Fri)
+AUTO_ORDER=manual>hard_constraints>weekend_rules>traffic_light>fairness

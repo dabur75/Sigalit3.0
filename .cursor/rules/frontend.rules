@@ -1,0 +1,3 @@
+# Frontend policy
+FRONTEND_SOURCE=backend/public
+FRONTEND_ARCHIVE=frontend_archive

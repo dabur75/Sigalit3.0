@@ -105,6 +105,9 @@ backend/
 └── legacy/              # Backup of old SQLite files
 ```
 
+### 📘 Scheduling Algorithm Rules
+- See `../docs/SCHEDULING_RULES.md` for the authoritative specification (manual vs auto, traffic-light, fairness, and weekend rules for Israel).
+
 ### 🤖 AI Features
 
 The system includes a sophisticated AI agent with:

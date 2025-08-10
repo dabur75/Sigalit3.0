@@ -41,3 +41,9 @@ FRONTEND_ARCHIVE=frontend_archive
 # - Any new UI work must be committed under `backend/public/`.
 # - The old `frontend/` has been moved to `frontend_archive/` as a fallback reference.
 # - Local dev URL: http://localhost:4000
+
+# Scheduling Algorithm (summary; full doc in docs/SCHEDULING_RULES.md)
+SCHEDULING_WEEKEND=Fri-Sat
+SCHEDULING_WEEKDAYS=Sun-Thu
+SCHEDULING_CLOSED_WEEKEND=Friday:Standby, Saturday:Standby+Motzash (Friday flag persists)
+SCHEDULING_AUTO_RESPECTS=manual,hard_constraints,weekend_rules,traffic_light
