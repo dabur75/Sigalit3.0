@@ -77,3 +77,48 @@ if (document.readyState === 'loading') {
 } else {
     renderHeaderUser();
 } 
+
+// =========================
+// API base + fetch helpers
+// =========================
+// Centralized API base and a thin fetch wrapper. This does not change existing
+// behavior yet; pages will be incrementally migrated to use these helpers.
+(() => {
+  const isDevStaticServer = window.location && window.location.port === '8080';
+
+  if (!('API_BASE_URL' in window)) {
+    const baseUrl = isDevStaticServer ? 'http://localhost:4000' : '';
+    Object.defineProperty(window, 'API_BASE_URL', {
+      value: baseUrl,
+      writable: false,
+      configurable: true,
+      enumerable: true
+    });
+  }
+
+  if (!('apiFetch' in window)) {
+    window.apiFetch = async function apiFetch(path, options = {}) {
+      const pathString = String(path || '');
+      const isAbsoluteUrl = /^https?:\/\//i.test(pathString);
+      const url = isAbsoluteUrl ? pathString : `${window.API_BASE_URL}${pathString}`;
+
+      const defaultOptions = {
+        credentials: 'same-origin',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      };
+
+      const mergedOptions = {
+        ...defaultOptions,
+        ...options,
+        headers: {
+          ...defaultOptions.headers,
+          ...(options && options.headers ? options.headers : {})
+        }
+      };
+
+      return fetch(url, mergedOptions);
+    };
+  }
+})();
