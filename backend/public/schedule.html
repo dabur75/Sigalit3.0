@@ -540,12 +540,12 @@
             selectedMonth = m;
             document.getElementById('current-month-label').innerText = `${monthsHe[m-1]} ${y}`;
             Promise.all([
-                fetch(`http://localhost:4000/api/schedule?month=${y}-${pad2(m)}`).then(res=>res.json()),
-                fetch(`http://localhost:4000/api/guides/enhanced`).then(res=>res.json()),
-                fetch('http://localhost:4000/api/constraints').then(res=>res.json()),
-                fetch('http://localhost:4000/api/fixed-constraints').then(res=>res.json()),
-                fetch('http://localhost:4000/api/vacations').then(res=>res.json()),
-                fetch(`http://localhost:4000/api/weekend-types/${y}/${m}`).then(res=>res.json()).catch(() => ({ weekendTypes: {} }))
+                apiFetch(`/api/schedule?month=${y}-${pad2(m)}`).then(res=>res.json()),
+                apiFetch('/api/guides/enhanced').then(res=>res.json()),
+                apiFetch('/api/constraints').then(res=>res.json()),
+                apiFetch('/api/fixed-constraints').then(res=>res.json()),
+                apiFetch('/api/vacations').then(res=>res.json()),
+                apiFetch(`/api/weekend-types/${y}/${m}`).then(res=>res.json()).catch(() => ({ weekendTypes: {} }))
             ])
             .then(([schedule, guidesData, constraintsData, fixedData, vacsData, weekendData]) => {
                 allSchedule = schedule || [];
@@ -557,7 +557,7 @@
                 console.log('Loaded weekend types:', weekendTypes);
                 
                 // Load official schedule if available
-                fetch(`http://localhost:4000/api/workflow/status/${y}-${pad2(m)}`)
+                apiFetch(`/api/workflow/status/${y}-${pad2(m)}`)
                     .then(res => res.json())
                     .then(workflowData => {
                         const statusDiv = document.getElementById('schedule-status');
@@ -569,7 +569,7 @@
                             statusDiv.classList.add('finalized');
                             
                             // Load official schedule
-                            fetch(`http://localhost:4000/api/schedule/official/${y}-${pad2(m)}`)
+                            apiFetch(`/api/schedule/official/${y}-${pad2(m)}`)
                                 .then(res => res.json())
                                 .then(officialSchedule => {
                                     if (officialSchedule && officialSchedule.length > 0) {
@@ -688,7 +688,7 @@
         // Function to fetch weekend types from backend
         async function fetchWeekendTypes(year, month) {
             try {
-                const response = await fetch(`http://localhost:4000/api/weekend-types/${year}/${month}`);
+                const response = await apiFetch(`/api/weekend-types/${year}/${month}`);
                 const result = await response.json();
                 weekendTypes = result.weekendTypes || {};
                 return weekendTypes;

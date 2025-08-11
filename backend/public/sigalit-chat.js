@@ -8,7 +8,7 @@ class SigalitChat {
     this.isOpen = false;
     this.messages = [];
     this.isTyping = false;
-    this.apiBase = 'http://localhost:4000/api/ai';
+    this.apiBase = `${window.API_BASE_URL}/api/ai`;
     this.userId = this.getUserId();
     this.currentContext = {};
     

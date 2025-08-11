@@ -264,11 +264,11 @@ const weekdays = ["ראשון", "שני", "שלישי", "רביעי", "חמיש�
 
 // --- אילוצים חודשיים ---
 async function fetchGuides() {
-  const res = await fetch('http://localhost:4000/api/guides');
+  const res = await apiFetch('/api/guides');
   return await res.json();
 }
 async function fetchConstraints() {
-  const res = await fetch('http://localhost:4000/api/constraints');
+  const res = await apiFetch('/api/constraints');
   return await res.json();
 }
 async function renderConstraints() {
@@ -330,7 +330,7 @@ async function renderConstraints() {
 
 // --- אילוצים קבועים ---
 async function fetchFixedConstraints() {
-  const res = await fetch('http://localhost:4000/api/fixed-constraints');
+  const res = await apiFetch('/api/fixed-constraints');
   return await res.json();
 }
 async function renderFixedConstraints() {
@@ -383,7 +383,7 @@ async function renderFixedConstraints() {
 
 // --- חופשות ---
 async function fetchVacations() {
-  const res = await fetch('http://localhost:4000/api/vacations');
+  const res = await apiFetch('/api/vacations');
   return await res.json();
 }
 async function renderVacations() {
@@ -498,7 +498,7 @@ function openConstraintForm(constraint=null) {
       days = [dateStart];
     }
     for (let d of days) {
-      await fetch('http://localhost:4000/api/constraints', {
+      await apiFetch('/api/constraints', {
         method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({
           guideId,
           date: d,
@@ -518,7 +518,7 @@ async function editConstraint(id) {
 }
 async function deleteConstraint(id) {
   if (!confirm("למחוק את האילוץ?")) return;
-  await fetch('http://localhost:4000/api/constraints/'+id, {method:'DELETE'});
+  await apiFetch('/api/constraints/'+id, {method:'DELETE'});
   renderConstraints();
 }
 
@@ -552,11 +552,11 @@ function openFixedForm(fixed=null) {
   };
 
     if (fixed && fixed.id) {
-      await fetch('http://localhost:4000/api/fixed-constraints/'+fixed.id, {
+      await apiFetch('/api/fixed-constraints/'+fixed.id, {
         method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(obj)
       });
     } else {
-      await fetch('http://localhost:4000/api/fixed-constraints', {
+      await apiFetch('/api/fixed-constraints', {
         method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(obj)
       });
     }
@@ -572,7 +572,7 @@ async function editFixed(id) {
 }
 async function deleteFixed(id) {
   if (!confirm("למחוק את האילוץ?")) return;
-  await fetch('http://localhost:4000/api/fixed-constraints/'+id, {method:'DELETE'});
+  await apiFetch('/api/fixed-constraints/'+id, {method:'DELETE'});
   renderFixedConstraints();
 }
 
@@ -603,11 +603,11 @@ function openVacationForm(vacation=null) {
       status: "pending"
     };
     if (vacation && vacation.id) {
-      await fetch('http://localhost:4000/api/vacations/'+vacation.id, {
+      await apiFetch('/api/vacations/'+vacation.id, {
         method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(obj)
       });
     } else {
-      await fetch('http://localhost:4000/api/vacations', {
+      await apiFetch('/api/vacations', {
         method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(obj)
       });
     }
@@ -649,7 +649,7 @@ async function approveVacation(id) {
             type: "vacation"
           };
           
-          await fetch('http://localhost:4000/api/constraints', {
+          await apiFetch('/api/constraints', {
             method:'POST',
             headers:{'Content-Type':'application/json'},
             body:JSON.stringify(vacationConstraint)
@@ -658,7 +658,7 @@ async function approveVacation(id) {
       }
     }
     
-    await fetch('http://localhost:4000/api/vacations/'+vac.id, {
+    await apiFetch('/api/vacations/'+vac.id, {
       method:'PUT',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify(vac)
@@ -674,7 +674,7 @@ function closeApproveModal() {
 
 async function deleteVacation(id) {
   if (!confirm("למחוק את בקשת החופשה?")) return;
-  await fetch('http://localhost:4000/api/vacations/' + id, { method: 'DELETE' });
+  await apiFetch('/api/vacations/' + id, { method: 'DELETE' });
   renderVacations();
 }
 

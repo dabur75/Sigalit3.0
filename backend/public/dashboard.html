@@ -594,7 +594,7 @@
                 
                 console.log('📤 Sending to API:', obj);
                 
-                await fetch('http://localhost:4000/api/weekly-overrides', {
+                await apiFetch('/api/weekly-overrides', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(obj)
@@ -872,7 +872,7 @@ newConvSelect.onchange = async function() {
     const otherId = Number(newConvSelect.value);
     if (!otherId) return;
     // Create or get conversation
-    const res = await fetch('http://localhost:4000/api/conversations', {
+    const res = await apiFetch('/api/conversations', {
         method: 'POST',
         headers: {'Content-Type':'application/json'},
         body: JSON.stringify({ participants: [currentUserId, otherId] })
