@@ -55,6 +55,7 @@ Used both in UI hints and backend selection safety checks.
 - Preference given to guides with fewer shifts (fair distribution)
 - Prefer spreading weekend work (limit per-month caps)
 - Avoid consecutive heavy patterns (recent work penalties)
+- No back-to-back days: a guide must not be scheduled on two consecutive days, except for closed-weekend pairing (Friday standby continues to Saturday).
 - Respect coordinator rules (e.g., no automatic weekends for specific guides)
 
 ## Weekend Logic (Israel: Fri–Sat)

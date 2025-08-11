@@ -200,6 +200,17 @@ async function validateGuideAvailabilityPG(guide, date, context) {
     if (hasVacation) {
       availability.available = false; availability.traffic_light_status = 'red'; availability.traffic_light_reason = 'חופשה'; availability.reasons.push('חופשה'); return availability;
     }
+    // Disallow consecutive-day assignments (soft exception for closed-weekend pairing)
+    const guideStats = context.guideStats[guide.id];
+    if (guideStats && guideStats.lastShiftDate) {
+      const previousDayStr = addDaysLocal(date, -1);
+      const workedYesterday = guideStats.lastShiftDate === previousDayStr;
+      const isClosedSaturday = dayOfWeek === 6 && context.weekendTypes[previousDayStr] === true;
+      if (workedYesterday && !isClosedSaturday) {
+        availability.available = false; availability.traffic_light_status = 'red'; availability.traffic_light_reason = 'אסור יום אחרי יום'; availability.reasons.push('עבד אתמול'); return availability;
+      }
+    }
+
     // Coordinator rules
     const isWeekend = dayOfWeek === 5 || dayOfWeek === 6;
     if (context.coordinatorRules.some(r => r.rule_type === 'no_auto_scheduling' && r.is_active && r.guide1_id === guide.id)) {
@@ -209,7 +220,8 @@ async function validateGuideAvailabilityPG(guide, date, context) {
       availability.available = false; availability.traffic_light_status = 'red'; availability.traffic_light_reason = 'חוק רכז - לא בסופי שבוע'; availability.reasons.push('חוק רכז - לא בסופי שבוע'); return availability;
     }
     // Traffic-light and scoring
-    const guideStats = context.guideStats[guide.id];
+    // Traffic-light and scoring
+    // Note: guideStats referenced above; ensure present
     const traffic = calculateTrafficLightStatusForSchedulingPG(guide, guideStats, date, context);
     availability.traffic_light_status = traffic.status;
     availability.traffic_light_reason = traffic.reason;
