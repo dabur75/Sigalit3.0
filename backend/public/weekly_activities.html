@@ -262,12 +262,12 @@
     ];
 
     async function fetchActivities() {
-      const res = await fetch('http://localhost:4000/api/weekly-activities');
+      const res = await apiFetch('/api/weekly-activities');
       return await res.json();
     }
 
     async function fetchOverrides() {
-      const res = await fetch('http://localhost:4000/api/weekly-overrides');
+      const res = await apiFetch('/api/weekly-overrides');
       return await res.json();
     }
 
@@ -310,7 +310,7 @@
 
     async function deleteActivity(id) {
       if (!confirm('למחוק פעילות זו?')) return;
-      await fetch('http://localhost:4000/api/weekly-activities/' + id, { method: 'DELETE' });
+      await apiFetch('/api/weekly-activities/' + id, { method: 'DELETE' });
       render();
     }
 
@@ -318,7 +318,7 @@
       let formHtml = '';
       let activity = { weekday, time:'', duration:'', title:'', category:'טיפולית', facilitator:'' };
       if (mode === 'edit') {
-        fetch('http://localhost:4000/api/weekly-activities')
+        fetch(`${window.API_BASE_URL}/api/weekly-activities`)
           .then(res => res.json())
           .then(list => {
             activity = list.find(a => a.id === id);
@@ -379,13 +379,13 @@
         facilitator: f.facilitator.value
       };
       if (mode === 'edit') {
-        await fetch('http://localhost:4000/api/weekly-activities/' + id, {
+        await apiFetch('/api/weekly-activities/' + id, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(obj)
         });
       } else {
-        await fetch('http://localhost:4000/api/weekly-activities', {
+        await apiFetch('/api/weekly-activities', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(obj)
@@ -438,7 +438,7 @@
 
     window.deleteOverride = async function(id) {
       if (!confirm('למחוק את השינוי החד-פעמי הזה?')) return;
-      await fetch('http://localhost:4000/api/weekly-overrides/' + id, { method: 'DELETE' });
+      await apiFetch('/api/weekly-overrides/' + id, { method: 'DELETE' });
       renderOverrides();
     }
 
@@ -484,7 +484,7 @@
         category: f.category.value,
         facilitator: f.facilitator.value
       };
-      await fetch('http://localhost:4000/api/weekly-overrides', {
+      await apiFetch('/api/weekly-overrides', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(obj)

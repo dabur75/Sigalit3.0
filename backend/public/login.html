@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>ברוך הבא לסיגלית!</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="header-functions.js"></script>
     <style>
         body { background: #f7fafd; font-family: 'Heebo', Arial, sans-serif; }
         .login-box {
@@ -49,14 +50,14 @@
     // Cache busting - force reload
     console.log('Login page loaded - version 4.0 - ' + new Date().toISOString());
     console.log('🌐 Current URL:', window.location.href);
-    console.log('🔗 API URL:', 'http://localhost:4000/api/users');
+    console.log('🔗 API BASE:', window.API_BASE_URL);
     let guidesList = [];
 
     async function loadGuides() {
         try {
             console.log('🔄 Loading users from API...');
-            console.log('🌐 Making request to: http://localhost:4000/api/users');
-            const res = await fetch('http://localhost:4000/api/users', {
+            console.log('🌐 Making request to:', `${window.API_BASE_URL}/api/users`);
+            const res = await apiFetch('/api/users', {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
@@ -110,7 +111,7 @@
         // שלח בקשת התחברות לשרת
         let data;
         try {
-            const res = await fetch('http://localhost:4000/api/login', {
+            const res = await apiFetch('/api/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username: user.name, password: password })

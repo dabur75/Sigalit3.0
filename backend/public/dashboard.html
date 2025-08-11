@@ -291,12 +291,12 @@
 
         // ========================== TASKS ===============================
         async function fetchTasks() {
-            const res = await fetch('http://localhost:4000/api/tasks?open_only=true');
+            const res = await apiFetch('/api/tasks?open_only=true');
             return await res.json();
         }
         
         async function fetchAllTasks() {
-            const res = await fetch('http://localhost:4000/api/tasks/all');
+            const res = await apiFetch('/api/tasks/all');
             return await res.json();
         }
         async function renderTasks() {
@@ -329,7 +329,7 @@
             if (!text) return;
             let creator_id = localStorage.getItem('userId') || null;
             let today = new Date().toISOString().slice(0,10);
-            await fetch('http://localhost:4000/api/tasks', {
+            await apiFetch('/api/tasks', {
                 method: 'POST',
                 headers: {'Content-Type':'application/json'},
                 body: JSON.stringify({ text, creator_id, shift_date: today, status: "פתוחה", created_at: new Date().toISOString() })
@@ -340,7 +340,7 @@
 
         async function completeTask(id) {
             let closer_id = localStorage.getItem('userId') || null;
-            await fetch('http://localhost:4000/api/tasks/'+id, {
+            await apiFetch('/api/tasks/'+id, {
                 method:'PUT',
                 headers:{'Content-Type':'application/json'},
                 body: JSON.stringify({ 
@@ -356,7 +356,7 @@
         async function cancelTask(id) {
             if (!confirm('האם אתה בטוח שברצונך לבטל משימה זו?')) return;
             let closer_id = localStorage.getItem('userId') || null;
-            await fetch('http://localhost:4000/api/tasks/'+id, {
+            await apiFetch('/api/tasks/'+id, {
                 method:'PUT',
                 headers:{'Content-Type':'application/json'},
                 body: JSON.stringify({ 
@@ -423,7 +423,7 @@
         window.moveTaskToNewDate = async function() {
             const newDate = document.getElementById('moveDateInput').value;
             if (!newDate) return alert("בחר תאריך יעד");
-            await fetch('http://localhost:4000/api/tasks/'+moveTaskId, {
+            await apiFetch('/api/tasks/'+moveTaskId, {
                 method:'PUT',
                 headers:{'Content-Type':'application/json'},
                 body: JSON.stringify({ shift_date: newDate })
@@ -444,7 +444,7 @@
         }
 
         async function renderOnShift() {
-            const res = await fetch('http://localhost:4000/api/schedule');
+            const res = await apiFetch('/api/schedule');
             const schedule = await res.json();
             const today = new Date();
             const todayStr = today.toISOString().slice(0,10);
@@ -497,11 +497,11 @@
             return new Date();
         }
         async function fetchActivities() {
-            const res = await fetch('http://localhost:4000/api/weekly-activities');
+            const res = await apiFetch('/api/weekly-activities');
             return await res.json();
         }
         async function fetchOverrides() {
-            const res = await fetch('http://localhost:4000/api/weekly-overrides');
+            const res = await apiFetch('/api/weekly-overrides');
             return await res.json();
         }
         function setupDailyScheduleUI() {
@@ -704,7 +704,7 @@ document.addEventListener("DOMContentLoaded", function() {
     };
 
     async function loadReferrals(dateStr) {
-        const res = await fetch(`http://localhost:4000/api/doctor-referrals?date=${dateStr}`);
+        const res = await apiFetch(`/api/doctor-referrals?date=${dateStr}`);
         const referrals = await res.json();
         if (!referrals.length) {
             referralList.innerHTML = `<li style="color:#b2b2b2;">אין הפניות לרופא בתאריך זה</li>`;
@@ -753,7 +753,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
         if (!patient || !reason || !doctor || !date) return;
 
-        await fetch('http://localhost:4000/api/doctor-referrals', {
+        await apiFetch('/api/doctor-referrals', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({
@@ -774,7 +774,7 @@ document.addEventListener("DOMContentLoaded", function() {
 });
 
 async function completeReferral(id) {
-    const res = await fetch('http://localhost:4000/api/doctor-referrals');
+    const res = await apiFetch('/api/doctor-referrals');
     const all = await res.json();
     const ref = all.find(r => r.id === id);
     if (!ref) return;
@@ -783,7 +783,7 @@ async function completeReferral(id) {
     ref.closedAt = new Date().toISOString();
     ref.closedBy = localStorage.getItem("guide") || "מערכת";
 
-    await fetch(`http://localhost:4000/api/doctor-referrals/${id}`, {
+    await apiFetch(`/api/doctor-referrals/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(ref)
@@ -811,14 +811,14 @@ async function moveReferralToNewDate() {
     const newDate = document.getElementById('moveReferralDateInput').value;
     if (!newDate) return alert("בחר תאריך יעד");
 
-    const res = await fetch('http://localhost:4000/api/doctor-referrals');
+    const res = await apiFetch('/api/doctor-referrals');
     const all = await res.json();
     const ref = all.find(r => r.id === moveReferralId);
     if (!ref) return;
 
     ref.date = newDate;
 
-    await fetch(`http://localhost:4000/api/doctor-referrals/${ref.id}`, {
+    await apiFetch(`/api/doctor-referrals/${ref.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(ref)
@@ -837,7 +837,7 @@ let userIdToName = {};
 let currentUserId = Number(localStorage.getItem('userId'));
 
 async function fetchAllUsers() {
-    const res = await fetch('http://localhost:4000/api/guides');
+    const res = await apiFetch('/api/guides');
     allUsers = await res.json();
     userIdToName = {};
     allUsers.forEach(u => userIdToName[Number(u.id)] = u.name);
@@ -845,14 +845,14 @@ async function fetchAllUsers() {
 
 async function fetchConversations() {
     if (!currentUserId) return [];
-    const res = await fetch(`http://localhost:4000/api/conversations?user=${currentUserId}`);
+    const res = await apiFetch(`/api/conversations?user=${currentUserId}`);
     return await res.json();
 }
 function getOtherParticipant(conv) {
     return conv.participants.find(p => p !== currentUserId);
 }
 async function fetchConversationMessages(convId) {
-    const res = await fetch(`http://localhost:4000/api/conversations/${convId}/messages`);
+    const res = await apiFetch(`/api/conversations/${convId}/messages`);
     return await res.json();
 }
 
@@ -975,7 +975,7 @@ async function openConversationModal(conv) {
             const input = document.getElementById('modal-msg-text');
             const text = input.value.trim();
             if (!text) return;
-            await fetch(`http://localhost:4000/api/conversations/${currentModalConv.id}/messages`, {
+            await apiFetch(`/api/conversations/${currentModalConv.id}/messages`, {
                 method: 'POST',
                 headers: {'Content-Type':'application/json'},
                 body: JSON.stringify({ from: currentUserId, text })
@@ -1035,7 +1035,7 @@ if (modalSendForm) {
         const from = localStorage.getItem('userId') || localStorage.getItem('name') || 'מערכת';
         const fromName = localStorage.getItem('name') || 'משתמש';
         const to = getOtherParticipant(currentModalConv, fromName);
-        await fetch(`http://localhost:4000/api/conversations/${currentModalConv.id}/messages`, {
+        await apiFetch(`/api/conversations/${currentModalConv.id}/messages`, {
             method: 'POST',
             headers: {'Content-Type':'application/json'},
             body: JSON.stringify({ from, to, text, fromName })

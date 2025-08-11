@@ -99,7 +99,7 @@
         if (!text || !shiftDate) return;
         const userData = getCurrentUserData();
         let creator = userData.guide || "מערכת";
-        await fetch('http://localhost:4000/api/tasks', {
+        await apiFetch('/api/tasks', {
             method: 'POST',
             headers: {'Content-Type':'application/json'},
             body: JSON.stringify({ text, creator_id: userData.userId || null, shift_date: shiftDate, status: "פתוחה", created_at: new Date().toISOString() })
@@ -111,7 +111,7 @@
 
     // משימות פתוחות
     async function renderOpenTasks() {
-        const res = await fetch('http://localhost:4000/api/tasks');
+        const res = await apiFetch('/api/tasks');
         let tasks = await res.json();
         let filterDate = document.getElementById('filter-date').value;
         // הצג כל משימה שאינה "בוצע"
@@ -148,7 +148,7 @@
     // סגירת משימה
     async function closeTask(id) {
         const userData = getCurrentUserData();
-        const res = await fetch('http://localhost:4000/api/tasks/'+id, {
+        const res = await apiFetch('/api/tasks/'+id, {
             method: 'PUT',
             headers: {'Content-Type':'application/json'},
             body: JSON.stringify({ status: "בוצע", closed_at: new Date().toISOString(), closed_by_id: userData.userId || null })
@@ -229,7 +229,7 @@
             return;
         }
         
-        await fetch('http://localhost:4000/api/tasks/'+id, {
+        await apiFetch('/api/tasks/'+id, {
             method:'PUT',
             headers:{'Content-Type':'application/json'},
             body:JSON.stringify({ shift_date: newDate })
@@ -250,13 +250,13 @@
     // מחיקה
     async function deleteTask(id) {
         if (!confirm("למחוק את המשימה?")) return;
-        await fetch('http://localhost:4000/api/tasks/'+id, {method:'DELETE'});
+        await apiFetch('/api/tasks/'+id, {method:'DELETE'});
         renderOpenTasks();
     }
 
     // משימות סגורות
     async function renderClosedTasks() {
-        const res = await fetch('http://localhost:4000/api/tasks');
+        const res = await apiFetch('/api/tasks');
         let tasks = await res.json();
         let filterMonth = document.getElementById('filter-month').value || new Date().toISOString().slice(0,7);
         // הצג כל משימה שסטטוס שלה "בוצע" או "סגורה"
