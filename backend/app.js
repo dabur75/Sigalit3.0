@@ -1454,14 +1454,24 @@ app.post('/api/login', async (req, res) => {
   try {
     console.log('🔐 Login attempt:', req.body);
     const { username, password } = req.body;
-    
-    console.log('🔍 Searching for user with name:', username, 'and password:', password);
-    
-    const result = await pool.query(`
+
+    const rawUsername = String(username || '').trim();
+    const isEmailLogin = rawUsername.includes('@');
+
+    console.log('🔍 Searching for user by', isEmailLogin ? 'email' : 'name', ':', rawUsername);
+
+    const queryByEmail = `
       SELECT id, name, role, house_id, email, phone, is_active, accessible_houses
-      FROM users 
+      FROM users
+      WHERE lower(email) = lower($1) AND password = $2 AND is_active = true
+    `;
+    const queryByName = `
+      SELECT id, name, role, house_id, email, phone, is_active, accessible_houses
+      FROM users
       WHERE name = $1 AND password = $2 AND is_active = true
-    `, [username, password]);
+    `;
+
+    const result = await pool.query(isEmailLogin ? queryByEmail : queryByName, [rawUsername, password]);
     
     console.log('📊 Login query result:', result.rows.length, 'rows');
     
@@ -4405,7 +4415,7 @@ async function startServer() {
     }
     
     // Start Express server
-    app.listen(PORT, () => {
+    app.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 Sigalit PostgreSQL Backend running on port ${PORT}`);
       console.log(`📊 Database: PostgreSQL (sigalit_pg)`);
       console.log(`🌐 Frontend: http://localhost:${PORT}`);
