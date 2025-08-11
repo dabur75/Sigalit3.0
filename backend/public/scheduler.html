@@ -2639,7 +2639,8 @@
     <script>
         // Phase 1 Task 3: Frontend Integration with Backend API
         // Auto-detect API base: when served from dev static server (8080) use localhost:4000, otherwise same-origin '/api'
-        const API_BASE = (location.port === '8080') ? 'http://localhost:4000/api' : '/api';
+        // Use centralized API base from header-functions.js
+        const API_BASE = `${window.API_BASE_URL}/api`;
         let sidePanelOpen = false;
         let currentMonth = new Date().getFullYear() + '-' + String(new Date().getMonth() + 1).padStart(2, '0');
         let currentDate = null;

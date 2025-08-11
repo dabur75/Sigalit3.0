@@ -1941,7 +1941,8 @@
 
     <script>
         // Phase 1 Task 3: Frontend Integration with Backend API
-        const API_BASE = (location.port === '8080') ? 'http://localhost:4000/api' : '/api';
+        // Use centralized API base from header-functions.js
+        const API_BASE = `${window.API_BASE_URL}/api`;
         let sidePanelOpen = false;
         let currentMonth = '2025-06';
         let currentDate = null;
