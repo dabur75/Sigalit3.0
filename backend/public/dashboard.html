@@ -194,8 +194,8 @@
                            style="width:30%; padding:6px; border-radius:6px; border:1px solid #bdd9f6; margin-left:8px;font-size:0.9em;">
         <select id="referral-doctor"
                             style="padding:6px; border-radius:6px; border:1px solid #bdd9f6;font-size:0.9em;">
-            <option value="ד\"ר קרן">ד"ר אורית</option>
-            <option value="ד\"ר שלמה">ד"ר מיסם</option>
+            <option value="ד״ר אורית">ד"ר אורית</option>
+            <option value="ד״ר מיסם">ד"ר מיסם</option>
         </select>
         <button class="btn" type="submit">הוסף</button>
         </form>
@@ -579,8 +579,12 @@
                 console.log('📅 Original date from input:', date);
                 console.log('📅 Date type:', typeof date);
                 
+                // Convert Israeli date format (dd.mm.yyyy) to ISO format (YYYY-MM-DD)
+                const dateParts = date.split('.');
+                const isoDate = `${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`;
+                
                 const obj = {
-                    date,
+                    date: isoDate,
                     time: f.time.value,
                     title: f.title.value,
                     facilitator: f.facilitator.value,
@@ -617,26 +621,12 @@
             const activities = await fetchActivities();
             const overrides = await fetchOverrides();
             const todaysOverrides = overrides.filter(o => {
-                // Convert both dates to Israeli format for comparison
-                let overrideDate = o.date;
-                if (typeof o.date === 'string') {
-                    if (o.date.includes('T')) {
-                        // If it has time, convert to Israeli format
-                        const dateObj = new Date(o.date);
-                        const day = dateObj.getDate().toString().padStart(2, '0');
-                        const month = (dateObj.getMonth() + 1).toString().padStart(2, '0');
-                        const year = dateObj.getFullYear();
-                        overrideDate = `${day}.${month}.${year}`;
-                    }
-                } else if (o.date instanceof Date) {
-                    // If it's a Date object, convert to Israeli format
-                    const day = o.date.getDate().toString().padStart(2, '0');
-                    const month = (o.date.getMonth() + 1).toString().padStart(2, '0');
-                    const year = o.date.getFullYear();
-                    overrideDate = `${day}.${month}.${year}`;
-                }
-                console.log('🔍 Comparing dates:', { overrideDate, dstr, match: overrideDate === dstr });
-                return overrideDate === dstr;
+                // Prefer server-provided ISO date string
+                const iso = o.date_str || o.date;
+                if (!iso) return false;
+                const [y, m, d] = iso.split('T')[0].split('-');
+                const normalized = `${d}.${m}.${y}`; // dd.mm.yyyy
+                return normalized === dstr;
             }).sort((a, b) => (a.time > b.time ? 1 : -1));
             const regulars = activities.filter(a => a.weekday === normalizedWeekday).sort((a, b) => (a.time > b.time ? 1 : -1));
             const overrideTimes = new Set(todaysOverrides.map(o => o.time));
@@ -721,20 +711,36 @@ document.addEventListener("DOMContentLoaded", function() {
         } else {
             referralList.innerHTML = referrals
                 .filter(r => r.status !== "בוצע")
-                .map(r => `
+                .map(r => {
+                    const doctorRaw = r.doctor || '';
+                    const doctorNorm = doctorRaw
+                        .replace(/\\"/g, '"')
+                        .replace(/"/g, '״')
+                        .replace(/^ד\s*["״]?\s*ר/, 'ד״ר')
+                        .trim();
+                    return `
                     <li>
                         <div>
                             <b>${r.patient}</b> - ${r.reason}
-                            <span style="font-size:13px;color:#557;">(${r.doctor})</span>
+                            <div style="font-size:12px; color:#666; margin-top:4px;">
+                                <span style="color:#254b77;">👤 ${r.created_by}</span>
+                                <span style="margin:0 8px;">•</span>
+                                <span style="color:#666;">${new Date(r.created_at).toLocaleDateString('he-IL')} ${new Date(r.created_at).toLocaleTimeString('he-IL', {hour: '2-digit', minute: '2-digit'})}</span>
+                                <span style="margin:0 8px;">•</span>
+                                <span style=\"background:#e3f1fb; color:#254b77; padding:2px 8px; border-radius:12px; font-size:11px; display:inline-block; white-space:nowrap;\">${doctorNorm}</span>
+                            </div>
                         </div>
                         <div class="task-actions">
                             <button class="btn" style="background:#3db66b;" onclick="completeReferral(${r.id})">בוצע</button>
                             <button class="btn" style="background:#f2c53a; color:#1d1d1d;" onclick="openMoveReferralPopup(${r.id})">העבר ליום אחר</button>
                         </div>
                     </li>
-                `).join('');
+                    `;
+                }).join('');
         }
     }
+    // Expose loader for global access from button handlers
+    window.loadReferrals = loadReferrals;
 
 
     document.getElementById('add-referral-form').onsubmit = async function(e) {
@@ -758,7 +764,7 @@ document.addEventListener("DOMContentLoaded", function() {
         // ניקוי שדות
         document.getElementById('patient-name').value = "";
         document.getElementById('referral-reason').value = "";
-        document.getElementById('referral-doctor').value = "ד\"ר קרן";
+        document.getElementById('referral-doctor').value = "ד״ר אורית";
 
         loadReferrals(date);
     };
@@ -783,7 +789,10 @@ async function completeReferral(id) {
         body: JSON.stringify(ref)
     });
 
-    loadReferrals(referralDateInput.value);
+    const currentDate = document.getElementById('referral-date-input')?.value;
+    if (typeof window.loadReferrals === 'function' && currentDate) {
+        window.loadReferrals(currentDate);
+    }
 }
 window.completeReferral = completeReferral;
 let moveReferralId = null;
@@ -816,7 +825,10 @@ async function moveReferralToNewDate() {
     });
 
     closeMoveReferralPopup();
-    loadReferrals(referralDateInput.value);
+    const currentDate = document.getElementById('referral-date-input')?.value;
+    if (typeof window.loadReferrals === 'function' && currentDate) {
+        window.loadReferrals(currentDate);
+    }
 }
 
 // --- Conversation List ---

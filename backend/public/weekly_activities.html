@@ -404,16 +404,19 @@
       const now = new Date();
       const futureOverrides = overrides
         .filter(o => {
-          const dateTime = new Date(o.date + 'T' + (o.time || '00:00'));
+          const iso = o.date_str || o.date; // prefer server iso
+          if (!iso) return false;
+          const dateTime = new Date(iso + 'T' + (o.time || '00:00'));
           return dateTime >= now;
         })
-        .sort((a, b) => (a.date+a.time > b.date+b.time ? 1 : -1));
+        .sort((a, b) => ((a.date_str||a.date)+(a.time||'') > (b.date_str||b.date)+(b.time||'') ? 1 : -1));
 
       let html = '';
       if (futureOverrides.length > 0) {
         html += `<h3 style="margin:38px 0 15px 0; font-size:1.15em; color:#336;">שינויים חד פעמיים קרובים:</h3>`;
         futureOverrides.forEach(o => {
-          const dt = new Date(o.date + 'T' + (o.time || '00:00'));
+          const iso = o.date_str || o.date;
+          const dt = new Date(iso + 'T' + (o.time || '00:00'));
           const day = dt.toLocaleDateString('he-IL', {weekday:'long'});
           const dateStr = dt.toLocaleDateString('he-IL');
           html += `

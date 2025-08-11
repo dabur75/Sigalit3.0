@@ -300,7 +300,6 @@
                     <th>טלפון</th>
                     <th>אימייל</th>
                     <th>תפקיד</th>
-                    <th>סוג שיבוץ</th>
                     <th>אחוז משרה</th>
                     <th>פעולות</th>
                 </tr>
@@ -337,13 +336,6 @@
                         <option value="רכז">רכז</option>
                         <option value="רכזת">רכזת</option>
                         <option value="מדריכה">מדריכה</option>
-                    </select>
-                </label>
-                <label>סוג שיבוץ:
-                    <select id="assignment_type">
-                        <option value="regular">רגיל</option>
-                        <option value="overlap">חפיפה</option>
-                        <option value="oncall">כונן</option>
                     </select>
                 </label>
                 <label>אחוז משרה:
@@ -388,7 +380,10 @@
         }
     }
     async function renderGuides() {
-        const guides = await fetchGuides();
+        // Include both מדריך and רכז roles
+        const guides = await fetch('http://localhost:4000/api/users/enhanced')
+            .then(r=>r.json())
+            .then(list => list.filter(u => u.role === 'מדריך' || u.role === 'רכז' || u.role === 'רכזת'));
         const tbody = document.getElementById('guides-tbody');
         if (!guides.length) {
             tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;">אין מדריכים</td></tr>`;
@@ -399,12 +394,6 @@
         
         for (const g of guides) {
             const constraints = await fetchGuideConstraints(g.id);
-            const assignmentType = g.assignment_type || 'regular';
-            const assignmentTypeText = {
-                'regular': 'רגיל',
-                'overlap': 'חפיפה', 
-                'oncall': 'כונן'
-            }[assignmentType];
             
             const availabilityStatus = getAvailabilityStatus(g);
             const statsHtml = generateStatsHtml(g);
@@ -424,9 +413,7 @@
                 <td>
                     <span class="badge${g.role === 'רכז' || g.role === 'רכזת' ? ' coordinator' : ''}">${g.role}</span>
                 </td>
-                <td>
-                    <span class="badge ${assignmentType}">${assignmentTypeText}</span>
-                </td>
+                
                 <td>
                     <input class="percent-input" type="number" value="${g.percent || 100}" min="1" max="200" onchange="updatePercent(${g.id}, this.value)" ${userRole!=='רכז'&&userRole!=='רכזת'?'disabled':''}>% 
                 </td>
@@ -474,7 +461,7 @@
         document.getElementById('phone').value = guide ? guide.phone : '';
         document.getElementById('email').value = guide ? guide.email : '';
         document.getElementById('role').value = guide ? guide.role : 'מדריך';
-        document.getElementById('assignment_type').value = guide ? (guide.assignment_type || 'regular') : 'regular';
+        
         document.getElementById('percent').value = guide ? (guide.percent||100) : 100;
         document.getElementById('password').value = ''; // מתחיל ריק תמיד
 
@@ -491,7 +478,6 @@
                 phone: document.getElementById('phone').value,
                 email: document.getElementById('email').value,
                 role: document.getElementById('role').value,
-                assignment_type: document.getElementById('assignment_type').value,
                 percent: Number(document.getElementById('percent').value)
             };
             if (password) g.password = password; // אם הוזנה סיסמה חדשה - שמור

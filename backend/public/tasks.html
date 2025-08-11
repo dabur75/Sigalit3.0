@@ -118,7 +118,7 @@
         let filtered = tasks.filter(t => t.status !== "בוצע");
         // אם המשתמש בחר תאריך, סנן לפי תאריך, אחרת הצג הכל
         if (filterDate) {
-            filtered = filtered.filter(t => t.shift_date === filterDate);
+            filtered = filtered.filter(t => (t.shift_date_str || t.shift_date)?.slice(0,10) === filterDate);
         }
         filtered.sort((a, b) => a.created_at.localeCompare(b.created_at));
         const list = document.getElementById('open-tasks-list');
@@ -134,7 +134,7 @@
             <div class="task-row">
                 <span class="task-text">${t.text}</span>
                 <span class="task-meta">[${t.creator_name || 'לא ידוע'}]</span>
-                <span class="task-meta">${formatDate(t.shift_date)}</span>
+                <span class="task-meta">${formatDate(t.shift_date_str || t.shift_date)}</span>
                 <div class="task-actions">
                     <button class="btn btn-small" onclick="closeTask(${t.id})">בוצע</button>
                     <button class="btn btn-small" style="background:#c6ceec;color:#223;" onclick="moveTaskDate(${t.id})">העבר יום</button>
@@ -260,7 +260,7 @@
         let tasks = await res.json();
         let filterMonth = document.getElementById('filter-month').value || new Date().toISOString().slice(0,7);
         // הצג כל משימה שסטטוס שלה "בוצע" או "סגורה"
-        let filtered = tasks.filter(t => (t.status === "בוצע" || t.status === "סגורה") && t.shift_date && t.shift_date.slice(0,7) === filterMonth);
+        let filtered = tasks.filter(t => (t.status === "בוצע" || t.status === "סגורה") && (t.shift_date_str || t.shift_date) && (t.shift_date_str || t.shift_date).slice(0,7) === filterMonth);
         filtered.sort((a, b) => (b.closed_at || '').localeCompare(a.closed_at || ''));
         const list = document.getElementById('closed-tasks-list');
         if (!filtered.length) {
@@ -273,7 +273,7 @@
             <div class="task-row done">
                 <span class="task-text">${t.text}</span>
                 <span class="task-meta">[${t.creator_name || 'לא ידוע'}]</span>
-                <span class="task-meta">${formatDate(t.shift_date)}</span>
+                <span class="task-meta">${formatDate(t.shift_date_str || t.shift_date)}</span>
                 <span class="task-meta">סגר: ${t.closed_by_name || "לא ידוע"}</span>
             </div>
             `;
@@ -283,25 +283,32 @@
     // תצוגת תאריך
     function formatDate(d) {
         if (!d) return "";
-        
-        // Handle Israeli date format (dd.mm.yyyy)
-        if (d.includes('.')) {
-            let arr = d.split(".");
-            if (arr.length === 3) {
-                return `${arr[0]}/${arr[1]}/${arr[2]}`;
-            }
+        // Allow Date objects
+        if (d instanceof Date && !isNaN(d)) {
+            const day = String(d.getDate()).padStart(2, '0');
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const year = d.getFullYear();
+            return `${day}-${month}-${year}`; // dd-mm-yyyy (Israeli)
         }
-        
-        // Handle ISO date format (yyyy-mm-dd)
-        if (d.includes('-')) {
-            let arr = d.split("-");
-            if (arr.length === 3) {
-                return `${arr[2]}/${arr[1]}/${arr[0]}`;
-            }
+        // Normalize string
+        let s = String(d).trim();
+        if (s.includes('T')) s = s.split('T')[0]; // strip time from ISO
+        // dd.mm.yyyy → dd-mm-yyyy
+        if (s.includes('.')) {
+            const [dd, mm, yyyy] = s.split('.');
+            if (dd && mm && yyyy) return `${dd.padStart(2,'0')}-${mm.padStart(2,'0')}-${yyyy}`;
         }
-        
-        // Fallback - return as is
-        return d;
+        // dd/mm/yyyy → dd-mm-yyyy
+        if (s.includes('/')) {
+            const [dd, mm, yyyy] = s.split('/');
+            if (dd && mm && yyyy) return `${dd.padStart(2,'0')}-${mm.padStart(2,'0')}-${yyyy}`;
+        }
+        // yyyy-mm-dd → dd-mm-yyyy
+        if (s.includes('-')) {
+            const [yyyy, mm, dd] = s.split('-');
+            if (yyyy && mm && dd) return `${dd.padStart(2,'0')}-${mm.padStart(2,'0')}-${yyyy}`;
+        }
+        return s;
     }
 
     // אתחול תאריכים

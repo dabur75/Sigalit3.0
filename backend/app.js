@@ -130,7 +130,8 @@ app.get('/api/tasks/all', async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT 
-        t.*,
+        t.*, 
+        to_char(t.shift_date, 'YYYY-MM-DD') AS shift_date_str,
         u1.name as creator_name,
         u2.name as assigned_to_name,
         u3.name as closed_by_name
@@ -140,16 +141,7 @@ app.get('/api/tasks/all', async (req, res) => {
       LEFT JOIN users u3 ON t.closed_by_id = u3.id
       ORDER BY t.created_at DESC
     `);
-    
-    // Convert dates to Israeli format
-    const formattedRows = result.rows.map(row => ({
-      ...row,
-      shift_date: row.shift_date ? new Date(row.shift_date).toLocaleDateString('he-IL') : null,
-      created_at: row.created_at ? new Date(row.created_at).toLocaleDateString('he-IL') : null,
-      closed_at: row.closed_at ? new Date(row.closed_at).toLocaleDateString('he-IL') : null
-    }));
-    
-    res.json(formattedRows);
+    res.json(result.rows);
   } catch (error) {
     console.error('Error fetching all tasks:', error);
     res.status(500).json({ error: 'Failed to fetch all tasks' });
@@ -162,7 +154,8 @@ app.get('/api/tasks/status/:status', async (req, res) => {
     const { status } = req.params;
     const result = await pool.query(`
       SELECT 
-        t.*,
+        t.*, 
+        to_char(t.shift_date, 'YYYY-MM-DD') AS shift_date_str,
         u1.name as creator_name,
         u2.name as assigned_to_name,
         u3.name as closed_by_name
@@ -173,16 +166,7 @@ app.get('/api/tasks/status/:status', async (req, res) => {
       WHERE t.status = $1
       ORDER BY t.created_at DESC
     `, [status]);
-    
-    // Convert dates to Israeli format
-    const formattedRows = result.rows.map(row => ({
-      ...row,
-      shift_date: row.shift_date ? new Date(row.shift_date).toLocaleDateString('he-IL') : null,
-      created_at: row.created_at ? new Date(row.created_at).toLocaleDateString('he-IL') : null,
-      closed_at: row.closed_at ? new Date(row.closed_at).toLocaleDateString('he-IL') : null
-    }));
-    
-    res.json(formattedRows);
+    res.json(result.rows);
   } catch (error) {
     console.error('Error fetching tasks by status:', error);
     res.status(500).json({ error: 'Failed to fetch tasks by status' });
@@ -197,7 +181,7 @@ app.get('/api/tasks', async (req, res) => {
     let params = [];
     
     if (open_only === 'true') {
-      whereClause = 'WHERE t.status NOT IN (\'בוצע\', \'סגורה\', \'בוטלה\')';
+      whereClause = "WHERE t.status NOT IN ('בוצע', 'סגורה', 'בוטלה')";
     } else if (status) {
       whereClause = 'WHERE t.status = $1';
       params.push(status);
@@ -205,7 +189,8 @@ app.get('/api/tasks', async (req, res) => {
     
     const result = await pool.query(`
       SELECT 
-        t.*,
+        t.*, 
+        to_char(t.shift_date, 'YYYY-MM-DD') AS shift_date_str,
         u1.name as creator_name,
         u2.name as assigned_to_name,
         u3.name as closed_by_name
@@ -216,16 +201,7 @@ app.get('/api/tasks', async (req, res) => {
       ${whereClause}
       ORDER BY t.created_at DESC
     `, params);
-    
-    // Convert dates to Israeli format
-    const formattedRows = result.rows.map(row => ({
-      ...row,
-      shift_date: row.shift_date ? new Date(row.shift_date).toLocaleDateString('he-IL') : null,
-      created_at: row.created_at ? new Date(row.created_at).toLocaleDateString('he-IL') : null,
-      closed_at: row.closed_at ? new Date(row.closed_at).toLocaleDateString('he-IL') : null
-    }));
-    
-    res.json(formattedRows);
+    res.json(result.rows);
   } catch (error) {
     console.error('Error fetching tasks:', error);
     res.status(500).json({ error: 'Failed to fetch tasks' });
@@ -803,18 +779,20 @@ app.delete('/api/weekly-activities/:id', async (req, res) => {
 app.get('/api/weekly-overrides', async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT id, date, time, title, category, facilitator, created_at
+      SELECT 
+        id,
+        to_char(date, 'YYYY-MM-DD') AS date_str,
+        time,
+        title,
+        category,
+        facilitator,
+        created_at
       FROM overrides_activities
       ORDER BY date, time
     `);
-    
-    // Convert dates to Israeli format (dd-mm-yyyy)
-    const formattedRows = result.rows.map(row => ({
-      ...row,
-      date: row.date ? row.date.toLocaleDateString('he-IL') : null // he-IL gives dd/mm/yyyy format
-    }));
-    
-    res.json(formattedRows);
+
+    // Return stable machine-friendly date strings; clients can format for display
+    res.json(result.rows);
   } catch (error) {
     console.error('Error fetching weekly overrides:', error);
     res.status(500).json({ error: 'Failed to fetch weekly overrides' });
