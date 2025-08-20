@@ -3,9 +3,17 @@ const express = require('express');
 const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
+// Load local env vars in development
+if (process.env.NODE_ENV !== 'production') {
+  try {
+    require('dotenv').config({ path: path.join(__dirname, '.env') });
+    console.log('🔐 .env loaded for development');
+  } catch (e) {
+    console.log('⚠️ dotenv not loaded:', e.message);
+  }
+}
 const app = express();
-// Scheduler service import (single source of truth)
-const { runCompleteAutoSchedulingPG } = require('./services/scheduler');
+// Scheduler removed during refactor; legacy import disabled
 const PORT = process.env.PORT || 4000;
 
 // PostgreSQL connection
@@ -38,6 +46,26 @@ function sendFile(res, filename) {
 }
 
 // Serve frontend files
+// =====================================
+// AI Scheduling routes (new)
+// =====================================
+try {
+  const aiSchedulingRoutes = require('./routes/ai-scheduling');
+  app.use('/api/schedule/ai', aiSchedulingRoutes);
+  console.log('🧠 AI scheduling routes mounted at /api/schedule/ai');
+} catch (e) {
+  console.log('AI scheduling routes not available:', e.message);
+}
+
+// Enhanced Manual Scheduler routes (new)
+// =====================================
+try {
+  const enhancedManualRoutes = require('./routes/enhanced-manual');
+  app.use('/api/enhanced-manual', enhancedManualRoutes);
+  console.log('🖱️ Enhanced manual scheduler routes mounted at /api/enhanced-manual');
+} catch (e) {
+  console.log('Enhanced manual scheduler routes not available:', e.message);
+}
 app.get('/', (req, res) => {
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
   res.setHeader('Pragma', 'no-cache');
@@ -624,11 +652,15 @@ app.post('/api/vacations', async (req, res) => {
   try {
     const { guideId, dateStart, dateEnd, note } = req.body;
     
+    // Ensure dates are formatted as YYYY-MM-DD (without timezone conversion)
+    const dateStartOnly = dateStart.split('T')[0];
+    const dateEndOnly = dateEnd.split('T')[0];
+    
     const result = await pool.query(`
       INSERT INTO vacations (user_id, date_start, date_end, note, status, response_note, created_at)
-      VALUES ($1, $2, $3, $4, 'pending', '', NOW())
+      VALUES ($1, $2::date, $3::date, $4, 'pending', '', NOW())
       RETURNING *
-    `, [guideId, dateStart, dateEnd, note || '']);
+    `, [guideId, dateStartOnly, dateEndOnly, note || '']);
     
     res.status(201).json({
       ...result.rows[0],
@@ -648,12 +680,16 @@ app.put('/api/vacations/:id', async (req, res) => {
     const { id } = req.params;
     const { guideId, dateStart, dateEnd, note, status, responseNote } = req.body;
     
+    // Ensure dates are formatted as YYYY-MM-DD (without timezone conversion)
+    const dateStartOnly = dateStart ? dateStart.split('T')[0] : dateStart;
+    const dateEndOnly = dateEnd ? dateEnd.split('T')[0] : dateEnd;
+    
     const result = await pool.query(`
       UPDATE vacations
-      SET user_id = $1, date_start = $2, date_end = $3, note = $4, status = $5, response_note = $6
+      SET user_id = $1, date_start = $2::date, date_end = $3::date, note = $4, status = $5, response_note = $6
       WHERE id = $7
       RETURNING *
-    `, [guideId, dateStart, dateEnd, note || '', status || 'pending', responseNote || '', id]);
+    `, [guideId, dateStartOnly, dateEndOnly, note || '', status || 'pending', responseNote || '', id]);
     
     if (result.rows.length > 0) {
       res.json({
@@ -1240,9 +1276,26 @@ app.get('/api/schedule/enhanced-statistics/:year/:month', async (req, res) => {
     
     // Calculate averages
     const totalShifts = guideStatistics.reduce((sum, guide) => sum + guide.total_shifts, 0);
+    const totalHours = guideStatistics.reduce((sum, guide) => sum + guide.total_hours, 0);
+    const totalSalaryFactor = guideStatistics.reduce((sum, guide) => sum + guide.salary_factor, 0);
+    const totalRegularHours = guideStatistics.reduce((sum, guide) => sum + guide.regular_hours, 0);
+    const totalNightHours = guideStatistics.reduce((sum, guide) => sum + guide.night_hours, 0);
+    const totalShabbatHours = guideStatistics.reduce((sum, guide) => sum + guide.shabbat_hours, 0);
+    const totalConanHours = guideStatistics.reduce((sum, guide) => sum + guide.conan_hours, 0);
+    const totalConanShabbatHours = guideStatistics.reduce((sum, guide) => sum + guide.conan_shabbat_hours, 0);
+    const totalMotzashHours = guideStatistics.reduce((sum, guide) => sum + guide.motzash_hours, 0);
+    
     const activeGuides = guideStatistics.filter(guide => guide.total_shifts > 0).length;
     const averages = {
       shifts_per_guide: activeGuides > 0 ? totalShifts / activeGuides : 0,
+      hours_per_guide: activeGuides > 0 ? totalHours / activeGuides : 0,
+      salary_factor_per_guide: activeGuides > 0 ? totalSalaryFactor / activeGuides : 0,
+      regular_hours_per_guide: activeGuides > 0 ? totalRegularHours / activeGuides : 0,
+      night_hours_per_guide: activeGuides > 0 ? totalNightHours / activeGuides : 0,
+      shabbat_hours_per_guide: activeGuides > 0 ? totalShabbatHours / activeGuides : 0,
+      conan_hours_per_guide: activeGuides > 0 ? totalConanHours / activeGuides : 0,
+      conan_shabbat_hours_per_guide: activeGuides > 0 ? totalConanShabbatHours / activeGuides : 0,
+      motzash_hours_per_guide: activeGuides > 0 ? totalMotzashHours / activeGuides : 0,
       total_guides: guidesResult.rows.length,
       active_guides: activeGuides
     };
@@ -1842,32 +1895,148 @@ app.post('/api/schedule/manual', async (req, res) => {
     const dd = String(jsDate.getDate()).padStart(2, '0');
     const dateOnly = `${yyyy}-${mm}-${dd}`;
 
-    // Upsert by date (replace any existing record for the date)
-    await pool.query('DELETE FROM schedule WHERE date::date = $1::date', [dateOnly]);
-
-    const insert = await pool.query(`
-      INSERT INTO schedule (
-        date, weekday, type, 
-        guide1_id, guide2_id, 
+    // Merge-friendly upsert: preserve existing roles (e.g., keep כונן on Saturday) instead of deleting
+    const existingRes = await pool.query('SELECT * FROM schedule WHERE date::date = $1::date', [dateOnly]);
+    let savedRow;
+    if (existingRes.rows.length === 0) {
+      const insert = await pool.query(`
+        INSERT INTO schedule (
+          date, weekday, type, 
+          guide1_id, guide2_id, 
+          guide1_role, guide2_role,
+          is_manual, is_locked,
+          created_by, created_at, updated_at,
+          house_id
+        ) VALUES (
+          $1::date, $2, $3,
+          $4, $5,
+          $6, $7,
+          true, false,
+          $8, NOW(), NOW(),
+          'dror'
+        )
+        RETURNING *
+      `, [
+        dateOnly, weekday, scheduleType,
+        guide1_id || null, guide2_id || null,
         guide1_role, guide2_role,
-        is_manual, is_locked,
-        created_by, created_at, updated_at,
-        house_id
-      ) VALUES (
-        $1::date, $2, $3,
-        $4, $5,
-        $6, $7,
-        true, false,
-        $8, NOW(), NOW(),
-        'dror'
-      )
-      RETURNING *
-    `, [
-      dateOnly, weekday, scheduleType,
-      guide1_id || null, guide2_id || null,
-      guide1_role, guide2_role,
-      created_by
-    ]);
+        created_by
+      ]);
+      savedRow = insert.rows[0];
+    } else {
+      const existing = existingRes.rows[0];
+      let newGuide1Id = existing.guide1_id;
+      let newGuide2Id = existing.guide2_id;
+      let newGuide1Role = existing.guide1_role;
+      let newGuide2Role = existing.guide2_role;
+
+      // Special handling for Saturday: never override existing כונן; place new selection in the other slot
+      const isSaturday = dow === 6;
+      if (isSaturday) {
+        // Detect existing standby slot
+        const standbyInG1 = newGuide1Role === 'כונן' && newGuide1Id != null;
+        const standbyInG2 = newGuide2Role === 'כונן' && newGuide2Id != null;
+        const standbyId = standbyInG1 ? newGuide1Id : (standbyInG2 ? newGuide2Id : null);
+
+        // Determine weekend closed status (from Friday)
+        let isClosedSaturday = false;
+        try {
+          const base = new Date(dateOnly + 'T00:00:00');
+          base.setDate(base.getDate() - 1);
+          const friY = base.getFullYear();
+          const friM = String(base.getMonth() + 1).padStart(2, '0');
+          const friD = String(base.getDate()).padStart(2, '0');
+          const fridayOnly = `${friY}-${friM}-${friD}`;
+          const wt = await pool.query('SELECT is_closed FROM weekend_types WHERE date = $1::date', [fridayOnly]);
+          isClosedSaturday = wt.rows[0]?.is_closed === true;
+        } catch (_) {}
+
+        // Choose requested additional guide (avoid the standby id if sent)
+        let requestedId = null;
+        if (guide2_id && guide2_id !== standbyId) requestedId = guide2_id;
+        else if (guide1_id && guide1_id !== standbyId) requestedId = guide1_id;
+
+        if (requestedId != null) {
+          const desiredRole = (type === 'מוצ״ש' || guide1_role === 'מוצ״ש' || guide2_role === 'מוצ״ש' || isClosedSaturday) ? 'מוצ״ש' : (guide1_role || guide2_role || 'רגיל');
+          if (standbyInG1) {
+            // Put the new guide into slot 2
+            newGuide2Id = requestedId;
+            newGuide2Role = desiredRole;
+          } else if (standbyInG2) {
+            // Put the new guide into slot 1
+            newGuide1Id = requestedId;
+            newGuide1Role = desiredRole;
+          } else {
+            // No existing standby; fill the first empty slot
+            if (newGuide1Id == null) { newGuide1Id = requestedId; newGuide1Role = desiredRole; }
+            else if (newGuide2Id == null) { newGuide2Id = requestedId; newGuide2Role = desiredRole; }
+          }
+        }
+
+        // Extra safety: if this is Saturday and we're not seeing a standby on this row,
+        // try to pull the conan from Friday (closed weekend scenario) and preserve it.
+        try {
+          if (!(newGuide1Role === 'כונן' || newGuide2Role === 'כונן')) {
+            const base2 = new Date(dateOnly + 'T00:00:00');
+            base2.setDate(base2.getDate() - 1);
+            const fy = base2.getFullYear();
+            const fm = String(base2.getMonth() + 1).padStart(2, '0');
+            const fd = String(base2.getDate()).padStart(2, '0');
+            const fridayOnly2 = `${fy}-${fm}-${fd}`;
+            const friRow = await pool.query('SELECT guide1_id, guide2_id, guide1_role, guide2_role FROM schedule WHERE date::date = $1::date', [fridayOnly2]);
+            if (friRow.rows.length > 0) {
+              const fr = friRow.rows[0];
+              const fridayConanId = fr.guide1_role === 'כונן' ? fr.guide1_id : (fr.guide2_role === 'כונן' ? fr.guide2_id : null);
+              if (fridayConanId) {
+                if (newGuide1Id == null) { newGuide1Id = fridayConanId; newGuide1Role = 'כונן'; }
+                else if (newGuide2Id == null) { newGuide2Id = fridayConanId; newGuide2Role = 'כונן'; }
+                else if (newGuide1Role !== 'כונן' && newGuide2Role !== 'כונן') {
+                  // Replace slot 2 if none are standby
+                  newGuide2Id = fridayConanId; newGuide2Role = 'כונן';
+                }
+              }
+            }
+          }
+        } catch (_) {}
+      } else {
+        // Default merge: prefer explicitly provided roles; fill empty slots, otherwise replace non-locked same-role
+        if (guide1_id != null) {
+          if (newGuide1Id == null) { newGuide1Id = guide1_id; newGuide1Role = guide1_role; }
+          else { newGuide2Id = guide1_id; newGuide2Role = guide1_role; }
+        }
+        if (guide2_id != null) {
+          if (newGuide2Id == null) { newGuide2Id = guide2_id; newGuide2Role = guide2_role; }
+          else if (newGuide1Id == null) { newGuide1Id = guide2_id; newGuide1Role = guide2_role; }
+          else {
+            // both filled; replace the non-כונן slot to avoid dropping standby by accident
+            if (newGuide1Role !== 'כונן') { newGuide1Id = guide2_id; newGuide1Role = guide2_role; }
+            else if (newGuide2Role !== 'כונן') { newGuide2Id = guide2_id; newGuide2Role = guide2_role; }
+          }
+        }
+      }
+
+      const update = await pool.query(`
+        UPDATE schedule
+        SET weekday = $2,
+            type = $3,
+            guide1_id = $4,
+            guide2_id = $5,
+            guide1_role = $6,
+            guide2_role = $7,
+            is_manual = true,
+            is_locked = false,
+            created_by = $8,
+            updated_at = NOW()
+        WHERE date::date = $1::date
+        RETURNING *
+      `, [
+        dateOnly, weekday, scheduleType,
+        newGuide1Id, newGuide2Id,
+        newGuide1Role, newGuide2Role,
+        created_by
+      ]);
+      savedRow = update.rows[0];
+    }
 
     // If it's a Friday conan on a closed weekend, mirror the conan to Saturday as a manual assignment
     if (dow === 5 && guide1_id && (type === 'כונן' || guide1_role === 'כונן')) {
@@ -1912,7 +2081,7 @@ app.post('/api/schedule/manual', async (req, res) => {
       }
     }
 
-    res.json({ success: true, assignment: insert.rows[0] });
+    res.json({ success: true, assignment: savedRow });
   } catch (error) {
     console.error('Error creating manual assignment:', error);
     res.status(500).json({ error: 'Failed to create assignment' });
@@ -1929,7 +2098,7 @@ app.get('/api/guides/availability/:date', async (req, res) => {
     
     // Get comprehensive availability data
     const result = await pool.query(`
-      SELECT 
+      SELECT DISTINCT ON (u.id)
         u.id as guide_id,
         u.name as guide_name,
         u.role as guide_role,
@@ -1955,8 +2124,9 @@ app.get('/api/guides/availability/:date', async (req, res) => {
       LEFT JOIN coordinator_rules cr_no_auto ON u.id = cr_no_auto.guide1_id AND cr_no_auto.rule_type = 'no_auto_scheduling' AND cr_no_auto.is_active = true
       LEFT JOIN coordinator_rules cr_no_conan ON u.id = cr_no_conan.guide1_id AND cr_no_conan.rule_type = 'no_conan' AND cr_no_conan.is_active = true
       WHERE u.role = 'מדריך' AND u.is_active = true
-      ORDER BY u.name
+      ORDER BY u.id, u.name
     `, [date, weekdayNum]);
+    
     
     // Get workload statistics for each guide
     const workloadResult = await pool.query(`
@@ -2005,6 +2175,8 @@ app.get('/api/guides/availability/:date', async (req, res) => {
     });
     
     console.log(`✅ Enhanced availability calculated for ${enhancedAvailability.length} guides`);
+    
+    
     res.json(enhancedAvailability);
     
   } catch (error) {
@@ -2207,7 +2379,7 @@ app.get('/api/constraints', async (req, res) => {
         c.id,
         c.user_id as guideId,
         c.type,
-        c.date,
+        c.date::TEXT as date_string,
         c.details as note,
         c.created_at,
         u.name as user_name
@@ -2221,7 +2393,7 @@ app.get('/api/constraints', async (req, res) => {
       id: row.id,
       guideId: row.guideid,
       type: row.type,
-      date: row.date.toISOString().split('T')[0], // Format as YYYY-MM-DD
+      date: row.date_string, // Use the text representation to avoid timezone conversion
       note: row.note || '',
       hourStart: null, // These fields don't exist in our schema
       hourEnd: null,   // These fields don't exist in our schema
@@ -2236,16 +2408,47 @@ app.get('/api/constraints', async (req, res) => {
   }
 });
 
+// Delete constraint
+app.delete('/api/constraints/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const result = await pool.query(`
+      DELETE FROM constraints 
+      WHERE id = $1
+      RETURNING id
+    `, [id]);
+    
+    if (result.rows.length > 0) {
+      res.json({ message: 'Constraint deleted successfully', id: result.rows[0].id });
+    } else {
+      res.status(404).json({ error: 'Constraint not found' });
+    }
+  } catch (error) {
+    console.error('Error deleting constraint:', error);
+    res.status(500).json({ error: 'Failed to delete constraint' });
+  }
+});
+
 // Create constraint
 app.post('/api/constraints', async (req, res) => {
   try {
-    const { user_id, type, date, details } = req.body;
+    const { guideId, date, note } = req.body;
     
+    // Validate required fields
+    if (!guideId || !date) {
+      return res.status(400).json({ error: 'guideId and date are required' });
+    }
+    
+    // Ensure the date is formatted as YYYY-MM-DD (without timezone conversion)
+    const dateOnly = date.split('T')[0]; // Remove time component if present
+    
+    // Use TO_DATE to ensure proper date handling without timezone issues
     const result = await pool.query(`
-      INSERT INTO constraints (user_id, type, date, details, created_at, updated_at)
-      VALUES ($1, $2, $3, $4, NOW(), NOW())
-      RETURNING *
-    `, [user_id, type, date, details]);
+      INSERT INTO constraints (user_id, type, date, details, house_id, created_at)
+      VALUES ($1, $2, TO_DATE($3, 'YYYY-MM-DD'), $4, $5, NOW())
+      RETURNING id, user_id, type, $3::TEXT as date_string, details, house_id, created_at
+    `, [guideId, 'constraint', dateOnly, note || '', 'dror']);
     
     res.json(result.rows[0]);
   } catch (error) {
@@ -2258,14 +2461,22 @@ app.post('/api/constraints', async (req, res) => {
 app.put('/api/constraints/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { user_id, type, date, details } = req.body;
+    const { guideId, date, note } = req.body;
+    
+    // Validate required fields
+    if (!guideId || !date) {
+      return res.status(400).json({ error: 'guideId and date are required' });
+    }
+    
+    // Ensure the date is formatted as YYYY-MM-DD (without timezone conversion)
+    const dateOnly = date.split('T')[0]; // Remove time component if present
     
     const result = await pool.query(`
       UPDATE constraints 
-      SET user_id = $1, type = $2, date = $3, details = $4
+      SET user_id = $1, type = $2, date = TO_DATE($3, 'YYYY-MM-DD'), details = $4
       WHERE id = $5
       RETURNING *
-    `, [user_id, type, date, details, id]);
+    `, [guideId, 'constraint', dateOnly, note || '', id]);
     
     if (result.rows.length > 0) {
       res.json(result.rows[0]);
@@ -2427,8 +2638,15 @@ app.get('/api/schedule/enhanced/:year/:month', async (req, res) => {
     const { year, month } = req.params;
   const result = await pool.query(`
       SELECT 
-        s.*,
+        s.id,
+        s.date,
         to_char(s.date, 'YYYY-MM-DD') as date_str,
+        s.guide1_id,
+        s.guide2_id,
+        s.guide1_role,
+        s.guide2_role,
+        s.is_manual,
+        s.is_locked,
         u1.name as guide1_name,
         u2.name as guide2_name,
         wt.is_closed as weekend_closed,
@@ -2583,17 +2801,16 @@ app.post('/api/workflow/create-draft/:month', async (req, res) => {
     const scheduleData = scheduleResult.rows;
     const version = status ? status.current_draft_version + 1 : 1;
     
-    // Create draft entry
+    // Create draft entry (align with current schema: drafts.data jsonb, no notes column)
     await pool.query(`
-      INSERT INTO drafts (month, version, name, schedule_data, created_by, notes)
-      VALUES ($1, $2, $3, $4, $5, $6)
+      INSERT INTO drafts (month, version, name, data, created_by, is_final)
+      VALUES ($1, $2, $3, $4::jsonb, $5, false)
     `, [
-      month, 
-      version, 
-      `Draft ${version}`, 
-      JSON.stringify(scheduleData), 
-      created_by, 
-      notes
+      month,
+      version,
+      `Draft ${version}`,
+      JSON.stringify(scheduleData),
+      created_by
     ]);
     
     // Update workflow status
@@ -2698,129 +2915,241 @@ app.post('/api/workflow/reset/:month', async (req, res) => {
 // AUTO-SCHEDULING ALGORITHM - MIGRATED TO POSTGRESQL
 // ============================================================================
 
-// Enhanced auto-scheduling endpoint - Complete Algorithm (with path parameters)
+// Enhanced auto-scheduling endpoint - disabled during refactor
 app.post('/api/schedule/auto-schedule-enhanced/:year/:month', async (req, res) => {
-  try {
-    const { year, month } = req.params;
-    const { options = {} } = req.body;
-    
-    console.log(`🚀 Starting complete auto-scheduling for ${year}-${month} with options:`, options);
-    
-    // Run the complete auto-scheduling algorithm
-    const result = await runCompleteAutoSchedulingPG(parseInt(year), parseInt(month), options);
-    
-    if (result.success) {
-      res.json({
-        success: true,
-        message: `Auto-scheduling completed: ${result.stats.assigned} assignments created`,
-        stats: result.stats,
-        warnings: result.warnings,
-        assignments: result.assignments
-      });
-    } else {
-      res.status(500).json({ 
-        success: false, 
-        error: result.error,
-        warnings: result.warnings || []
-      });
-    }
-  } catch (error) {
-    console.error('Error in auto-scheduling:', error);
-    res.status(500).json({ error: 'Auto-scheduling failed', details: error.message });
-  }
+  const { year, month } = req.params;
+  console.log(`ℹ️ [/api/schedule/auto-schedule-enhanced/:year/:month] Disabled for ${year}-${month}.`);
+  return res.status(200).json({ success: false, disabled: true, message: 'Auto scheduling is temporarily disabled during refactor.' });
 });
 
-// Enhanced auto-scheduling endpoint - Complete Algorithm (with body parameters)
 app.post('/api/schedule/auto-schedule-enhanced', async (req, res) => {
+  console.log('ℹ️ [/api/schedule/auto-schedule-enhanced] Disabled during refactor.');
+  return res.status(200).json({ success: false, disabled: true, message: 'Auto scheduling is temporarily disabled during refactor.' });
+});
+
+// Advanced Auto Scheduler Endpoint - State-of-the-art scheduling with fairness and constraints
+const AdvancedScheduler = require('./services/advanced-scheduler');
+
+app.post('/api/schedule/auto-advanced/:year/:month', async (req, res) => {
+  const { year, month } = req.params;
+  const { overwrite = false } = req.query;
+  
+  console.log(`🧠 [Advanced Scheduler] Starting advanced auto-scheduling for ${year}-${month}`);
+  
   try {
-    const { year, month, options = {} } = req.body;
-    
-    console.log(`🚀 Starting complete auto-scheduling for ${year}-${month} with options:`, options);
-    
-    // Run the complete auto-scheduling algorithm
-    const result = await runCompleteAutoSchedulingPG(parseInt(year), parseInt(month), options);
+    const scheduler = new AdvancedScheduler();
+    const result = await scheduler.generateAdvancedSchedule(
+      parseInt(year), 
+      parseInt(month), 
+      overwrite === 'true'
+    );
     
     if (result.success) {
+      console.log(`✅ [Advanced Scheduler] Generated ${result.schedule.length} assignments`);
+      
+      // Save the schedule to database
+      const monthStr = String(month).padStart(2, '0');
+      
+      // Clear existing auto assignments if overwrite is true
+      if (overwrite === 'true') {
+        await pool.query(`
+          DELETE FROM schedule 
+          WHERE EXTRACT(YEAR FROM date) = $1 
+            AND EXTRACT(MONTH FROM date) = $2 
+            AND is_manual = false
+        `, [parseInt(year), parseInt(month)]);
+      }
+      
+      // Insert new assignments
+      for (const assignment of result.schedule) {
+        if (!assignment.is_manual) { // Don't overwrite manual assignments
+          // Simple insert since we already cleared existing assignments
+          await pool.query(`
+            INSERT INTO schedule (date, weekday, type, guide1_id, guide1_role, guide2_id, guide2_role, is_manual)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, false)
+          `, [
+            assignment.date,
+            assignment.dayName || 'N/A',
+            'auto',
+            assignment.guide1_id,
+            assignment.guide1_role,
+            assignment.guide2_id,
+            assignment.guide2_role
+          ]);
+        }
+      }
+      
       res.json({
         success: true,
-        message: `Auto-scheduling completed: ${result.stats.assigned} assignments created`,
-        stats: result.stats,
-        warnings: result.warnings,
-        assignments: result.assignments
+        message: 'שיבוץ אוטומטי מתקדם הושלם בהצלחה',
+        schedule: result.schedule,
+        monthly_plan: result.monthly_plan,
+        statistics: result.statistics,
+        total_assignments: result.schedule.length,
+        fairness_score: result.statistics?.fairnessScore || 'לא זמין'
       });
+      
     } else {
-      res.status(500).json({ 
-        success: false, 
+      console.error(`❌ [Advanced Scheduler] Failed: ${result.error}`);
+      res.status(500).json({
+        success: false,
         error: result.error,
-        warnings: result.warnings || []
+        message: 'כשל בשיבוץ אוטומטי מתקדם'
       });
     }
+    
   } catch (error) {
-    console.error('Error in auto-scheduling:', error);
-    res.status(500).json({ error: 'Auto-scheduling failed', details: error.message });
+    console.error('❌ [Advanced Scheduler] Exception:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      message: 'שגיאה בשיבוץ אוטומטי מתקדם'
+    });
   }
 });
 
 // New simplified endpoint aligned with docs plan: POST /api/schedule/auto/:year/:month
 app.post('/api/schedule/auto/:year/:month', async (req, res) => {
+  const { year, month } = req.params;
+  const { overwrite } = req.query;
+  
+  console.log(`🤖 [/api/schedule/auto] Running algorithm-based auto scheduling for ${year}-${month}`);
+  
   try {
-    const { year, month } = req.params;
-    const overwrite = String(req.query.overwrite || '').toLowerCase() === 'true';
-
-    console.log(`🚀 [/api/schedule/auto] Starting auto-scheduling for ${year}-${month} overwrite=${overwrite}`);
-
-    // Current implementation always overwrites auto-assignments while preserving manual.
-    // The overwrite flag is reserved for future behavior tuning.
-    const result = await runCompleteAutoSchedulingPG(parseInt(year), parseInt(month));
-
-    if (result.success) {
-      res.json({
-        success: true,
-        message: `Auto-scheduling completed: ${result.stats.assigned} assignments created`,
-        stats: result.stats,
-        warnings: result.warnings,
-        assignments: result.assignments
-      });
-    } else {
-      res.status(500).json({
-        success: false,
-        error: result.error,
-        warnings: result.warnings || []
+    // Get basic scheduling context
+    const guides = (await pool.query(
+      `SELECT id, name, role FROM users WHERE is_active = true AND role = 'מדריך' ORDER BY name`
+    )).rows;
+    
+    if (guides.length === 0) {
+      return res.status(400).json({ success: false, error: 'No active guides found' });
+    }
+    
+    // Get weekend types for the month
+    const weekendTypes = {};
+    const weekendRows = (await pool.query(
+      `SELECT date::text as date, is_closed FROM weekend_types WHERE EXTRACT(YEAR FROM date) = $1 AND EXTRACT(MONTH FROM date) = $2`,
+      [year, month]
+    )).rows;
+    
+    for (const row of weekendRows) {
+      weekendTypes[row.date] = row.is_closed === true;
+    }
+    
+    // Get existing assignments if not overwriting
+    let existingAssignments = [];
+    if (!overwrite) {
+      existingAssignments = (await pool.query(
+        `SELECT date::text as date FROM schedule WHERE EXTRACT(YEAR FROM date) = $1 AND EXTRACT(MONTH FROM date) = $2`,
+        [year, month]
+      )).rows.map(r => r.date);
+    }
+    
+    // Simple algorithm: assign guides with basic rotation
+    const daysInMonth = new Date(year, month, 0).getDate();
+    const assignments = [];
+    let guideIndex = 0;
+    
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      
+      // Skip if already assigned and not overwriting
+      if (!overwrite && existingAssignments.includes(dateStr)) {
+        continue;
+      }
+      
+      const dow = new Date(year, month - 1, day).getDay(); // 0=Sunday, 5=Friday, 6=Saturday
+      const isFriday = dow === 5;
+      const isSaturday = dow === 6;
+      const isClosedWeekend = weekendTypes[dateStr] || (isSaturday && weekendTypes[`${year}-${String(month).padStart(2, '0')}-${String(day-1).padStart(2, '0')}`]);
+      
+      let guide1_id = null, guide1_role = 'רגיל';
+      let guide2_id = null, guide2_role = 'רגיל';
+      
+      if (isFriday && isClosedWeekend) {
+        // Closed Friday: only one standby
+        guide1_id = guides[guideIndex % guides.length].id;
+        guide1_role = 'כונן';
+        guideIndex++;
+      } else if (isSaturday && isClosedWeekend) {
+        // Closed Saturday: continue with same standby + optional Motzash
+        guide1_id = guides[(guideIndex - 1) % guides.length].id;
+        guide1_role = 'כונן';
+        guide2_id = guides[guideIndex % guides.length].id;
+        guide2_role = 'מוצ״ש';
+        guideIndex++;
+      } else {
+        // Regular day: two guides
+        guide1_id = guides[guideIndex % guides.length].id;
+        guide2_id = guides[(guideIndex + 1) % guides.length].id;
+        guideIndex += 2;
+      }
+      
+      assignments.push({
+        date: dateStr,
+        guide1_id,
+        guide1_role,
+        guide2_id,
+        guide2_role
       });
     }
+    
+    // Save assignments to database
+    let assignedCount = 0;
+    for (const assignment of assignments) {
+      try {
+        if (overwrite) {
+          // Delete existing assignments for this date
+          await pool.query('DELETE FROM schedule WHERE date = $1', [assignment.date]);
+        }
+        
+        // Insert new assignment
+        await pool.query(
+          `INSERT INTO schedule (date, guide1_id, guide1_role, guide2_id, guide2_role, is_manual, created_at)
+           VALUES ($1, $2, $3, $4, $5, false, CURRENT_TIMESTAMP)
+           ON CONFLICT (date) DO UPDATE SET
+           guide1_id = EXCLUDED.guide1_id,
+           guide1_role = EXCLUDED.guide1_role,
+           guide2_id = EXCLUDED.guide2_id,
+           guide2_role = EXCLUDED.guide2_role,
+           is_manual = false`,
+          [assignment.date, assignment.guide1_id, assignment.guide1_role, assignment.guide2_id, assignment.guide2_role]
+        );
+        assignedCount++;
+      } catch (e) {
+        console.error(`Error assigning ${assignment.date}:`, e.message);
+      }
+    }
+    
+    const stats = {
+      requested: assignments.length,
+      assigned: assignedCount,
+      guides_used: guides.length
+    };
+    
+    console.log(`✅ Algorithm scheduling completed: ${assignedCount}/${assignments.length} assignments created`);
+    
+    res.json({
+      success: true,
+      stats,
+      message: `Algorithm scheduling completed successfully. ${assignedCount} assignments created.`
+    });
+    
   } catch (error) {
-    console.error('Error in /api/schedule/auto:', error);
-    res.status(500).json({ error: 'Auto-scheduling failed', details: error.message });
+    console.error('Error in algorithm auto-scheduling:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      message: 'Algorithm auto-scheduling failed'
+    });
   }
 });
 
 // Legacy endpoint for backwards compatibility
 app.post('/api/schedule/auto-schedule/:year/:month', async (req, res) => {
-  try {
-    const { year, month } = req.params;
-    console.log(`Starting auto-scheduling for ${year}-${month}`);
-    
-    const result = await runCompleteAutoSchedulingPG(parseInt(year), parseInt(month));
-    
-    if (result.success) {
-      res.json({
-        success: true,
-        message: `Auto-scheduling completed: ${result.stats.assigned} assignments created`,
-        stats: result.stats,
-        warnings: result.warnings,
-        assignments: result.assignments
-      });
-    } else {
-      res.status(500).json({ 
-        success: false, 
-        error: result.error,
-        warnings: result.warnings || []
-      });
-    }
-  } catch (error) {
-    console.error('Auto-scheduling error:', error);
-    res.status(500).json({ error: 'Auto-scheduling failed', details: error.message });
-  }
+  const { year, month } = req.params;
+  console.log(`ℹ️ [/api/schedule/auto-schedule] Disabled for ${year}-${month}.`);
+  return res.status(200).json({ success: false, disabled: true, message: 'Auto scheduling is temporarily disabled during refactor.' });
 });
 
 // ============================================================================
@@ -2833,410 +3162,7 @@ app.post('/api/schedule/auto-schedule/:year/:month', async (req, res) => {
 
 /* NOTE: Scheduler implementation lives in services/scheduler.js and is imported above. */
 
-// ============================================================================
-// PHASE 1: DATA PREPARATION - POSTGRESQL VERSION
-// ============================================================================
-
-async function prepareSchedulingDataPG(year, month) {
-  // Load all required data with PostgreSQL queries
-  const guidesResult = await pool.query("SELECT * FROM users WHERE role = 'מדריך' AND is_active = true ORDER BY name");
-  const guides = guidesResult.rows;
-  
-  const constraintsResult = await pool.query("SELECT * FROM constraints");
-  const constraints = constraintsResult.rows;
-  
-  const fixedConstraintsResult = await pool.query("SELECT * FROM fixed_constraints");
-  const fixedConstraints = fixedConstraintsResult.rows;
-  
-  const vacationsResult = await pool.query("SELECT * FROM vacations WHERE status = 'approved'");
-  const vacations = vacationsResult.rows;
-  
-  const coordinatorRulesResult = await pool.query("SELECT * FROM coordinator_rules WHERE is_active = true");
-  const coordinatorRules = coordinatorRulesResult.rows;
-  
-  const existingScheduleResult = await pool.query(`
-    SELECT * FROM schedule 
-    WHERE EXTRACT(YEAR FROM date) = $1 AND EXTRACT(MONTH FROM date) = $2
-  `, [year, month]);
-  const existingSchedule = existingScheduleResult.rows;
-  
-  // Load weekend types
-  const weekendTypes = {};
-  const weekendRowsResult = await pool.query(`
-    SELECT * FROM weekend_types 
-    WHERE EXTRACT(YEAR FROM date) = $1 AND EXTRACT(MONTH FROM date) = $2
-  `, [year, month]);
-  weekendRowsResult.rows.forEach(row => {
-    const fridayStr = formatDateLocal(row.date);
-    weekendTypes[fridayStr] = row.is_closed; // Store Friday explicitly
-    // Mirror closed weekend to Saturday in-memory (terminology: closed/open weekend affects both days)
-    if (row.is_closed === true) {
-      const saturdayStr = addDaysLocal(fridayStr, 1);
-      weekendTypes[saturdayStr] = true;
-    }
-  });
-  
-  // Generate all days in month
-  const days = getAllDaysInMonth(year, month).map(date => {
-    const dateStr = formatDateLocal(date);
-    const weekday = getHebrewWeekday(date.getDay());
-    const weekendType = weekendTypes[dateStr] || null;
-    
-    return {
-      date: dateStr,
-      weekday: weekday,
-      weekdayNum: date.getDay(),
-      weekendType: weekendType,
-      isWeekend: date.getDay() === 5 || date.getDay() === 6, // Friday or Saturday
-      requirements: null // Will be calculated later
-    };
-  });
-  
-  // Initialize guide statistics
-  const guideStats = {};
-  guides.forEach(guide => {
-    guideStats[guide.id] = {
-      totalShifts: 0,
-      leadShifts: 0,
-      secondShifts: 0,
-      regularShifts: 0,
-      overlapShifts: 0,
-      standbyShifts: 0,
-      motzashShifts: 0,
-      weekendShifts: 0,
-      weekdayShifts: 0,
-      lastShiftDate: null,
-      consecutiveDays: 0
-    };
-  });
-  
-  // Load existing assignments and update stats
-  const manualAssignments = {};
-  existingSchedule.forEach(assignment => {
-    if (assignment.is_manual) {
-      manualAssignments[formatDateLocal(assignment.date)] = assignment;
-      
-      // Update statistics for manual assignments
-      if (assignment.guide1_id) {
-        updateGuideStatsForAssignmentPG(guideStats[assignment.guide1_id], assignment.date, assignment.guide1_role || 'רגיל');
-      }
-      if (assignment.guide2_id) {
-        updateGuideStatsForAssignmentPG(guideStats[assignment.guide2_id], assignment.date, assignment.guide2_role || 'רגיל');
-      }
-    }
-  });
-  
-  return {
-    guides,
-    constraints,
-    fixedConstraints,
-    vacations,
-    coordinatorRules,
-    weekendTypes,
-    days,
-    guideStats,
-    manualAssignments,
-    year,
-    month,
-    options: {},
-    totalDays: days.length,
-    averageShiftsPerGuide: 0 // Will be calculated during assignment
-  };
-}
-
-// Helper function to get Hebrew weekday name
-function getHebrewWeekday(dayIndex) {
-  const weekdays = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
-  return weekdays[dayIndex];
-}
-
-// Date helpers to avoid timezone off-by-one errors
-function formatDateLocal(dateObj) {
-  const y = dateObj.getFullYear();
-  const m = String(dateObj.getMonth() + 1).padStart(2, '0');
-  const d = String(dateObj.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
-}
-
-function addDaysLocal(dateStr, deltaDays) {
-  const base = new Date(dateStr + 'T00:00:00'); // local midnight
-  base.setDate(base.getDate() + deltaDays);
-  return formatDateLocal(base);
-}
-
-// ============================================================================
-// PHASE 2: DAY-BY-DAY ASSIGNMENT - POSTGRESQL VERSION
-// ============================================================================
-
-async function assignDayOptimalPG(dayInfo, context) {
-  const { date, weekday, weekdayNum, weekendType } = dayInfo;
-  
-  // Skip if manually assigned
-  if (context.manualAssignments[date]) {
-    console.log(`Skipping manually assigned day: ${date}`);
-    return context.manualAssignments[date];
-  }
-  
-  // Determine requirements for this day
-  const requirements = getDayRequirementsPG(dayInfo, context);
-  dayInfo.requirements = requirements;
-  
-  console.log(`Day ${date} requirements:`, requirements);
-  
-  // Handle special case: closed weekend
-  if (requirements.isClosedWeekend || requirements.isClosedSaturday) {
-    // For Friday, use the original logic
-    if (weekdayNum === 5) { // Friday
-      return await handleClosedSaturdayWeekendPG(dayInfo, context);
-    }
-    
-    // For Saturday, we need to handle it differently
-    if (weekdayNum === 6) { // Saturday
-      // Find the standby guide that was assigned for Friday
-      const fridayDateStr = addDaysLocal(date, -1);
-      
-      // Find the standby guide from Friday - check multiple sources
-      let fridayAssignment = context.manualAssignments[fridayDateStr];
-      if (!fridayAssignment) {
-        fridayAssignment = context.assignments?.find(a => a.date === fridayDateStr);
-      }
-      if (!fridayAssignment) {
-        // If we can't find the Friday assignment, we need to create it first
-        console.log(`Friday assignment not found for ${fridayDateStr}, creating it now`);
-        const fridayInfo = {
-          date: fridayDateStr,
-          weekday: getHebrewWeekday(5), // Friday
-          weekdayNum: 5,
-          weekendType: true // Closed Saturday
-        };
-        const fridayAssignmentResult = await handleClosedSaturdayWeekendPG(fridayInfo, context);
-        if (fridayAssignmentResult) {
-          // Add to context for future reference
-          if (!context.assignments) context.assignments = [];
-          context.assignments.push(fridayAssignmentResult);
-          fridayAssignment = fridayAssignmentResult;
-        }
-      }
-      
-      if (fridayAssignment && fridayAssignment.guide1_id) {
-        const standbyGuide = context.guides.find(g => g.id === fridayAssignment.guide1_id);
-        
-        if (standbyGuide) {
-          // Find motzash guide (different from standby guide)
-          const motzashAvailable = await Promise.all(
-            context.guides.map(async guide => {
-              if (guide.id === standbyGuide.id) return null; // Skip standby guide
-              const availability = await validateGuideAvailabilityPG(guide, date, context);
-              return { ...guide, availability };
-            })
-          );
-          
-          const availableForMotzash = motzashAvailable
-            .filter(guide => guide && guide.availability.available)
-            .sort((a, b) => a.availability.score - b.availability.score);
-          
-          if (availableForMotzash.length > 0) {
-            const motzashGuide = availableForMotzash[0];
-            
-            console.log(`Saturday closed weekend assignment: standby=${standbyGuide.name}, motzash=${motzashGuide.name}`);
-            
-            return {
-              date: date,
-              weekday: weekday,
-              type: 'מוצ״ש',
-              guide1_id: standbyGuide.id,
-              guide1_name: standbyGuide.name,
-              guide1_role: 'כונן',
-              guide2_id: motzashGuide.id,
-              guide2_name: motzashGuide.name,
-              guide2_role: 'מוצ״ש',
-              is_manual: false,
-              is_locked: false,
-              created_by: null
-            };
-          } else {
-            console.log(`No available motzash guide for closed Saturday ${date}`);
-            // Return just the standby guide if no motzash available
-            return {
-              date: date,
-              weekday: weekday,
-              type: 'כונן',
-              guide1_id: standbyGuide.id,
-              guide1_name: standbyGuide.name,
-              guide1_role: 'כונן',
-              guide2_id: null,
-              guide2_name: null,
-              guide2_role: null,
-              is_manual: false,
-              is_locked: false,
-              created_by: null
-            };
-          }
-        }
-      } else {
-        console.log(`No Friday assignment found for closed Saturday ${date}`);
-        // Fall back to regular assignment if no Friday assignment
-      }
-    }
-  }
-  
-  // Get available guides with scores
-  const guidesWithAvailability = await Promise.all(
-    context.guides.map(async guide => {
-      const availability = await validateGuideAvailabilityPG(guide, date, context);
-      return {
-        ...guide,
-        availability
-      };
-    })
-  );
-  
-  // Filter available guides and sort by score
-  const availableGuides = guidesWithAvailability
-    .filter(guide => guide.availability.available)
-    .sort((a, b) => a.availability.score - b.availability.score);
-  
-  console.log(`Available guides for ${date}: ${availableGuides.length}/${context.guides.length}`);
-  
-  // If no guides available, try override soft constraints
-  if (availableGuides.length === 0) {
-    console.log(`No available guides for ${date}, trying soft constraint override`);
-    const overrideGuides = await tryOverrideSoftConstraintsPG(guidesWithAvailability, date, context);
-    if (overrideGuides.length > 0) {
-      return await selectOptimalGuidesPG(overrideGuides, requirements, context, date);
-    } else {
-      console.log(`Cannot assign any guides for ${date} - will notify coordinator`);
-      return null; // Will create warning
-    }
-  }
-  
-  // Select optimal guides
-  return await selectOptimalGuidesPG(availableGuides, requirements, context, date);
-}
-
-function getDayRequirementsPG(dayInfo, context) {
-  const { date, weekday, weekdayNum, weekendType } = dayInfo;
-  
-  // Closed weekend Friday (flag stored on Friday)
-  if (weekdayNum === 5) { // Friday
-    const fridayDateStr = date; // already YYYY-MM-DD
-    const isClosedOnFriday = context.weekendTypes[fridayDateStr] === true;
-    if (isClosedOnFriday) {
-      const saturdayDateStr = addDaysLocal(fridayDateStr, 1);
-      return {
-        guidesNeeded: 1,
-        roles: ['כונן'],
-        type: 'standby', // כונן
-        isClosedWeekendFriday: true,
-        linkedSaturday: saturdayDateStr
-      };
-    }
-  }
-  
-  // Closed weekend Saturday (flag is on Friday)
-  if (weekdayNum === 6) { // Saturday
-    const fridayDateStr = addDaysLocal(date, -1);
-    const isClosedFromFriday = context.weekendTypes[fridayDateStr] === true;
-    if (isClosedFromFriday) {
-      return {
-        guidesNeeded: 2, // Friday כונן continues + add מוצ״ש
-        roles: ['כונן', 'מוצ״ש'],
-        type: 'closed_weekend_saturday',
-        isClosedWeekend: true,
-        requiresMotzash: true,
-        linkedFriday: fridayDateStr
-      };
-    }
-  }
-  
-  // Regular days (including open Saturday, holidays)
-  return {
-    guidesNeeded: 2,
-    roles: ['רגיל', 'חפיפה'],
-    type: 'regular',
-    isWeekend: weekdayNum === 5 || weekdayNum === 6
-  };
-}
-
-async function handleClosedSaturdayWeekendPG(fridayInfo, context) {
-  const { date: fridayDate } = fridayInfo;
-  const saturdayDateStr = addDaysLocal(fridayDate, 1);
-  
-  console.log(`Handling closed Saturday weekend: ${fridayDate} -> ${saturdayDateStr}`);
-  
-  // Find best standby guide for Friday
-  const fridayAvailable = await Promise.all(
-    context.guides.map(async guide => {
-      const availability = await validateGuideAvailabilityPG(guide, fridayDate, context);
-      // Additional check: standby limit
-      if (availability.available && context.guideStats[guide.id].standbyShifts >= 2) {
-        availability.available = false;
-        availability.reason = 'כבר עבד כונן פעמיים החודש';
-      }
-      return { ...guide, availability };
-    })
-  );
-  
-  const availableForStandby = fridayAvailable
-    .filter(guide => guide.availability.available)
-    .sort((a, b) => a.availability.score - b.availability.score);
-  
-  console.log(`Available standby guides for ${fridayDate}: ${availableForStandby.length}/${context.guides.length}`);
-  availableForStandby.forEach((guide, index) => {
-    console.log(`  ${index + 1}. ${guide.name} (score: ${guide.availability.score}, reason: ${guide.availability.reason})`);
-  });
-  
-  if (availableForStandby.length === 0) {
-    console.log(`No available standby guides for closed Saturday ${fridayDate}`);
-    // Try to find any available guide, even if they've reached standby limit
-    const anyAvailable = fridayAvailable
-      .filter(guide => guide.availability.available || guide.availability.reason === 'כבר עבד כונן פעמיים החודש')
-      .sort((a, b) => a.availability.score - b.availability.score);
-    
-    if (anyAvailable.length > 0) {
-      console.log(`Using guide despite standby limit: ${anyAvailable[0].name}`);
-      const standbyGuide = anyAvailable[0];
-      
-      return {
-        date: fridayDate,
-        weekday: getHebrewWeekday(new Date(fridayDate).getDay()),
-        type: 'כונן',
-        guide1_id: standbyGuide.id,
-        guide1_name: standbyGuide.name,
-        guide1_role: 'כונן',
-        guide2_id: null,
-        guide2_name: null,
-        guide2_role: null,
-        is_manual: false,
-        is_locked: false,
-        created_by: null,
-        linkedSaturday: saturdayDateStr,
-        warning: 'Guide assigned despite standby limit'
-      };
-    }
-    return null;
-  }
-  
-  const standbyGuide = availableForStandby[0];
-  console.log(`Selected standby guide: ${standbyGuide.name} for ${fridayDate}-${saturdayDateStr}`);
-  
-  // Return Friday assignment
-  return {
-    date: fridayDate,
-    weekday: getHebrewWeekday(new Date(fridayDate).getDay()),
-    type: 'כונן',
-    guide1_id: standbyGuide.id,
-    guide1_name: standbyGuide.name,
-    guide1_role: 'כונן',
-    guide2_id: null,
-    guide2_name: null,
-    guide2_role: null,
-    is_manual: false,
-    is_locked: false,
-    created_by: null,
-    linkedSaturday: saturdayDateStr
-  };
-}
+// Auto-scheduling implementation removed during refactor. Placeholder only.
 
 // ============================================================================
 // TRAFFIC LIGHT SYSTEM FOR SCHEDULING - POSTGRESQL VERSION
@@ -4044,7 +3970,13 @@ function calculateGuideStatisticsPG(schedule, guideId, year, month, weekendTypes
     motzash_hours: 0,
     total_shifts: 0,
     weekend_shifts: 0,
-    weekday_shifts: 0
+    weekday_shifts: 0,
+    manual_shifts: 0,
+    auto_shifts: 0,
+    regular_shifts: 0,
+    overlap_shifts: 0,
+    conan_shifts: 0,
+    motzash_shifts: 0
   };
   
   schedule.forEach((day, index) => {
@@ -4067,6 +3999,21 @@ function calculateGuideStatisticsPG(schedule, guideId, year, month, weekendTypes
         stats.weekday_shifts++;
       }
       
+      // Count shift types
+      if (day.guide1_id === guideId && day.is_manual) {
+        stats.manual_shifts++;
+      } else if (day.guide2_id === guideId && day.is_manual) {
+        stats.manual_shifts++;
+      } else {
+        stats.auto_shifts++;
+      }
+      
+      // Count by role type
+      if (role === 'רגיל') stats.regular_shifts++;
+      else if (role === 'חפיפה') stats.overlap_shifts++;
+      else if (role === 'כונן') stats.conan_shifts++;
+      else if (role === 'מוצ״ש') stats.motzash_shifts++;
+      
       // Calculate hours based on role and day type - EXACT SAME LOGIC AS SQLITE VERSION
       const hours = calculateHoursForShiftPG(day, role, weekendTypes, schedule, index);
       
@@ -4078,6 +4025,19 @@ function calculateGuideStatisticsPG(schedule, guideId, year, month, weekendTypes
       stats.motzash_hours += hours.motzash;
     }
   });
+  
+  // Calculate total hours and salary factor
+  stats.total_hours = stats.regular_hours + stats.night_hours + stats.shabbat_hours + 
+                      stats.conan_hours + stats.conan_shabbat_hours + stats.motzash_hours;
+  
+  // Calculate salary factor with multipliers:
+  // Regular: ×1.0, Night: ×1.5, Shabbat: ×2.0, Conan: ×0.3, Conan Shabbat: ×0.6, Motzash: ×1.0
+  stats.salary_factor = (stats.regular_hours * 1.0) + 
+                        (stats.night_hours * 1.5) + 
+                        (stats.shabbat_hours * 2.0) + 
+                        (stats.conan_hours * 0.3) + 
+                        (stats.conan_shabbat_hours * 0.6) + 
+                        (stats.motzash_hours * 1.0);
   
   return stats;
 }
@@ -4548,10 +4508,4 @@ app.delete('/api/doctor-referrals/:id', async (req, res) => {
 // Start the server
 startServer();
 
-// Export functions for testing
-module.exports = {
-  runCompleteAutoSchedulingPG,
-  assignDayOptimalPG,
-  handleClosedSaturdayWeekendPG,
-  getDayRequirementsPG
-};
+// Export nothing related to auto-scheduling; fully stripped

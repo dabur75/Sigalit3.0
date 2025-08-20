@@ -9,7 +9,12 @@
     "build": "echo 'Production build - static files included'",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": ["scheduling", "hebrew", "residential-homes", "guide-management"],
+  "keywords": [
+    "scheduling",
+    "hebrew",
+    "residential-homes",
+    "guide-management"
+  ],
   "author": "Sigalit Pro Team",
   "license": "ISC",
   "description": "Sigalit - Smart Guide Scheduling System for Residential Homes",
@@ -20,6 +25,7 @@
     "axios": "^1.7.9",
     "cors": "^2.8.5",
     "csv-parser": "^3.2.0",
+    "dotenv": "^17.2.1",
     "express": "^5.1.0",
     "pg": "^8.16.3"
   }

@@ -1,0 +1,4483 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>מדריך שיבוץ משופר - סיגלית</title>
+    
+    <!-- Include header functions -->
+    <script src="header-functions.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Roboto', sans-serif;
+            background: #f8fafc;
+            min-height: 100vh;
+            direction: rtl;
+            color: #334155;
+            overflow-x: auto;
+        }
+
+        /* Header and Navigation */
+        .main-container {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #7c3aed, #a855f7);
+            color: white;
+            padding: 20px 40px;
+            box-shadow: 0 4px 20px rgba(124, 58, 237, 0.3);
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .header-title {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .header-title h1 {
+            font-size: 1.8rem;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .header-title .icon {
+            font-size: 2rem;
+        }
+
+        .header-nav {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .nav-button {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 8px 16px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+        }
+
+        .nav-button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-1px);
+        }
+
+        /* Main Content Area */
+        .content-wrapper {
+            flex: 1;
+            padding: 20px;
+            max-width: 1600px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        /* Month Navigation */
+        .month-navigation {
+            background: white;
+            border-radius: 12px;
+            padding: 20px 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .month-controls {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .month-button {
+            background: #8b5cf6;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 20px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .month-button:hover:not(:disabled) {
+            background: #7c3aed;
+            transform: translateY(-1px);
+        }
+
+        .month-button:disabled {
+            background: #cbd5e1;
+            color: #94a3b8;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .current-month-display {
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: #7c3aed;
+            min-width: 200px;
+            text-align: center;
+        }
+
+        .month-info {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            color: #64748b;
+            font-size: 0.9rem;
+        }
+
+        /* Action Buttons */
+        .action-buttons {
+            background: white;
+            border-radius: 12px;
+            padding: 20px 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .action-button {
+            background: #10b981;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 20px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .action-button:hover:not(:disabled) {
+            background: #059669;
+            transform: translateY(-1px);
+        }
+
+        .action-button:disabled {
+            background: #cbd5e1;
+            color: #94a3b8;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .action-button.secondary {
+            background: #6b7280;
+        }
+
+        .action-button.secondary:hover:not(:disabled) {
+            background: #4b5563;
+        }
+
+        .action-button.danger {
+            background: #ef4444;
+        }
+
+        .action-button.danger:hover:not(:disabled) {
+            background: #dc2626;
+        }
+
+        /* Guide Cards Container */
+        .guides-section {
+            background: white;
+            border-radius: 12px;
+            padding: 20px 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+        }
+
+        .guides-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .guides-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #374151;
+        }
+
+        .guides-info {
+            color: #6b7280;
+            font-size: 0.9rem;
+        }
+
+        .guides-container {
+            display: flex;
+            gap: 15px;
+            overflow-x: auto;
+            padding: 10px 0;
+            min-height: 120px;
+        }
+
+        /* Guide Cards */
+        .guide-card {
+            background: #ffffff;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 15px;
+            min-width: 140px;
+            cursor: grab;
+            transition: all 0.2s ease;
+            user-select: none;
+            position: relative;
+        }
+
+        .guide-card:hover {
+            border-color: #8b5cf6;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(139, 92, 246, 0.2);
+        }
+
+        .guide-card.selected {
+            border-color: #7c3aed;
+            background: #f3f4f6;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(124, 58, 237, 0.3);
+        }
+
+        .guide-card.dragging {
+            opacity: 0.8;
+            transform: rotate(5deg);
+            cursor: grabbing;
+            z-index: 1000;
+        }
+
+        .guide-card.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            border-color: #d1d5db;
+        }
+
+        .guide-name {
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+
+        .guide-stats {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .shift-counter {
+            background: #8b5cf6;
+            color: white;
+            border-radius: 12px;
+            padding: 4px 8px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            min-width: 24px;
+            text-align: center;
+        }
+
+        .salary-hours {
+            color: #6b7280;
+            font-size: 0.85rem;
+            text-align: center;
+            margin-top: 4px;
+        }
+
+        .guide-constraints-indicator {
+            position: absolute;
+            top: -8px;
+            left: -8px;
+            background: #ef4444;
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 0.7rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+        }
+
+        /* Calendar Section */
+        .calendar-section {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+            margin-bottom: 20px;
+        }
+
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+        }
+
+        .calendar-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #374151;
+        }
+
+        .calendar-legend {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.85rem;
+        }
+
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 3px;
+        }
+
+        /* Calendar Grid */
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 1px;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid #e5e7eb;
+            background: #e5e7eb;
+        }
+
+        .calendar-day-header {
+            background: #8b5cf6;
+            color: white;
+            padding: 12px 8px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 0.9rem;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .calendar-day-header.weekend-header {
+            background: #7c3aed;
+            box-shadow: inset 0 0 0 2px #fbbf24;
+        }
+        
+        .day-short {
+            font-size: 1rem;
+            font-weight: 700;
+        }
+        
+        .day-full {
+            font-size: 0.7rem;
+            opacity: 0.8;
+            margin-top: 2px;
+        }
+
+        .calendar-day {
+            background: white;
+            min-height: 120px;
+            padding: 0;
+            position: relative;
+            border: 2px solid transparent;
+            transition: all 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .calendar-day:hover {
+            background: #f8fafc;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .calendar-day.other-month {
+            background: #f3f4f6;
+            color: #9ca3af;
+            opacity: 0.6;
+        }
+
+        .calendar-day.today {
+            background: #eff6ff;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        /* Israeli weekend styling */
+        .calendar-day.weekend {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border-left: 3px solid #f59e0b;
+        }
+        
+        .calendar-day.friday {
+            background: linear-gradient(135deg, #ddd6fe 0%, #c4b5fd 100%);
+            border-left: 3px solid #8b5cf6;
+        }
+        
+        .calendar-day.saturday {
+            background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+            border-left: 3px solid #6366f1;
+        }
+
+        .calendar-day.closed-weekend {
+            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+            border-left: 3px solid #ef4444;
+        }
+        
+        .calendar-day.holiday {
+            background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+            border-left: 3px solid #10b981;
+        }
+
+        .calendar-day.drop-target {
+            border-color: #10b981;
+            background: #ecfdf5;
+        }
+
+        .calendar-day.drop-invalid {
+            border-color: #ef4444;
+            background: #fef2f2;
+        }
+
+        .calendar-day.has-constraint {
+            background: #fff1f2;
+            border-color: #f87171;
+        }
+
+        /* Enhanced Day Structure */
+        .day-header {
+            padding: 6px 8px;
+            background: rgba(255, 255, 255, 0.9);
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            min-height: 30px;
+        }
+        
+        .day-number {
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: #374151;
+        }
+        
+        .day-indicators {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+        }
+        
+        .today-indicator {
+            color: #3b82f6;
+            font-size: 0.8rem;
+        }
+        
+        .holiday-indicator,
+        .closed-indicator {
+            font-size: 0.7rem;
+        }
+        
+        .day-slots {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            padding: 4px;
+        }
+        
+        .day-slot {
+            flex: 1;
+            border: 1px solid #e5e7eb;
+            border-radius: 4px;
+            padding: 4px;
+            min-height: 30px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        
+        .day-slot:hover {
+            border-color: #8b5cf6;
+            transform: scale(1.02);
+        }
+        
+        .normal-slot {
+            background: #f8fafc;
+            border-color: #8b5cf6;
+        }
+        
+        .overlap-slot {
+            background: #fffbeb;
+            border-color: #f59e0b;
+        }
+        
+        .slot-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2px;
+        }
+        
+        .slot-label {
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: #6b7280;
+        }
+        
+        .slot-type-icon {
+            font-size: 0.7rem;
+        }
+        
+        .slot-content {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 20px;
+        }
+        
+        .assignment-placeholder {
+            font-size: 0.6rem;
+            color: #9ca3af;
+            text-align: center;
+            font-style: italic;
+        }
+        
+        .slot-actions {
+            display: none;
+            position: absolute;
+            top: 2px;
+            right: 2px;
+        }
+        
+        .day-slot:hover .slot-actions {
+            display: block;
+        }
+        
+        .remove-assignment {
+            background: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            font-size: 0.7rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .day-footer {
+            padding: 4px 8px;
+            background: rgba(0, 0, 0, 0.02);
+            border-top: 1px solid #e5e7eb;
+            min-height: 20px;
+        }
+        
+        .day-stats {
+            text-align: center;
+            font-size: 0.7rem;
+            color: #6b7280;
+        }
+        
+        /* Enhanced drop zone states */
+        .day-slot.drop-zone {
+            border: 2px dashed #10b981;
+            background: #ecfdf5;
+            box-shadow: inset 0 0 0 1px #10b981;
+        }
+        
+        .day-slot.drop-hover {
+            border-color: #059669;
+            background: #d1fae5;
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+        
+        .day-slot.drop-enter {
+            animation: dropEnter 0.2s ease;
+        }
+        
+        .day-slot.drop-invalid {
+            border: 2px dashed #ef4444;
+            background: #fef2f2;
+            box-shadow: inset 0 0 0 1px #ef4444;
+        }
+        
+        .day-slot.drop-success {
+            border-color: #10b981;
+            background: #d1fae5;
+            animation: dropSuccess 0.5s ease;
+        }
+        
+        .day-slot.occupied {
+            background: #f3f4f6;
+            border-color: #6b7280;
+            cursor: default;
+        }
+        
+        .day-slot.occupied:hover {
+            transform: none;
+        }
+        
+        @keyframes dropEnter {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.08); }
+            100% { transform: scale(1.05); }
+        }
+        
+        @keyframes dropSuccess {
+            0% { transform: scale(1.05); background: #d1fae5; }
+            50% { transform: scale(1.1); background: #a7f3d0; }
+            100% { transform: scale(1); background: #f3f4f6; }
+        }
+        
+        /* Assignment Display */
+        .assignment-display {
+            text-align: center;
+            width: 100%;
+        }
+        
+        .assigned-guide-name {
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 2px;
+        }
+        
+        .assigned-guide-role {
+            font-size: 0.6rem;
+            color: #6b7280;
+            font-style: italic;
+        }
+        
+        .day-slot.occupied .assignment-display {
+            background: rgba(139, 92, 246, 0.1);
+            border-radius: 3px;
+            padding: 4px;
+        }
+        
+        .normal-slot.occupied .assignment-display {
+            background: rgba(139, 92, 246, 0.15);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+        }
+        
+        .overlap-slot.occupied .assignment-display {
+            background: rgba(245, 158, 11, 0.15);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+        
+        /* Enhanced Constraint Visualization */
+        .constraint-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            pointer-events: none;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0.8;
+        }
+        
+        .constraint-overlay-regular {
+            background: linear-gradient(45deg, #fee2e2 25%, transparent 25%),
+                        linear-gradient(-45deg, #fee2e2 25%, transparent 25%);
+            background-size: 8px 8px;
+            border: 2px solid #dc2626;
+        }
+        
+        .constraint-overlay-fixed {
+            background: linear-gradient(90deg, #fef3c7 50%, transparent 50%);
+            background-size: 6px 6px;
+            border: 2px solid #d97706;
+        }
+        
+        .constraint-overlay-vacation {
+            background: linear-gradient(135deg, #ecfdf5 25%, #d1fae5 25%, #d1fae5 50%, #ecfdf5 50%);
+            background-size: 10px 10px;
+            border: 2px solid #059669;
+        }
+        
+        .constraint-overlay-dynamic {
+            background: linear-gradient(45deg, #fce7f3 30%, transparent 30%),
+                        linear-gradient(-45deg, #fce7f3 30%, transparent 30%);
+            background-size: 12px 12px;
+            border: 2px solid #be185d;
+        }
+        
+        .constraint-icon {
+            font-size: 1.2rem;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+            z-index: 11;
+        }
+        
+        .constraint-info {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 2px 6px;
+            border-radius: 12px;
+            font-size: 0.6rem;
+            z-index: 12;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            max-width: 80%;
+            text-align: center;
+        }
+        
+        .constraint-info:hover {
+            background: rgba(0, 0, 0, 0.9);
+            transform: scale(1.1);
+        }
+        
+        .constraint-info-regular {
+            background: rgba(220, 38, 38, 0.9);
+        }
+        
+        .constraint-info-fixed {
+            background: rgba(217, 119, 6, 0.9);
+        }
+        
+        .constraint-info-vacation {
+            background: rgba(5, 150, 105, 0.9);
+        }
+        
+        .constraint-info-dynamic {
+            background: rgba(190, 24, 93, 0.9);
+        }
+        
+        .constraint-type-label {
+            font-weight: 600;
+            display: block;
+        }
+        
+        .constraint-reason-short {
+            font-size: 0.5rem;
+            opacity: 0.9;
+            display: block;
+            margin-top: 1px;
+        }
+        
+        /* Slot constraint styling */
+        .slot-has-constraint {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+        
+        .slot-constraint-regular {
+            border-color: #dc2626;
+            background: #fee2e2;
+        }
+        
+        .slot-constraint-fixed {
+            border-color: #d97706;
+            background: #fef3c7;
+        }
+        
+        .slot-constraint-vacation {
+            border-color: #059669;
+            background: #ecfdf5;
+        }
+        
+        .slot-constraint-dynamic {
+            border-color: #be185d;
+            background: #fce7f3;
+        }
+        
+        .constraint-blocked {
+            position: relative;
+        }
+        
+        .constraint-blocked::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: repeating-linear-gradient(
+                45deg,
+                transparent,
+                transparent 2px,
+                rgba(220, 38, 38, 0.3) 2px,
+                rgba(220, 38, 38, 0.3) 4px
+            );
+            pointer-events: none;
+        }
+        
+        /* Constraint legend enhancement */
+        .constraint-legend {
+            display: flex;
+            gap: 15px;
+            margin: 10px 0;
+            padding: 10px;
+            background: #f8fafc;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .legend-constraint-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.8rem;
+        }
+        
+        .legend-constraint-icon {
+            width: 16px;
+            height: 16px;
+            border-radius: 3px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+        }
+        
+        .legend-constraint-icon.regular {
+            background: #fee2e2;
+            border: 1px solid #dc2626;
+        }
+        
+        .legend-constraint-icon.fixed {
+            background: #fef3c7;
+            border: 1px solid #d97706;
+        }
+        
+        .legend-constraint-icon.vacation {
+            background: #ecfdf5;
+            border: 1px solid #059669;
+        }
+        
+        .legend-constraint-icon.dynamic {
+            background: #fce7f3;
+            border: 1px solid #be185d;
+        }
+
+        .day-slots {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            min-height: 60px;
+        }
+
+        .day-slot {
+            background: #f8fafc;
+            border: 1px dashed #d1d5db;
+            border-radius: 6px;
+            padding: 6px;
+            min-height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            color: #6b7280;
+            transition: all 0.2s ease;
+        }
+
+        .day-slot.normal-slot {
+            border-color: #8b5cf6;
+        }
+
+        .day-slot.overlap-slot {
+            border-color: #f59e0b;
+        }
+
+        .day-slot.occupied {
+            background: #8b5cf6;
+            color: white;
+            border-style: solid;
+        }
+
+        .day-slot.overlap-occupied {
+            background: #f59e0b;
+            color: white;
+            border-style: solid;
+        }
+
+        .day-slot.drop-zone {
+            border-color: #10b981;
+            background: #ecfdf5;
+            border-style: solid;
+        }
+
+        .day-slot.drop-invalid {
+            border-color: #ef4444;
+            background: #fef2f2;
+            border-style: solid;
+        }
+
+        .slot-label {
+            font-size: 0.7rem;
+            opacity: 0.7;
+        }
+
+        .assigned-guide {
+            font-weight: 600;
+            color: inherit;
+        }
+
+        /* Constraint Visualization */
+        .constraint-overlay {
+            position: absolute;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: 0;
+            background: repeating-linear-gradient(
+                45deg,
+                rgba(239, 68, 68, 0.1),
+                rgba(239, 68, 68, 0.1) 10px,
+                transparent 10px,
+                transparent 20px
+            );
+            pointer-events: none;
+            border-radius: 6px;
+        }
+
+        .constraint-info {
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            font-size: 0.7rem;
+            color: #ef4444;
+            font-weight: 600;
+        }
+
+        /* Status and Loading */
+        .status-bar {
+            background: white;
+            border-radius: 12px;
+            padding: 15px 25px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .status-info {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.9rem;
+        }
+
+        .status-icon {
+            font-size: 1rem;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+            color: #64748b;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .loading-spinner {
+            border: 3px solid #f3f4f6;
+            border-top: 3px solid #8b5cf6;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1200px) {
+            .content-wrapper {
+                padding: 15px;
+            }
+            
+            .calendar-section {
+                padding: 20px;
+            }
+            
+            .calendar-day {
+                min-height: 80px;
+            }
+            
+            .guides-container {
+                flex-wrap: wrap;
+            }
+            
+            .guide-card {
+                min-width: 120px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                padding: 15px 20px;
+            }
+            
+            .header-content {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .header-nav {
+                gap: 10px;
+            }
+            
+            .month-navigation {
+                padding: 15px 20px;
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .month-controls {
+                gap: 15px;
+            }
+            
+            .current-month-display {
+                font-size: 1.2rem;
+            }
+            
+            .action-buttons {
+                padding: 15px 20px;
+                justify-content: center;
+            }
+            
+            .guides-section {
+                padding: 15px 20px;
+            }
+            
+            .calendar-section {
+                padding: 15px;
+            }
+            
+            .calendar-day {
+                min-height: 70px;
+                padding: 4px;
+            }
+            
+            .guide-card {
+                min-width: 100px;
+                padding: 12px;
+            }
+        }
+
+        /* Animation and Transitions */
+        .fade-in {
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .slide-in {
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(20px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        /* Drag and Drop Visual Feedback */
+        .drag-ghost {
+            position: fixed;
+            pointer-events: none;
+            z-index: 10000;
+            transform: rotate(5deg);
+            opacity: 0.9;
+        }
+        
+        /* Mobile Touch Support Styles */
+        .touch-ghost {
+            border: 2px solid #007bff;
+            background: linear-gradient(135deg, #007bff, #0056b3);
+            color: white;
+        }
+        
+        .touch-ghost .touch-indicator {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            background: #28a745;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+        }
+        
+        .guide-card.touch-dragging {
+            opacity: 0.5;
+            transform: scale(0.95);
+            transition: all 0.2s ease;
+        }
+        
+        .day-slot.touch-drop-target {
+            border-color: #007bff !important;
+            border-width: 3px !important;
+            background-color: rgba(0, 123, 255, 0.1) !important;
+            box-shadow: 0 0 10px rgba(0, 123, 255, 0.3);
+            animation: pulse-blue 0.5s infinite alternate;
+        }
+        
+        @keyframes pulse-blue {
+            0% { box-shadow: 0 0 10px rgba(0, 123, 255, 0.3); }
+            100% { box-shadow: 0 0 20px rgba(0, 123, 255, 0.6); }
+        }
+        
+        /* Touch-friendly sizing for mobile */
+        @media (max-width: 768px) {
+            .guide-card {
+                min-height: 60px;
+                touch-action: none;
+            }
+            
+            .day-slot {
+                min-height: 40px;
+                touch-action: none;
+            }
+            
+            .drag-ghost {
+                transform: scale(1.1) rotate(-3deg);
+            }
+        }
+        
+        /* Context Menu Styles */
+        .context-menu {
+            position: fixed;
+            z-index: 10001;
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            padding: 8px 0;
+            display: none;
+            min-width: 200px;
+            direction: rtl;
+            font-family: 'Segoe UI', Arial, sans-serif;
+        }
+        
+        .context-menu-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 16px;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            gap: 10px;
+        }
+        
+        .context-menu-item:hover {
+            background-color: #f8fafc;
+        }
+        
+        .context-menu-item:active {
+            background-color: #e2e8f0;
+        }
+        
+        .context-menu-icon {
+            font-size: 16px;
+            width: 20px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+        
+        .context-menu-text {
+            flex: 1;
+            font-size: 14px;
+            color: #374151;
+        }
+        
+        .context-menu-divider {
+            height: 1px;
+            background: #e2e8f0;
+            margin: 4px 0;
+        }
+        
+        .context-menu-item[data-action="remove"] {
+            color: #dc2626;
+        }
+        
+        .context-menu-item[data-action="remove"]:hover {
+            background-color: #fef2f2;
+        }
+        
+        .day-slot.context-target {
+            border-color: #3b82f6 !important;
+            border-width: 2px !important;
+            box-shadow: 0 0 8px rgba(59, 130, 246, 0.3);
+        }
+        
+        /* Conflict Dialog Styles */
+        .conflict-dialog-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 10002;
+            display: none;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .conflict-dialog {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            direction: rtl;
+            font-family: 'Segoe UI', Arial, sans-serif;
+        }
+        
+        .conflict-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 24px 16px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .conflict-header h3 {
+            margin: 0;
+            color: #dc2626;
+            font-size: 18px;
+        }
+        
+        .conflict-close-btn {
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: #6b7280;
+            cursor: pointer;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .conflict-close-btn:hover {
+            color: #374151;
+        }
+        
+        .conflict-content {
+            padding: 20px 24px;
+        }
+        
+        .conflict-info p {
+            margin: 8px 0;
+            color: #374151;
+        }
+        
+        .conflict-reasons {
+            margin-top: 16px;
+            padding: 12px;
+            background: #fef2f2;
+            border-radius: 8px;
+            border-right: 3px solid #dc2626;
+        }
+        
+        .conflict-reasons ul {
+            margin: 8px 0 0 20px;
+            color: #7f1d1d;
+        }
+        
+        .conflict-options {
+            margin-top: 20px;
+        }
+        
+        .conflict-option {
+            display: flex;
+            align-items: center;
+            margin: 12px 0;
+            gap: 10px;
+        }
+        
+        .conflict-option input[type="radio"] {
+            margin: 0;
+        }
+        
+        .conflict-option label {
+            cursor: pointer;
+            color: #374151;
+            margin: 0;
+        }
+        
+        .conflict-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            padding: 16px 24px 20px;
+            border-top: 1px solid #e2e8f0;
+        }
+        
+        .conflict-actions .btn {
+            padding: 8px 16px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .conflict-actions .btn-primary {
+            background: #3b82f6;
+            color: white;
+        }
+        
+        .conflict-actions .btn-primary:hover {
+            background: #2563eb;
+        }
+        
+        .conflict-actions .btn-secondary {
+            background: #f3f4f6;
+            color: #374151;
+        }
+        
+        .conflict-actions .btn-secondary:hover {
+            background: #e5e7eb;
+        }
+        
+        /* Bulk Operations Panel Styles */
+        .bulk-panel {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            margin: 16px 0;
+            padding: 0;
+            direction: rtl;
+        }
+        
+        .bulk-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px;
+            background: #3b82f6;
+            color: white;
+            border-radius: 8px 8px 0 0;
+        }
+        
+        .bulk-header h3 {
+            margin: 0;
+            font-size: 16px;
+        }
+        
+        .bulk-close {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 0;
+            width: 24px;
+            height: 24px;
+        }
+        
+        .bulk-close:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+        }
+        
+        .bulk-actions {
+            display: flex;
+            gap: 12px;
+            padding: 16px 20px;
+            flex-wrap: wrap;
+        }
+        
+        .bulk-action-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            background: white;
+            color: #374151;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+        
+        .bulk-action-btn:hover:not(:disabled) {
+            background: #f3f4f6;
+            border-color: #9ca3af;
+        }
+        
+        .bulk-action-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .bulk-action-btn.primary {
+            background: #3b82f6;
+            color: white;
+            border-color: #3b82f6;
+        }
+        
+        .bulk-action-btn.primary:hover:not(:disabled) {
+            background: #2563eb;
+        }
+        
+        .bulk-action-btn.secondary {
+            background: #6b7280;
+            color: white;
+            border-color: #6b7280;
+        }
+        
+        .bulk-action-btn.secondary:hover:not(:disabled) {
+            background: #4b5563;
+        }
+        
+        .bulk-guide-selector {
+            padding: 16px 20px;
+            border-top: 1px solid #e2e8f0;
+            background: white;
+        }
+        
+        .bulk-guide-selector label {
+            display: block;
+            margin-bottom: 8px;
+            color: #374151;
+            font-weight: 500;
+        }
+        
+        .bulk-guide-selector select {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            margin-bottom: 16px;
+            direction: rtl;
+        }
+        
+        .bulk-slot-options {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+        
+        .bulk-slot-options label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 0;
+            font-weight: normal;
+        }
+        
+        .calendar-day.bulk-selected {
+            background: #dbeafe !important;
+            border: 2px solid #3b82f6 !important;
+            box-shadow: 0 0 8px rgba(59, 130, 246, 0.3);
+        }
+        
+        .calendar-day.bulk-selected .day-number {
+            color: #1d4ed8;
+            font-weight: bold;
+        }
+
+        /* Notifications */
+        .notification {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: white;
+            border-radius: 8px;
+            padding: 15px 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            z-index: 10000;
+            border-left: 4px solid #10b981;
+            display: none;
+        }
+
+        .notification.error {
+            border-left-color: #ef4444;
+        }
+
+        .notification.warning {
+            border-left-color: #f59e0b;
+        }
+
+        .notification.show {
+            display: block;
+            animation: slideDown 0.3s ease-out;
+        }
+
+        @keyframes slideDown {
+            from { transform: translateX(-50%) translateY(-20px); opacity: 0; }
+            to { transform: translateX(-50%) translateY(0); opacity: 1; }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Include common header -->
+    <div id="header-placeholder"></div>
+
+    <div class="main-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <div class="header-title">
+                    <span class="icon">🖱️</span>
+                    <h1>מדריך שיבוץ משופר</h1>
+                </div>
+                <nav class="header-nav">
+                    <a href="scheduler.html" class="nav-button">שיבוץ רגיל</a>
+                    <a href="schedule.html" class="nav-button">לוח שיבוץ</a>
+                    <a href="constraints.html" class="nav-button">אילוצים</a>
+                    <a href="dashboard.html" class="nav-button">דשבורד</a>
+                </nav>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <div class="content-wrapper">
+            <!-- Month Navigation -->
+            <div class="month-navigation">
+                <div class="month-controls">
+                    <button class="month-button" id="prev-month-btn">חודש קודם</button>
+                    <div class="current-month-display" id="current-month-display">
+                        טוען...
+                    </div>
+                    <button class="month-button" id="next-month-btn">חודש הבא</button>
+                </div>
+                <div class="month-info">
+                    <div class="status-item">
+                        <span class="status-icon">📅</span>
+                        <span id="month-stats">טוען נתונים...</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="action-buttons">
+                <button class="action-button" id="save-changes-btn">
+                    <span>💾</span>
+                    שמור שינויים
+                </button>
+                <button class="action-button secondary" id="clear-selection-btn">
+                    <span>🔄</span>
+                    נקה בחירה
+                </button>
+                <button class="action-button secondary" id="undo-btn" disabled>
+                    <span>↩️</span>
+                    בטל פעולה
+                </button>
+                <button class="action-button secondary" id="redo-btn" disabled>
+                    <span>↪️</span>
+                    חזור על פעולה
+                </button>
+                <button class="action-button danger" id="clear-month-btn">
+                    <span>🗑️</span>
+                    נקה חודש
+                </button>
+                <button class="action-button secondary" id="bulk-mode-btn">
+                    <span>📋</span>
+                    מצב בחירה מרובה
+                </button>
+                <div style="margin-right: auto;">
+                    <button class="action-button secondary" id="refresh-btn">
+                        <span>🔄</span>
+                        רענן
+                    </button>
+                </div>
+            </div>
+
+            <!-- Bulk Operations Panel -->
+            <div id="bulk-operations-panel" class="bulk-panel" style="display: none;">
+                <div class="bulk-header">
+                    <h3>פעולות על בחירה מרובה</h3>
+                    <span id="selected-count">0 תאריכים נבחרו</span>
+                    <button id="bulk-close-btn" class="bulk-close">×</button>
+                </div>
+                <div class="bulk-actions">
+                    <button class="bulk-action-btn" id="bulk-assign-btn" disabled>
+                        <span>👤</span>
+                        שבץ מדריך לכל התאריכים
+                    </button>
+                    <button class="bulk-action-btn" id="bulk-clear-btn" disabled>
+                        <span>🗑️</span>
+                        נקה שיבוצים מהתאריכים
+                    </button>
+                    <button class="bulk-action-btn" id="bulk-copy-pattern-btn" disabled>
+                        <span>📋</span>
+                        העתק דפוס שיבוץ
+                    </button>
+                    <button class="bulk-action-btn" id="bulk-apply-constraints-btn" disabled>
+                        <span>⚠️</span>
+                        החל אילוצים
+                    </button>
+                </div>
+                <div class="bulk-guide-selector" id="bulk-guide-selector" style="display: none;">
+                    <label>בחר מדריך לשיבוץ מרובה:</label>
+                    <select id="bulk-guide-select">
+                        <option value="">-- בחר מדריך --</option>
+                    </select>
+                    <div class="bulk-slot-options">
+                        <label>
+                            <input type="checkbox" id="bulk-normal-slot" checked> משמרת רגילה
+                        </label>
+                        <label>
+                            <input type="checkbox" id="bulk-overlap-slot"> משמרת חפיפה
+                        </label>
+                    </div>
+                    <button class="bulk-action-btn primary" id="bulk-confirm-assign">אשר שיבוץ</button>
+                    <button class="bulk-action-btn secondary" id="bulk-cancel-assign">בטל</button>
+                </div>
+            </div>
+
+            <!-- Guides Section -->
+            <div class="guides-section">
+                <div class="guides-header">
+                    <h2 class="guides-title">מדריכים זמינים</h2>
+                    <div class="guides-info" id="guides-info">
+                        טוען מדריכים...
+                    </div>
+                </div>
+                <div class="guides-container" id="guides-container">
+                    <!-- Guide cards will be populated by JavaScript -->
+                    <div class="loading active">
+                        <div class="loading-spinner"></div>
+                        טוען מדריכים...
+                    </div>
+                </div>
+            </div>
+
+            <!-- Status Bar -->
+            <div class="status-bar">
+                <div class="status-info">
+                    <div class="status-item">
+                        <span class="status-icon">👤</span>
+                        <span id="selected-guide-info">לא נבחר מדריך</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-icon">🚫</span>
+                        <span id="constraints-count">0 אילוצים</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-icon">📊</span>
+                        <span id="assignments-count">0 שיבוצים</span>
+                    </div>
+                </div>
+                <div class="status-item">
+                    <span class="status-icon">⏱️</span>
+                    <span id="last-updated">טוען...</span>
+                </div>
+            </div>
+
+            <!-- Calendar Section -->
+            <div class="calendar-section">
+                <div class="calendar-header">
+                    <h2 class="calendar-title">לוח שיבוץ חודשי</h2>
+                    <div class="calendar-legend">
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #8b5cf6;"></div>
+                            <span>משמרת רגילה</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #f59e0b;"></div>
+                            <span>חפיפה</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #10b981;"></div>
+                            <span>זמין לשיבוץ</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Enhanced Constraint Legend -->
+                    <div class="constraint-legend">
+                        <div class="legend-constraint-item">
+                            <div class="legend-constraint-icon regular">🚫</div>
+                            <span>אילוץ רגיל</span>
+                        </div>
+                        <div class="legend-constraint-item">
+                            <div class="legend-constraint-icon fixed">📅</div>
+                            <span>אילוץ קבוע</span>
+                        </div>
+                        <div class="legend-constraint-item">
+                            <div class="legend-constraint-icon vacation">🌴</div>
+                            <span>חופשה</span>
+                        </div>
+                        <div class="legend-constraint-item">
+                            <div class="legend-constraint-icon dynamic">⚠️</div>
+                            <span>אילוץ דינמי</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="calendar-grid" id="calendar-grid">
+                    <!-- Calendar will be populated by JavaScript -->
+                    <div class="loading active" style="grid-column: 1 / -1; padding: 40px;">
+                        <div class="loading-spinner"></div>
+                        טוען לוח שיבוץ...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div class="notification" id="notification">
+        <div id="notification-message"></div>
+    </div>
+
+    <!-- JavaScript -->
+    <script>
+        // Enhanced Manual Scheduler JavaScript
+        console.log('🖱️ Enhanced Manual Scheduler Loading...');
+        
+        // Global state
+        let currentYear = new Date().getFullYear();
+        let currentMonth = new Date().getMonth() + 1;
+        let selectedGuide = null;
+        let guides = [];
+        let constraints = {};
+        let assignments = [];
+        let undoStack = [];
+        let redoStack = [];
+        let copiedAssignment = null;
+        const MAX_UNDO_HISTORY = 50;
+        let bulkSelectionMode = false;
+        let selectedDates = new Set();
+        let bulkOperationInProgress = false;
+        
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('📱 DOM loaded, initializing enhanced manual scheduler...');
+            initializeScheduler();
+        });
+        
+        // Main initialization function
+        async function initializeScheduler() {
+            try {
+                // Load common header
+                await loadHeader();
+                
+                // Set up event listeners
+                setupEventListeners();
+                
+                // Load initial data
+                await loadMonthData();
+                
+                console.log('✅ Enhanced manual scheduler initialized successfully');
+            } catch (error) {
+                console.error('❌ Error initializing scheduler:', error);
+                showNotification('שגיאה בטעינת המערכת', 'error');
+            }
+        }
+        
+        // Event listeners setup
+        function setupEventListeners() {
+            // Month navigation
+            document.getElementById('prev-month-btn').addEventListener('click', () => navigateMonth(-1));
+            document.getElementById('next-month-btn').addEventListener('click', () => navigateMonth(1));
+            
+            // Action buttons
+            document.getElementById('save-changes-btn').addEventListener('click', saveChanges);
+            document.getElementById('clear-selection-btn').addEventListener('click', clearSelection);
+            document.getElementById('undo-btn').addEventListener('click', undoLastAction);
+            document.getElementById('redo-btn').addEventListener('click', redoLastAction);
+            document.getElementById('clear-month-btn').addEventListener('click', clearMonth);
+            document.getElementById('bulk-mode-btn').addEventListener('click', toggleBulkMode);
+            document.getElementById('refresh-btn').addEventListener('click', refreshData);
+            
+            // Bulk operation event listeners
+            setupBulkOperationListeners();
+            
+            // Keyboard shortcuts
+            document.addEventListener('keydown', handleKeyboardShortcuts);
+            
+            // Initialize mobile touch support
+            setupMobileTouchSupport();
+        }
+        
+        // Load month data
+        async function loadMonthData() {
+            try {
+                showLoading(true);
+                
+                // Update display
+                updateMonthDisplay();
+                
+                // Load weekend types first (needed for calendar rendering)
+                await loadWeekendTypes();
+                
+                // Load guides with statistics
+                await loadGuides();
+                
+                // Load calendar
+                await loadCalendar();
+                
+                // Update status
+                updateStatus();
+                
+            } catch (error) {
+                console.error('Error loading month data:', error);
+                showNotification('שגיאה בטעינת נתוני החודש', 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+        
+        // Load guides with statistics
+        async function loadGuides() {
+            try {
+                const response = await apiFetch(`/api/enhanced-manual/guides/${currentYear}/${currentMonth}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    guides = data.guides;
+                    renderGuideCards();
+                    updateGuidesInfo();
+                } else {
+                    throw new Error(data.error || 'Failed to load guides');
+                }
+            } catch (error) {
+                console.error('Error loading guides:', error);
+                showNotification('שגיאה בטעינת המדריכים', 'error');
+            }
+        }
+        
+        // Render guide cards
+        function renderGuideCards() {
+            const container = document.getElementById('guides-container');
+            container.innerHTML = '';
+            
+            guides.forEach(guide => {
+                const card = createGuideCard(guide);
+                container.appendChild(card);
+            });
+        }
+        
+        // Create guide card element
+        function createGuideCard(guide) {
+            const card = document.createElement('div');
+            card.className = 'guide-card';
+            card.draggable = true;
+            card.dataset.guideId = guide.id;
+            card.dataset.guideName = guide.name;
+            
+            // Check if guide has constraints this month
+            const constraintCount = constraints[guide.id] ? constraints[guide.id].total_count : 0;
+            
+            // Add constraint indicator if needed
+            let constraintIndicator = '';
+            if (constraintCount > 0) {
+                constraintIndicator = `<div class="guide-constraints-indicator">${constraintCount}</div>`;
+            }
+            
+            // Calculate efficiency indicator (salary factor per shift)
+            const efficiency = guide.total_shifts > 0 ? (guide.salary_factor / guide.total_shifts) : 0;
+            let efficiencyClass = '';
+            if (efficiency > 25) efficiencyClass = 'high-efficiency';
+            else if (efficiency < 15) efficiencyClass = 'low-efficiency';
+            
+            card.innerHTML = `
+                ${constraintIndicator}
+                <div class="guide-name">${guide.name}</div>
+                <div class="guide-stats">
+                    <div class="shift-counter ${efficiencyClass}">${guide.total_shifts || 0}</div>
+                    <div style="color: #6b7280; font-size: 0.8rem;">משמרות</div>
+                </div>
+                <div class="salary-hours">${(guide.salary_factor || 0).toFixed(1)} שעות שכר</div>
+                <div class="guide-efficiency" style="font-size: 0.7rem; color: #9ca3af; text-align: center;">
+                    ${efficiency.toFixed(1)} ש/משמרת
+                </div>
+            `;
+            
+            // Add event listeners
+            card.addEventListener('click', (e) => handleGuideCardClick(e, guide));
+            card.addEventListener('dragstart', (e) => handleDragStart(e, guide));
+            card.addEventListener('dragend', handleDragEnd);
+            card.addEventListener('mouseenter', () => handleGuideHover(guide, true));
+            card.addEventListener('mouseleave', () => handleGuideHover(guide, false));
+            
+            return card;
+        }
+        
+        // Load calendar
+        async function loadCalendar() {
+            try {
+                // Generate calendar grid
+                renderCalendarGrid();
+                
+                // Load existing assignments
+                await loadAssignments();
+                
+            } catch (error) {
+                console.error('Error loading calendar:', error);
+                showNotification('שגיאה בטעינת הלוח', 'error');
+            }
+        }
+        
+        // Render calendar grid
+        function renderCalendarGrid() {
+            const container = document.getElementById('calendar-grid');
+            container.innerHTML = '';
+            
+            // Enhanced Hebrew day headers with full names
+            const dayNames = [
+                { short: 'א', full: 'ראשון' },
+                { short: 'ב', full: 'שני' },
+                { short: 'ג', full: 'שלישי' },
+                { short: 'ד', full: 'רביעי' },
+                { short: 'ה', full: 'חמישי' },
+                { short: 'ו', full: 'שישי' },
+                { short: 'ש', full: 'שבת' }
+            ];
+            
+            dayNames.forEach((day, index) => {
+                const header = document.createElement('div');
+                header.className = 'calendar-day-header';
+                
+                // Add weekend class for Friday and Saturday
+                if (index === 5 || index === 6) {
+                    header.classList.add('weekend-header');
+                }
+                
+                header.innerHTML = `
+                    <span class="day-short">${day.short}</span>
+                    <span class="day-full">${day.full}</span>
+                `;
+                header.title = day.full;
+                container.appendChild(header);
+            });
+            
+            // Generate days with enhanced weekend logic
+            const firstDay = new Date(currentYear, currentMonth - 1, 1);
+            const lastDay = new Date(currentYear, currentMonth, 0);
+            const startDate = new Date(firstDay);
+            
+            // Israeli week starts on Sunday (day 0), so adjust accordingly
+            const firstDayOfWeek = firstDay.getDay();
+            startDate.setDate(startDate.getDate() - firstDayOfWeek);
+            
+            for (let i = 0; i < 42; i++) {
+                const date = new Date(startDate);
+                date.setDate(startDate.getDate() + i);
+                
+                const dayElement = createDayElement(date);
+                container.appendChild(dayElement);
+            }
+        }
+        
+        // Create day element with enhanced features
+        function createDayElement(date) {
+            const day = document.createElement('div');
+            day.className = 'calendar-day';
+            day.dataset.date = date.toISOString().split('T')[0];
+            
+            // Enhanced date classification
+            const isCurrentMonth = date.getMonth() === currentMonth - 1;
+            const isToday = date.toDateString() === new Date().toDateString();
+            const isFriday = date.getDay() === 5;
+            const isSaturday = date.getDay() === 6;
+            const isWeekend = isFriday || isSaturday;
+            const isHoliday = checkIfHoliday(date);
+            
+            // Apply CSS classes
+            if (!isCurrentMonth) day.classList.add('other-month');
+            if (isToday) day.classList.add('today');
+            if (isWeekend) day.classList.add('weekend');
+            if (isFriday) day.classList.add('friday');
+            if (isSaturday) day.classList.add('saturday');
+            if (isHoliday) day.classList.add('holiday');
+            
+            // Determine if this is a closed weekend day
+            const isClosedWeekend = checkClosedWeekendStatus(date);
+            if (isClosedWeekend) day.classList.add('closed-weekend');
+            
+            // Create enhanced day structure
+            day.innerHTML = `
+                <div class="day-header">
+                    <div class="day-number">${date.getDate()}</div>
+                    <div class="day-indicators">
+                        ${isToday ? '<span class="today-indicator">●</span>' : ''}
+                        ${isHoliday ? '<span class="holiday-indicator">🎉</span>' : ''}
+                        ${isClosedWeekend ? '<span class="closed-indicator">🔒</span>' : ''}
+                    </div>
+                </div>
+                <div class="day-slots">
+                    <div class="day-slot normal-slot" data-slot="normal" data-date="${day.dataset.date}">
+                        <div class="slot-header">
+                            <span class="slot-label">רגיל</span>
+                            <span class="slot-type-icon">👤</span>
+                        </div>
+                        <div class="slot-content">
+                            <div class="assignment-placeholder">לחץ כאן לשיבוץ</div>
+                        </div>
+                        <div class="slot-actions">
+                            <button class="remove-assignment" title="הסר שיבוץ">×</button>
+                        </div>
+                    </div>
+                    <div class="day-slot overlap-slot" data-slot="overlap" data-date="${day.dataset.date}">
+                        <div class="slot-header">
+                            <span class="slot-label">חפיפה</span>
+                            <span class="slot-type-icon">👥</span>
+                        </div>
+                        <div class="slot-content">
+                            <div class="assignment-placeholder">לחץ כאן לשיבוץ</div>
+                        </div>
+                        <div class="slot-actions">
+                            <button class="remove-assignment" title="הסר שיבוץ">×</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="day-footer">
+                    <div class="day-stats">
+                        <span class="shift-count">0</span>
+                    </div>
+                </div>
+            `;
+            
+            // Add enhanced drop event listeners
+            const slots = day.querySelectorAll('.day-slot');
+            slots.forEach(slot => {
+                slot.addEventListener('dragover', handleSlotDragOver);
+                slot.addEventListener('drop', handleSlotDrop);
+                slot.addEventListener('dragenter', handleSlotDragEnter);
+                slot.addEventListener('dragleave', handleSlotDragLeave);
+                slot.addEventListener('click', handleSlotClick);
+                slot.addEventListener('contextmenu', (e) => showContextMenu(e, slot));
+                
+                // Add removal button listeners
+                const removeBtn = slot.querySelector('.remove-assignment');
+                removeBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    removeAssignment(slot.dataset.date, slot.dataset.slot);
+                });
+            });
+            
+            return day;
+        }
+        
+        // Check if date is a holiday (enhanced Israeli holiday detection)
+        function checkIfHoliday(date) {
+            // This is a simplified implementation - in production you'd check against a holiday database
+            // For now, just mark some common Israeli holidays
+            const month = date.getMonth() + 1;
+            const day = date.getDate();
+            
+            // Israeli holidays (approximate dates - these should be replaced with proper Hebrew calendar integration)
+            const holidays = [
+                {month: 1, day: 1},   // New Year (Civil)
+                {month: 4, day: 19},  // Independence Day (approximate - varies by Hebrew calendar)
+                {month: 4, day: 27},  // Memorial Day (approximate)
+                {month: 5, day: 9},   // Jerusalem Day (approximate)
+                {month: 9, day: 15},  // Rosh Hashanah (approximate - varies by Hebrew calendar)
+                {month: 9, day: 24},  // Yom Kippur (approximate)
+                {month: 9, day: 29},  // Sukkot begins (approximate)
+                {month: 12, day: 25}, // Hanukkah begins (approximate)
+            ];
+            
+            return holidays.some(holiday => holiday.month === month && holiday.day === day);
+        }
+        
+        // Enhanced Israeli weekend and holiday logic
+        function getIsraeliDayInfo(date) {
+            const dayOfWeek = date.getDay();
+            const isFriday = dayOfWeek === 5;
+            const isSaturday = dayOfWeek === 6;
+            const isWeekend = isFriday || isSaturday;
+            const isHoliday = checkIfHoliday(date);
+            const isClosedWeekend = checkClosedWeekendStatus(date);
+            
+            return {
+                isFriday,
+                isSaturday,
+                isWeekend,
+                isHoliday,
+                isClosedWeekend,
+                isWorkingDay: !isWeekend && !isHoliday,
+                weekendType: isClosedWeekend ? 'closed' : 'open'
+            };
+        }
+        
+        // Check closed weekend status for the date
+        function checkClosedWeekendStatus(date) {
+            // This integrates with the weekend_types system
+            const dateStr = date.toISOString().split('T')[0];
+            return weekendTypes[dateStr] === true;
+        }
+        
+        // Load weekend types from API
+        let weekendTypes = {};
+        
+        async function loadWeekendTypes() {
+            try {
+                const response = await apiFetch(`/api/weekend-types/${currentYear}/${currentMonth}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    weekendTypes = data.weekend_types || {};
+                } else {
+                    // Fallback: assume all Saturdays are closed
+                    weekendTypes = {};
+                    console.warn('Could not load weekend types, using fallback');
+                }
+            } catch (error) {
+                console.error('Error loading weekend types:', error);
+                // Fallback: assume all Saturdays are closed
+                weekendTypes = {};
+            }
+        }
+        
+        // Utility functions
+        function navigateMonth(direction) {
+            currentMonth += direction;
+            if (currentMonth > 12) {
+                currentMonth = 1;
+                currentYear++;
+            } else if (currentMonth < 1) {
+                currentMonth = 12;
+                currentYear--;
+            }
+            loadMonthData();
+        }
+        
+        function updateMonthDisplay() {
+            const monthNames = [
+                'ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני',
+                'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'
+            ];
+            
+            document.getElementById('current-month-display').textContent = 
+                `${monthNames[currentMonth - 1]} ${currentYear}`;
+        }
+        
+        function showLoading(show) {
+            const loadingElements = document.querySelectorAll('.loading');
+            loadingElements.forEach(el => {
+                el.classList.toggle('active', show);
+            });
+        }
+        
+        function showNotification(message, type = 'success') {
+            const notification = document.getElementById('notification');
+            const messageEl = document.getElementById('notification-message');
+            
+            messageEl.textContent = message;
+            notification.className = `notification ${type} show`;
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+        
+        // Guide card interaction handlers
+        function handleGuideCardClick(e, guide) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // Toggle selection
+            if (selectedGuide && selectedGuide.id === guide.id) {
+                clearGuideSelection();
+            } else {
+                selectGuide(guide);
+            }
+        }
+        
+        function selectGuide(guide) {
+            console.log('🎯 Selected guide:', guide.name);
+            
+            // Update global state
+            selectedGuide = guide;
+            
+            // Update visual selection
+            updateGuideCardSelection();
+            
+            // Load and display constraints for this guide
+            loadGuideConstraints(guide.id);
+            
+            // Update status display
+            updateSelectedGuideDisplay();
+            
+            // Highlight available slots on calendar
+            highlightAvailableSlots();
+            
+            showNotification(`נבחר מדריך: ${guide.name}`, 'success');
+        }
+        
+        function clearGuideSelection() {
+            console.log('🔄 Clearing guide selection');
+            
+            selectedGuide = null;
+            updateGuideCardSelection();
+            clearConstraintHighlights();
+            clearSlotHighlights();
+            updateSelectedGuideDisplay();
+            
+            showNotification('הבחירה נוקתה', 'success');
+        }
+        
+        function updateGuideCardSelection() {
+            // Remove selection from all cards
+            document.querySelectorAll('.guide-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            
+            // Add selection to current card
+            if (selectedGuide) {
+                const selectedCard = document.querySelector(`[data-guide-id="${selectedGuide.id}"]`);
+                if (selectedCard) {
+                    selectedCard.classList.add('selected');
+                }
+            }
+        }
+        
+        function handleGuideHover(guide, isEntering) {
+            if (isEntering && !selectedGuide) {
+                // Show preview of constraints for this guide
+                previewGuideConstraints(guide.id);
+            } else if (!isEntering && !selectedGuide) {
+                // Clear preview
+                clearConstraintHighlights();
+            }
+        }
+        
+        // Constraint loading and visualization
+        async function loadGuideConstraints(guideId) {
+            try {
+                const response = await apiFetch(`/api/enhanced-manual/constraints/${guideId}/${currentYear}/${currentMonth}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    constraints[guideId] = data.constraints;
+                    visualizeConstraints(data.constraints);
+                    updateConstraintsDisplay(data.constraints);
+                } else {
+                    throw new Error(data.error || 'Failed to load constraints');
+                }
+            } catch (error) {
+                console.error('Error loading constraints:', error);
+                showNotification('שגיאה בטעינת אילוצים', 'error');
+            }
+        }
+        
+        async function previewGuideConstraints(guideId) {
+            // Quick preview without full loading
+            if (constraints[guideId]) {
+                visualizeConstraints(constraints[guideId]);
+            }
+        }
+        
+        function visualizeConstraints(constraintData) {
+            clearConstraintHighlights();
+            
+            console.log('🎨 Visualizing constraints:', constraintData);
+            
+            // Track constraint counts for display
+            let constraintCounts = {
+                regular: 0,
+                fixed: 0,
+                vacation: 0,
+                dynamic: 0,
+                total: 0
+            };
+            
+            // Highlight regular constraints
+            if (constraintData.regular && constraintData.regular.length > 0) {
+                constraintData.regular.forEach(constraint => {
+                    highlightConstraintDate(constraint.date, 'regular', constraint.details, constraint.reason);
+                    constraintCounts.regular++;
+                });
+            }
+            
+            // Highlight fixed constraints (weekly recurring)
+            if (constraintData.fixed && constraintData.fixed.length > 0) {
+                constraintData.fixed.forEach(constraint => {
+                    const affectedDays = highlightFixedConstraintDays(constraint.weekday, constraint.details, constraint.reason);
+                    constraintCounts.fixed += affectedDays;
+                });
+            }
+            
+            // Highlight vacation constraints
+            if (constraintData.vacations && constraintData.vacations.length > 0) {
+                constraintData.vacations.forEach(vacation => {
+                    const affectedDays = highlightVacationPeriod(vacation.date_start, vacation.date_end, vacation.details, vacation.reason);
+                    constraintCounts.vacation += affectedDays;
+                });
+            }
+            
+            // Generate and highlight dynamic constraints (consecutive days)
+            if (selectedGuide) {
+                const dynamicConstraints = generateDynamicConstraints(selectedGuide.id);
+                dynamicConstraints.forEach(dynamic => {
+                    highlightConstraintDate(dynamic.date, 'dynamic', dynamic.details, dynamic.reason);
+                    constraintCounts.dynamic++;
+                });
+            }
+            
+            // Add pre-existing dynamic constraints from API
+            if (constraintData.dynamic && constraintData.dynamic.length > 0) {
+                constraintData.dynamic.forEach(dynamic => {
+                    highlightConstraintDate(dynamic.date, 'dynamic', dynamic.details, dynamic.reason);
+                    constraintCounts.dynamic++;
+                });
+            }
+            
+            // Calculate total constraints
+            constraintCounts.total = constraintCounts.regular + constraintCounts.fixed + constraintCounts.vacation + constraintCounts.dynamic;
+            
+            // Update constraint display in status bar
+            updateConstraintsDisplay(constraintCounts);
+            
+            // Update available drop zones based on constraints
+            updateDropZoneAvailability();
+            
+            console.log('📊 Constraint counts:', constraintCounts);
+        }
+        
+        function highlightConstraintDate(date, type, details, reason) {
+            const dayElement = document.querySelector(`[data-date="${date}"]`);
+            if (dayElement) {
+                dayElement.classList.add('has-constraint', `constraint-${type}`);
+                
+                // Create detailed tooltip with Hebrew text
+                const tooltipText = createConstraintTooltip(type, details, reason, date);
+                dayElement.title = tooltipText;
+                
+                // Add enhanced constraint overlay
+                if (!dayElement.querySelector('.constraint-overlay')) {
+                    const overlay = document.createElement('div');
+                    overlay.className = `constraint-overlay constraint-overlay-${type}`;
+                    
+                    // Add constraint icon based on type
+                    const icon = getConstraintIcon(type);
+                    overlay.innerHTML = `
+                        <div class="constraint-icon">${icon}</div>
+                        <div class="constraint-pattern"></div>
+                    `;
+                    
+                    dayElement.appendChild(overlay);
+                    
+                    // Add constraint info badge
+                    const info = document.createElement('div');
+                    info.className = `constraint-info constraint-info-${type}`;
+                    info.innerHTML = `
+                        <span class="constraint-type-label">${getConstraintTypeLabel(type)}</span>
+                        <span class="constraint-reason-short">${getShortReason(reason, type)}</span>
+                    `;
+                    info.title = tooltipText;
+                    dayElement.appendChild(info);
+                    
+                    // Add click handler for detailed constraint info
+                    info.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        showConstraintDetails(date, type, details, reason);
+                    });
+                }
+                
+                // Also add constraint to specific slots if applicable
+                addConstraintToSlots(dayElement, type);
+            }
+        }
+        
+        function createConstraintTooltip(type, details, reason, date) {
+            const formattedDate = formatDateForDisplay(date);
+            const typeLabel = getConstraintTypeLabel(type);
+            
+            let tooltip = `${typeLabel} - ${formattedDate}\n`;
+            
+            if (reason) {
+                tooltip += `סיבה: ${reason}\n`;
+            }
+            
+            if (details) {
+                tooltip += `פרטים: ${details}\n`;
+            }
+            
+            // Add specific information based on constraint type
+            switch (type) {
+                case 'regular':
+                    tooltip += 'אילוץ ספציפי לתאריך זה';
+                    break;
+                case 'fixed':
+                    tooltip += 'אילוץ קבוע שחוזר מדי שבוע';
+                    break;
+                case 'vacation':
+                    tooltip += 'חופשה או חוסר זמינות';
+                    break;
+                case 'dynamic':
+                    tooltip += 'אילוץ דינמי (מניעת ימים רצופים)';
+                    break;
+            }
+            
+            return tooltip;
+        }
+        
+        function getConstraintIcon(type) {
+            const icons = {
+                regular: '🚫',
+                fixed: '📅',
+                vacation: '🌴',
+                dynamic: '⚠️'
+            };
+            return icons[type] || '❌';
+        }
+        
+        function getConstraintTypeLabel(type) {
+            const labels = {
+                regular: 'אילוץ רגיל',
+                fixed: 'אילוץ קבוע',
+                vacation: 'חופשה',
+                dynamic: 'אילוץ דינמי'
+            };
+            return labels[type] || 'אילוץ';
+        }
+        
+        function getShortReason(reason, type) {
+            if (reason && reason.length > 20) {
+                return reason.substring(0, 17) + '...';
+            }
+            return reason || getConstraintTypeLabel(type);
+        }
+        
+        function addConstraintToSlots(dayElement, type) {
+            const slots = dayElement.querySelectorAll('.day-slot');
+            slots.forEach(slot => {
+                slot.classList.add('slot-has-constraint', `slot-constraint-${type}`);
+                
+                // Disable drop zone functionality for constrained slots
+                slot.classList.remove('drop-zone');
+                slot.classList.add('constraint-blocked');
+            });
+        }
+        
+        function showConstraintDetails(date, type, details, reason) {
+            const formattedDate = formatDateForDisplay(date);
+            const typeLabel = getConstraintTypeLabel(type);
+            
+            let message = `<strong>${typeLabel}</strong><br>`;
+            message += `תאריך: ${formattedDate}<br>`;
+            
+            if (reason) {
+                message += `סיבה: ${reason}<br>`;
+            }
+            
+            if (details) {
+                message += `פרטים: ${details}<br>`;
+            }
+            
+            // Add action buttons for constraint management
+            message += `<br><div class="constraint-actions">`;
+            if (type === 'dynamic') {
+                message += `<small>אילוץ זה נוצר אוטומטית למניעת ימים רצופים</small>`;
+            } else {
+                message += `<small>לעריכה או מחיקה, עבור לעמוד האילוצים</small>`;
+            }
+            message += `</div>`;
+            
+            showNotification(message, 'info', 5000);
+        }
+        
+        function highlightFixedConstraintDays(weekday, details, reason) {
+            // Highlight all days of this weekday in the month
+            const dayElements = document.querySelectorAll('.calendar-day');
+            let affectedDays = 0;
+            
+            dayElements.forEach(dayElement => {
+                const date = new Date(dayElement.dataset.date);
+                // Check if this day matches the constraint weekday and is in current month
+                if (date.getDay() === weekday && date.getMonth() === currentMonth - 1) {
+                    highlightConstraintDate(dayElement.dataset.date, 'fixed', details, reason);
+                    affectedDays++;
+                }
+            });
+            
+            return affectedDays;
+        }
+        
+        function highlightVacationPeriod(startDate, endDate, details, reason) {
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            let affectedDays = 0;
+            
+            for (let date = new Date(start); date <= end; date.setDate(date.getDate() + 1)) {
+                const dateStr = date.toISOString().split('T')[0];
+                
+                // Only highlight dates within current month view
+                if (date.getMonth() === currentMonth - 1 || date.getFullYear() === currentYear) {
+                    highlightConstraintDate(dateStr, 'vacation', details, reason);
+                    affectedDays++;
+                }
+            }
+            
+            return affectedDays;
+        }
+        
+        // Dynamic constraint generation for consecutive day prevention
+        function generateDynamicConstraints(guideId) {
+            const dynamicConstraints = [];
+            
+            if (!assignments || assignments.length === 0) {
+                return dynamicConstraints;
+            }
+            
+            // Find all assignments for this guide in the current month
+            const guideAssignments = assignments.filter(assignment => 
+                assignment.guide1_id === guideId || assignment.guide2_id === guideId
+            );
+            
+            if (guideAssignments.length === 0) {
+                return dynamicConstraints;
+            }
+            
+            // For each assignment, add constraints for consecutive days
+            guideAssignments.forEach(assignment => {
+                const assignmentDate = new Date(assignment.date);
+                
+                // Add constraint for day before assignment (prevent consecutive)
+                const dayBefore = new Date(assignmentDate);
+                dayBefore.setDate(dayBefore.getDate() - 1);
+                
+                // Add constraint for day after assignment (prevent consecutive)
+                const dayAfter = new Date(assignmentDate);
+                dayAfter.setDate(dayAfter.getDate() + 1);
+                
+                // Check if these days fall within current month view
+                const currentMonthStart = new Date(currentYear, currentMonth - 1, 1);
+                const currentMonthEnd = new Date(currentYear, currentMonth, 0);
+                
+                if (dayBefore >= currentMonthStart && dayBefore <= currentMonthEnd) {
+                    // Check if it's a special case (Friday-Saturday pairing for closed weekends)
+                    const isSpecialCase = checkConsecutiveDayException(assignment.date, dayBefore.toISOString().split('T')[0]);
+                    
+                    if (!isSpecialCase) {
+                        dynamicConstraints.push({
+                            date: dayBefore.toISOString().split('T')[0],
+                            details: 'מניעת ימים רצופים',
+                            reason: `למניעת יום רצוף עם ${formatDateForDisplay(assignment.date)}`,
+                            sourceDate: assignment.date,
+                            type: 'consecutive_before'
+                        });
+                    }
+                }
+                
+                if (dayAfter >= currentMonthStart && dayAfter <= currentMonthEnd) {
+                    // Check if it's a special case (Friday-Saturday pairing for closed weekends)
+                    const isSpecialCase = checkConsecutiveDayException(assignment.date, dayAfter.toISOString().split('T')[0]);
+                    
+                    if (!isSpecialCase) {
+                        dynamicConstraints.push({
+                            date: dayAfter.toISOString().split('T')[0],
+                            details: 'מניעת ימים רצופים',
+                            reason: `למניעת יום רצוף עם ${formatDateForDisplay(assignment.date)}`,
+                            sourceDate: assignment.date,
+                            type: 'consecutive_after'
+                        });
+                    }
+                }
+            });
+            
+            return dynamicConstraints;
+        }
+        
+        // Check for consecutive day exceptions (like Friday-Saturday for closed weekends)
+        function checkConsecutiveDayException(date1, date2) {
+            const d1 = new Date(date1);
+            const d2 = new Date(date2);
+            
+            // Check if this is a Friday-Saturday pair
+            const isFridayToSaturday = (d1.getDay() === 5 && d2.getDay() === 6) || 
+                                     (d1.getDay() === 6 && d2.getDay() === 5);
+            
+            if (isFridayToSaturday) {
+                // Check if Saturday is a closed weekend
+                const saturday = d1.getDay() === 6 ? d1 : d2;
+                const saturdayStr = saturday.toISOString().split('T')[0];
+                
+                if (weekendTypes[saturdayStr] === true) {
+                    // This is a closed weekend, so Friday-Saturday consecutive is allowed
+                    return true;
+                }
+            }
+            
+            return false;
+        }
+        
+        function clearConstraintHighlights() {
+            document.querySelectorAll('.calendar-day').forEach(day => {
+                day.classList.remove('has-constraint', 'constraint-regular', 'constraint-fixed', 'constraint-vacation', 'constraint-dynamic');
+                day.removeAttribute('title');
+                
+                // Remove constraint overlays
+                const overlay = day.querySelector('.constraint-overlay');
+                if (overlay) overlay.remove();
+                
+                // Remove constraint info badges
+                const info = day.querySelector('.constraint-info');
+                if (info) info.remove();
+                
+                // Clear slot constraints
+                const slots = day.querySelectorAll('.day-slot');
+                slots.forEach(slot => {
+                    slot.classList.remove('slot-has-constraint', 'slot-constraint-regular', 'slot-constraint-fixed', 'slot-constraint-vacation', 'slot-constraint-dynamic', 'constraint-blocked');
+                });
+            });
+        }
+        
+        // Update drop zone availability based on constraints
+        function updateDropZoneAvailability() {
+            if (!selectedGuide) return;
+            
+            // Clear existing drop zones
+            clearSlotHighlights();
+            
+            // Add drop zones to available slots
+            document.querySelectorAll('.calendar-day').forEach(day => {
+                if (!day.classList.contains('other-month')) {
+                    const slots = day.querySelectorAll('.day-slot');
+                    slots.forEach(slot => {
+                        // Only allow drops on slots that are not occupied and not constrained
+                        if (!slot.classList.contains('occupied') && !slot.classList.contains('constraint-blocked')) {
+                            slot.classList.add('drop-zone');
+                        }
+                    });
+                }
+            });
+        }
+        
+        // Handle constraint updates after new assignments
+        function updateConstraintsAfterAssignment(guideId, date, slotType) {
+            console.log('🔄 Updating constraints after assignment:', { guideId, date, slotType });
+            
+            // If a guide is currently selected, refresh their constraints
+            if (selectedGuide && selectedGuide.id === guideId) {
+                // Reload constraints to get updated dynamic constraints
+                setTimeout(() => {
+                    loadGuideConstraints(guideId);
+                }, 100);
+            }
+            
+            // Update all other visible guides if they have overlapping constraints
+            guides.forEach(guide => {
+                if (guide.id !== guideId && constraints[guide.id]) {
+                    // Check if this guide might be affected by dynamic constraints
+                    const nearbyDates = [
+                        new Date(date + 'T00:00:00'),
+                        new Date(new Date(date + 'T00:00:00').getTime() - 24 * 60 * 60 * 1000),
+                        new Date(new Date(date + 'T00:00:00').getTime() + 24 * 60 * 60 * 1000)
+                    ];
+                    
+                    // This is a simplified check - in a full implementation you'd want more sophisticated logic
+                    console.log(`Checking if guide ${guide.name} needs constraint updates...`);
+                }
+            });
+        }
+        
+        // Enhanced constraints display update
+        function updateConstraintsDisplay(constraintCounts) {
+            const constraintsCountElement = document.getElementById('constraints-count');
+            if (constraintsCountElement && constraintCounts) {
+                const totalConstraints = constraintCounts.total || 0;
+                
+                let displayText = `${totalConstraints} אילוצים`;
+                
+                if (totalConstraints > 0) {
+                    const breakdown = [];
+                    if (constraintCounts.regular > 0) breakdown.push(`${constraintCounts.regular} רגילים`);
+                    if (constraintCounts.fixed > 0) breakdown.push(`${constraintCounts.fixed} קבועים`);
+                    if (constraintCounts.vacation > 0) breakdown.push(`${constraintCounts.vacation} חופשות`);
+                    if (constraintCounts.dynamic > 0) breakdown.push(`${constraintCounts.dynamic} דינמיים`);
+                    
+                    if (breakdown.length > 0) {
+                        displayText += ` (${breakdown.join(', ')})`;
+                    }
+                }
+                
+                constraintsCountElement.textContent = displayText;
+                constraintsCountElement.title = 'לחץ על יום עם אילוץ לפרטים נוספים';
+            }
+        }
+        
+        function highlightAvailableSlots() {
+            if (!selectedGuide) return;
+            
+            document.querySelectorAll('.calendar-day').forEach(day => {
+                if (!day.classList.contains('has-constraint') && !day.classList.contains('other-month')) {
+                    const slots = day.querySelectorAll('.day-slot');
+                    slots.forEach(slot => {
+                        if (!slot.classList.contains('occupied')) {
+                            slot.classList.add('drop-zone');
+                        }
+                    });
+                }
+            });
+        }
+        
+        function clearSlotHighlights() {
+            document.querySelectorAll('.day-slot').forEach(slot => {
+                slot.classList.remove('drop-zone', 'drop-invalid');
+            });
+        }
+        
+        // Drag and Drop Implementation
+        let draggedGuide = null;
+        let dragGhost = null;
+        
+        function handleDragStart(e, guide) {
+            console.log('🖱️ Drag start:', guide.name);
+            
+            draggedGuide = guide;
+            
+            // Create drag ghost element
+            createDragGhost(e, guide);
+            
+            // Add dragging class to card
+            e.target.classList.add('dragging');
+            
+            // Set drag data
+            e.dataTransfer.setData('text/plain', guide.id);
+            e.dataTransfer.effectAllowed = 'move';
+            
+            // Highlight possible drop zones
+            highlightDropZones();
+        }
+        
+        function handleDragEnd(e) {
+            console.log('🖱️ Drag end');
+            
+            // Clean up
+            e.target.classList.remove('dragging');
+            clearDropZoneHighlights();
+            removeDragGhost();
+            
+            draggedGuide = null;
+        }
+        
+        function createDragGhost(e, guide) {
+            dragGhost = document.createElement('div');
+            dragGhost.className = 'drag-ghost guide-card';
+            dragGhost.innerHTML = `
+                <div class="guide-name">${guide.name}</div>
+                <div class="shift-counter">${guide.total_shifts || 0}</div>
+            `;
+            
+            document.body.appendChild(dragGhost);
+            
+            // Position ghost at cursor
+            updateDragGhostPosition(e);
+            
+            // Hide default drag image
+            const emptyImg = new Image();
+            emptyImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAUEBAAAACwAAAAAAQABAAACAkQBADs=';
+            e.dataTransfer.setDragImage(emptyImg, 0, 0);
+        }
+        
+        function updateDragGhostPosition(e) {
+            if (dragGhost) {
+                dragGhost.style.left = (e.clientX + 10) + 'px';
+                dragGhost.style.top = (e.clientY - 20) + 'px';
+            }
+        }
+        
+        function removeDragGhost() {
+            if (dragGhost) {
+                dragGhost.remove();
+                dragGhost = null;
+            }
+        }
+        
+        function highlightDropZones() {
+            if (!draggedGuide) return;
+            
+            document.querySelectorAll('.day-slot').forEach(slot => {
+                const dayElement = slot.closest('.calendar-day');
+                if (dayElement && !dayElement.classList.contains('has-constraint') && !dayElement.classList.contains('other-month')) {
+                    if (!slot.classList.contains('occupied')) {
+                        slot.classList.add('drop-zone');
+                    }
+                } else {
+                    slot.classList.add('drop-invalid');
+                }
+            });
+        }
+        
+        function clearDropZoneHighlights() {
+            document.querySelectorAll('.day-slot').forEach(slot => {
+                slot.classList.remove('drop-zone', 'drop-invalid');
+            });
+        }
+        
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            
+            // Update ghost position
+            updateDragGhostPosition(e);
+            
+            // Highlight current drop target
+            const slot = e.target.closest('.day-slot');
+            if (slot) {
+                clearTempHighlights();
+                if (slot.classList.contains('drop-zone')) {
+                    slot.style.transform = 'scale(1.05)';
+                    slot.style.borderWidth = '3px';
+                }
+            }
+        }
+        
+        function handleDragLeave(e) {
+            // Clear temporary highlights
+            clearTempHighlights();
+        }
+        
+        function clearTempHighlights() {
+            document.querySelectorAll('.day-slot').forEach(slot => {
+                slot.style.transform = '';
+                slot.style.borderWidth = '';
+            });
+        }
+        
+        async function handleDrop(e) {
+            e.preventDefault();
+            console.log('🎯 Drop');
+            
+            const slot = e.target.closest('.day-slot');
+            const dayElement = e.target.closest('.calendar-day');
+            
+            if (!slot || !dayElement || !draggedGuide) {
+                showNotification('שיבוץ לא חוקי', 'error');
+                return;
+            }
+            
+            const date = dayElement.dataset.date;
+            const slotType = slot.dataset.slot;
+            
+            // Validate assignment
+            try {
+                const validation = await validateAssignment(draggedGuide.id, date, slotType);
+                
+                if (!validation.is_valid) {
+                    showNotification(`שיבוץ נכשל: ${validation.reasons.join(', ')}`, 'error');
+                    return;
+                }
+                
+                if (validation.warnings.length > 0) {
+                    showNotification(`אזהרה: ${validation.warnings.join(', ')}`, 'warning');
+                }
+                
+                // Create assignment
+                await createAssignment(draggedGuide.id, date, slotType);
+                
+                showNotification(`${draggedGuide.name} שובץ בהצלחה ל-${date}`, 'success');
+                
+            } catch (error) {
+                console.error('Error in drop:', error);
+                showNotification('שגיאה בביצוע השיבוץ', 'error');
+            }
+        }
+        
+        // Enhanced slot-specific drag handlers
+        function handleSlotDragOver(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            if (!draggedGuide) return;
+            
+            const slot = e.currentTarget;
+            const date = slot.dataset.date;
+            const slotType = slot.dataset.slot;
+            
+            // Update drag effect based on validity
+            if (slot.classList.contains('occupied')) {
+                e.dataTransfer.dropEffect = 'none';
+                slot.classList.add('drop-invalid');
+            } else if (slot.classList.contains('drop-zone')) {
+                e.dataTransfer.dropEffect = 'move';
+                slot.classList.add('drop-hover');
+            } else {
+                e.dataTransfer.dropEffect = 'none';
+                slot.classList.add('drop-invalid');
+            }
+            
+            // Update ghost position
+            updateDragGhostPosition(e);
+        }
+        
+        function handleSlotDragEnter(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            if (!draggedGuide) return;
+            
+            const slot = e.currentTarget;
+            
+            // Add visual feedback for entering slot
+            if (slot.classList.contains('drop-zone')) {
+                slot.classList.add('drop-enter');
+                slot.style.transform = 'scale(1.05)';
+            }
+        }
+        
+        function handleSlotDragLeave(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const slot = e.currentTarget;
+            
+            // Remove visual feedback when leaving slot
+            slot.classList.remove('drop-hover', 'drop-enter', 'drop-invalid');
+            slot.style.transform = '';
+            
+            // Only clear if we're actually leaving the slot (not moving to child element)
+            if (!slot.contains(e.relatedTarget)) {
+                clearSlotTempHighlights(slot);
+            }
+        }
+        
+        async function handleSlotDrop(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const slot = e.currentTarget;
+            const date = slot.dataset.date;
+            const slotType = slot.dataset.slot;
+            
+            console.log(`🎯 Slot drop: ${draggedGuide?.name} -> ${date} (${slotType})`);
+            
+            if (!draggedGuide) {
+                showNotification('שגיאה: לא נבחר מדריך', 'error');
+                return;
+            }
+            
+            // Clear visual feedback
+            clearSlotTempHighlights(slot);
+            
+            // Check if slot is available
+            if (slot.classList.contains('occupied')) {
+                showNotification('המשבצת כבר תפוסה', 'error');
+                return;
+            }
+            
+            try {
+                // Validate assignment
+                const validation = await validateAssignment(draggedGuide.id, date, slotType);
+                
+                if (!validation.is_valid) {
+                    showNotification(`שיבוץ נכשל: ${validation.reasons.join(', ')}`, 'error');
+                    slot.classList.add('drop-invalid');
+                    setTimeout(() => slot.classList.remove('drop-invalid'), 1000);
+                    return;
+                }
+                
+                if (validation.warnings && validation.warnings.length > 0) {
+                    showNotification(`אזהרה: ${validation.warnings.join(', ')}`, 'warning');
+                }
+                
+                // Create assignment
+                await createAssignment(draggedGuide.id, date, slotType);
+                
+                // Show success feedback
+                slot.classList.add('drop-success');
+                setTimeout(() => slot.classList.remove('drop-success'), 1000);
+                
+                showNotification(`${draggedGuide.name} שובץ בהצלחה ל-${formatDateForDisplay(date)} (${slotType === 'normal' ? 'רגיל' : 'חפיפה'})`, 'success');
+                
+                // Refresh data to show new assignment
+                await loadAssignments();
+                await refreshGuideStatistics();
+                
+            } catch (error) {
+                console.error('Error in slot drop:', error);
+                showNotification('שגיאה בביצוע השיבוץ', 'error');
+                slot.classList.add('drop-invalid');
+                setTimeout(() => slot.classList.remove('drop-invalid'), 1000);
+            }
+        }
+        
+        function handleSlotClick(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const slot = e.currentTarget;
+            const date = slot.dataset.date;
+            const slotType = slot.dataset.slot;
+            
+            // If there's a selected guide, try to assign them
+            if (selectedGuide && !slot.classList.contains('occupied')) {
+                createAssignmentByClick(selectedGuide.id, date, slotType);
+            } else if (slot.classList.contains('occupied')) {
+                // Show assignment details
+                showAssignmentDetails(slot);
+            } else {
+                showNotification('אנא בחר מדריך תחילה', 'info');
+            }
+        }
+        
+        async function createAssignmentByClick(guideId, date, slotType) {
+            try {
+                const validation = await validateAssignment(guideId, date, slotType);
+                
+                if (!validation.is_valid) {
+                    showNotification(`שיבוץ נכשל: ${validation.reasons.join(', ')}`, 'error');
+                    return;
+                }
+                
+                await createAssignment(guideId, date, slotType);
+                showNotification(`שיבוץ בוצע בהצלחה`, 'success');
+                
+                await loadAssignments();
+                await refreshGuideStatistics();
+                
+            } catch (error) {
+                console.error('Error in click assignment:', error);
+                showNotification('שגיאה בביצוע השיבוץ', 'error');
+            }
+        }
+        
+        function clearSlotTempHighlights(slot) {
+            slot.classList.remove('drop-hover', 'drop-enter', 'drop-invalid', 'drop-success');
+            slot.style.transform = '';
+        }
+        
+        function cancelDragOperation() {
+            console.log('🚫 Canceling drag operation');
+            
+            if (draggedGuide) {
+                // Clear drag state
+                clearDropZoneHighlights();
+                clearTempHighlights();
+                removeDragGhost();
+                
+                // Remove dragging class from all guide cards
+                document.querySelectorAll('.guide-card').forEach(card => {
+                    card.classList.remove('dragging');
+                });
+                
+                draggedGuide = null;
+                
+                showNotification('פעולת הגרירה בוטלה', 'info');
+            }
+        }
+        
+        // Mobile Touch Support for Drag and Drop
+        let touchStartPos = null;
+        let touchCurrentElement = null;
+        let isTouchDragging = false;
+        
+        function setupMobileTouchSupport() {
+            // Add touch event listeners to guide cards and slots
+            document.addEventListener('touchstart', handleTouchStart, { passive: false });
+            document.addEventListener('touchmove', handleTouchMove, { passive: false });
+            document.addEventListener('touchend', handleTouchEnd, { passive: false });
+        }
+        
+        function handleTouchStart(e) {
+            const guideCard = e.target.closest('.guide-card');
+            if (guideCard && !guideCard.classList.contains('disabled')) {
+                e.preventDefault();
+                
+                const touch = e.touches[0];
+                touchStartPos = { x: touch.clientX, y: touch.clientY };
+                touchCurrentElement = guideCard;
+                
+                // Get guide data
+                const guideId = guideCard.dataset.guideId;
+                const guide = guides.find(g => g.id == guideId);
+                
+                if (guide) {
+                    // Start potential drag after short delay
+                    setTimeout(() => {
+                        if (touchCurrentElement && !isTouchDragging) {
+                            startTouchDrag(guide, touch);
+                        }
+                    }, 200);
+                }
+            }
+        }
+        
+        function handleTouchMove(e) {
+            if (!touchStartPos || !touchCurrentElement) return;
+            
+            const touch = e.touches[0];
+            const deltaX = Math.abs(touch.clientX - touchStartPos.x);
+            const deltaY = Math.abs(touch.clientY - touchStartPos.y);
+            
+            // Start drag if moved more than 10px
+            if ((deltaX > 10 || deltaY > 10) && !isTouchDragging) {
+                const guideId = touchCurrentElement.dataset.guideId;
+                const guide = guides.find(g => g.id == guideId);
+                
+                if (guide) {
+                    startTouchDrag(guide, touch);
+                }
+            }
+            
+            if (isTouchDragging) {
+                e.preventDefault();
+                updateTouchDragPosition(touch);
+                highlightTouchDropTarget(touch);
+            }
+        }
+        
+        function handleTouchEnd(e) {
+            if (isTouchDragging) {
+                e.preventDefault();
+                const touch = e.changedTouches[0];
+                performTouchDrop(touch);
+            }
+            
+            // Clean up
+            endTouchDrag();
+        }
+        
+        function startTouchDrag(guide, touch) {
+            console.log('📱 Starting touch drag:', guide.name);
+            
+            isTouchDragging = true;
+            draggedGuide = guide;
+            
+            // Add visual feedback
+            touchCurrentElement.classList.add('touch-dragging');
+            
+            // Create visual drag indicator
+            createTouchDragGhost(guide, touch);
+            
+            // Highlight drop zones
+            highlightDropZones();
+            
+            // Add haptic feedback if available
+            if (navigator.vibrate) {
+                navigator.vibrate(50);
+            }
+        }
+        
+        function createTouchDragGhost(guide, touch) {
+            if (dragGhost) removeDragGhost();
+            
+            dragGhost = document.createElement('div');
+            dragGhost.className = 'drag-ghost guide-card touch-ghost';
+            dragGhost.innerHTML = `
+                <div class="guide-name">${guide.name}</div>
+                <div class="shift-counter">${guide.total_shifts || 0}</div>
+                <div class="touch-indicator">📱</div>
+            `;
+            
+            document.body.appendChild(dragGhost);
+            updateTouchDragPosition(touch);
+        }
+        
+        function updateTouchDragPosition(touch) {
+            if (dragGhost) {
+                dragGhost.style.left = (touch.clientX - 50) + 'px';
+                dragGhost.style.top = (touch.clientY - 80) + 'px';
+            }
+        }
+        
+        function highlightTouchDropTarget(touch) {
+            // Clear previous highlights
+            document.querySelectorAll('.touch-drop-target').forEach(el => {
+                el.classList.remove('touch-drop-target');
+            });
+            
+            // Find element under touch
+            const elementUnder = document.elementFromPoint(touch.clientX, touch.clientY);
+            const slot = elementUnder?.closest('.day-slot');
+            
+            if (slot && slot.classList.contains('drop-zone')) {
+                slot.classList.add('touch-drop-target');
+                
+                // Add haptic feedback for valid drop zone
+                if (navigator.vibrate) {
+                    navigator.vibrate(25);
+                }
+            }
+        }
+        
+        async function performTouchDrop(touch) {
+            const elementUnder = document.elementFromPoint(touch.clientX, touch.clientY);
+            const slot = elementUnder?.closest('.day-slot');
+            
+            if (slot && draggedGuide) {
+                const date = slot.dataset.date;
+                const slotType = slot.dataset.slot;
+                
+                console.log(`📱 Touch drop: ${draggedGuide.name} -> ${date} (${slotType})`);
+                
+                if (slot.classList.contains('drop-zone')) {
+                    try {
+                        // Validate and create assignment
+                        const validation = await validateAssignment(draggedGuide.id, date, slotType);
+                        
+                        if (!validation.is_valid) {
+                            showNotification(`שיבוץ נכשל: ${validation.reasons.join(', ')}`, 'error');
+                            // Add error haptic feedback
+                            if (navigator.vibrate) {
+                                navigator.vibrate([100, 50, 100]);
+                            }
+                            return;
+                        }
+                        
+                        await createAssignment(draggedGuide.id, date, slotType);
+                        
+                        // Success feedback
+                        slot.classList.add('drop-success');
+                        setTimeout(() => slot.classList.remove('drop-success'), 1000);
+                        
+                        showNotification(`${draggedGuide.name} שובץ בהצלחה`, 'success');
+                        
+                        // Success haptic feedback
+                        if (navigator.vibrate) {
+                            navigator.vibrate([50, 25, 50]);
+                        }
+                        
+                        // Refresh data
+                        await loadAssignments();
+                        await refreshGuideStatistics();
+                        
+                    } catch (error) {
+                        console.error('Error in touch drop:', error);
+                        showNotification('שגיאה בביצוע השיבוץ', 'error');
+                        
+                        // Error haptic feedback
+                        if (navigator.vibrate) {
+                            navigator.vibrate([200, 100, 200]);
+                        }
+                    }
+                } else {
+                    showNotification('שיבוץ לא חוקי', 'error');
+                    
+                    // Invalid drop haptic feedback
+                    if (navigator.vibrate) {
+                        navigator.vibrate([100, 50, 100]);
+                    }
+                }
+            }
+        }
+        
+        function endTouchDrag() {
+            console.log('📱 Ending touch drag');
+            
+            isTouchDragging = false;
+            touchStartPos = null;
+            draggedGuide = null;
+            
+            // Clean up visual elements
+            if (touchCurrentElement) {
+                touchCurrentElement.classList.remove('touch-dragging');
+                touchCurrentElement = null;
+            }
+            
+            removeDragGhost();
+            clearDropZoneHighlights();
+            
+            document.querySelectorAll('.touch-drop-target').forEach(el => {
+                el.classList.remove('touch-drop-target');
+            });
+        }
+        
+        function formatDateForDisplay(dateStr) {
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('he-IL', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric'
+            });
+        }
+        
+        // Assignment management
+        async function validateAssignment(guideId, date, slotType) {
+            const response = await apiFetch('/api/enhanced-manual/validate-assignment', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    guide_id: guideId,
+                    date: date,
+                    slot_type: slotType
+                })
+            });
+            
+            return await response.json();
+        }
+        
+        async function createAssignment(guideId, date, slotType) {
+            const response = await apiFetch('/api/enhanced-manual/assign', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    guide_id: guideId,
+                    date: date,
+                    slot_type: slotType,
+                    created_by: 'enhanced-manual'
+                })
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                // Add to undo stack using new system
+                addToUndoStack({
+                    action: 'assign',
+                    date: date,
+                    slot_type: slotType,
+                    guide_id: guideId,
+                    guide_name: draggedGuide ? draggedGuide.name : getGuideNameById(guideId),
+                    assignment: result.assignment
+                });
+                
+                // Update UI
+                updateSlotDisplay(date, slotType, draggedGuide || { name: getGuideNameById(guideId) });
+                await refreshGuideStats();
+                
+                // Update constraints after assignment (for dynamic constraints)
+                updateConstraintsAfterAssignment(guideId, date, slotType);
+            } else {
+                throw new Error(result.error);
+            }
+        }
+        
+        function updateSlotDisplay(date, slotType, guide) {
+            const dayElement = document.querySelector(`[data-date="${date}"]`);
+            if (!dayElement) return;
+            
+            const slot = dayElement.querySelector(`[data-slot="${slotType}"]`);
+            if (!slot) return;
+            
+            slot.classList.remove('drop-zone');
+            slot.classList.add(slotType === 'normal' ? 'occupied' : 'overlap-occupied');
+            slot.innerHTML = `<span class="assigned-guide">${guide.name}</span>`;
+        }
+        
+        async function refreshGuideStats() {
+            await loadGuides();
+        }
+        
+        // Status and display updates
+        function updateSelectedGuideDisplay() {
+            const info = document.getElementById('selected-guide-info');
+            if (selectedGuide) {
+                info.textContent = `נבחר: ${selectedGuide.name}`;
+            } else {
+                info.textContent = 'לא נבחר מדריך';
+            }
+        }
+        
+        function updateGuidesInfo() {
+            const info = document.getElementById('guides-info');
+            info.textContent = `${guides.length} מדריכים זמינים`;
+        }
+        
+        function updateConstraintsDisplay(constraintData) {
+            const count = constraintData.total_count || 0;
+            document.getElementById('constraints-count').textContent = `${count} אילוצים`;
+        }
+        
+        function updateStatus() {
+            document.getElementById('last-updated').textContent = 
+                new Date().toLocaleTimeString('he-IL');
+        }
+        
+        // Legacy function - now redirects to new system
+        function updateUndoButton() {
+            updateUndoRedoButtons();
+        }
+        
+        // Action button implementations
+        function clearSelection() {
+            clearGuideSelection();
+        }
+        
+        async function saveChanges() {
+            try {
+                showNotification('שומר שינויים...', 'success');
+                // Refresh data to ensure consistency
+                await loadMonthData();
+                showNotification('השינויים נשמרו בהצלחה', 'success');
+            } catch (error) {
+                console.error('Error saving changes:', error);
+                showNotification('שגיאה בשמירת השינויים', 'error');
+            }
+        }
+        
+        // Enhanced Undo/Redo System
+        function addToUndoStack(operation) {
+            // Clear redo stack when new operation is added
+            redoStack = [];
+            
+            // Add operation to undo stack
+            undoStack.push({
+                ...operation,
+                timestamp: new Date().toISOString()
+            });
+            
+            // Limit undo history size
+            if (undoStack.length > MAX_UNDO_HISTORY) {
+                undoStack.shift();
+            }
+            
+            updateUndoRedoButtons();
+        }
+        
+        async function undoLastAction() {
+            if (undoStack.length === 0) return;
+            
+            const operation = undoStack.pop();
+            
+            try {
+                const inverseOperation = await executeUndoOperation(operation);
+                
+                // Add inverse operation to redo stack
+                if (inverseOperation) {
+                    redoStack.push(inverseOperation);
+                }
+                
+                showNotification('הפעולה בוטלה בהצלחה', 'success');
+                updateUndoRedoButtons();
+                
+            } catch (error) {
+                console.error('Error undoing operation:', error);
+                showNotification('שגיאה בביטול הפעולה', 'error');
+                // Put operation back if undo failed
+                undoStack.push(operation);
+                updateUndoRedoButtons();
+            }
+        }
+        
+        async function redoLastAction() {
+            if (redoStack.length === 0) return;
+            
+            const operation = redoStack.pop();
+            
+            try {
+                const inverseOperation = await executeRedoOperation(operation);
+                
+                // Add inverse operation back to undo stack
+                if (inverseOperation) {
+                    undoStack.push(inverseOperation);
+                }
+                
+                showNotification('הפעולה בוצעה שוב בהצלחה', 'success');
+                updateUndoRedoButtons();
+                
+            } catch (error) {
+                console.error('Error redoing operation:', error);
+                showNotification('שגיאה בביצוע הפעולה שוב', 'error');
+                // Put operation back if redo failed
+                redoStack.push(operation);
+                updateUndoRedoButtons();
+            }
+        }
+        
+        async function executeUndoOperation(operation) {
+            switch (operation.action) {
+                case 'assign':
+                    // Undo assignment by removing it
+                    await removeAssignment(operation.date, operation.slot_type);
+                    await refreshGuideStats();
+                    
+                    return {
+                        action: 'remove',
+                        date: operation.date,
+                        slot_type: operation.slot_type,
+                        guide_id: operation.guide_id,
+                        guide_name: operation.guide_name || getGuideNameById(operation.guide_id)
+                    };
+                    
+                case 'remove':
+                    // Undo removal by re-creating assignment
+                    await createAssignment(operation.guide_id, operation.date, operation.slot_type);
+                    await refreshGuideStats();
+                    
+                    return {
+                        action: 'assign',
+                        date: operation.date,
+                        slot_type: operation.slot_type,
+                        guide_id: operation.guide_id,
+                        guide_name: operation.guide_name
+                    };
+                    
+                case 'replace':
+                    // Undo replacement by restoring original assignment
+                    await removeAssignment(operation.date, operation.slot_type);
+                    if (operation.old_guide_id) {
+                        await createAssignment(operation.old_guide_id, operation.date, operation.slot_type);
+                    }
+                    await refreshGuideStats();
+                    
+                    return {
+                        action: 'replace',
+                        date: operation.date,
+                        slot_type: operation.slot_type,
+                        old_guide_id: operation.new_guide_id,
+                        old_guide_name: operation.new_guide_name,
+                        new_guide_id: operation.old_guide_id,
+                        new_guide_name: operation.old_guide_name
+                    };
+                    
+                default:
+                    console.warn('Unknown undo operation:', operation.action);
+                    return null;
+            }
+        }
+        
+        async function executeRedoOperation(operation) {
+            // Redo is essentially the reverse of undo
+            return await executeUndoOperation(operation);
+        }
+        
+        function updateUndoRedoButtons() {
+            const undoBtn = document.getElementById('undo-btn');
+            const redoBtn = document.getElementById('redo-btn');
+            
+            undoBtn.disabled = undoStack.length === 0;
+            redoBtn.disabled = redoStack.length === 0;
+            
+            // Update tooltips with operation counts
+            undoBtn.title = undoStack.length > 0 ? 
+                `בטל פעולה (${undoStack.length} פעולות זמינות)` : 
+                'אין פעולות לביטול';
+                
+            redoBtn.title = redoStack.length > 0 ? 
+                `חזור על פעולה (${redoStack.length} פעולות זמינות)` : 
+                'אין פעולות לחזרה';
+        }
+        
+        function getGuideNameById(guideId) {
+            const guide = guides.find(g => g.id == guideId);
+            return guide ? guide.name : 'מדריך לא ידוע';
+        }
+        
+        function clearUndoRedoHistory() {
+            undoStack = [];
+            redoStack = [];
+            updateUndoRedoButtons();
+        }
+        
+        function getUndoRedoHistorySummary() {
+            return {
+                undo: undoStack.map(op => ({
+                    action: op.action,
+                    guide: op.guide_name || getGuideNameById(op.guide_id),
+                    date: formatDateForDisplay(op.date),
+                    slot: op.slot_type === 'normal' ? 'רגיל' : 'חפיפה',
+                    timestamp: op.timestamp
+                })),
+                redo: redoStack.map(op => ({
+                    action: op.action,
+                    guide: op.guide_name || getGuideNameById(op.guide_id),
+                    date: formatDateForDisplay(op.date),
+                    slot: op.slot_type === 'normal' ? 'רגיל' : 'חפיפה',
+                    timestamp: op.timestamp
+                }))
+            };
+        }
+        
+        async function removeAssignment(date, slotType) {
+            try {
+                const response = await apiFetch(`/api/enhanced-manual/assignment/${date}/${slotType}`, {
+                    method: 'DELETE'
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    // Update UI
+                    const dayElement = document.querySelector(`[data-date="${date}"]`);
+                    if (dayElement) {
+                        const slot = dayElement.querySelector(`[data-slot="${slotType}"]`);
+                        if (slot) {
+                            slot.classList.remove('occupied', 'overlap-occupied');
+                            slot.innerHTML = `<span class="slot-label">${slotType === 'normal' ? 'רגיל' : 'חפיפה'}</span>`;
+                        }
+                    }
+                    
+                    await refreshGuideStats();
+                } else {
+                    throw new Error(result.error);
+                }
+            } catch (error) {
+                console.error('Error removing assignment:', error);
+                showNotification('שגיאה בהסרת השיבוץ', 'error');
+            }
+        }
+        
+        function clearMonth() {
+            if (confirm('האם אתה בטוח שברצונך לנקות את כל השיבוצים החודשיים?')) {
+                // Implementation for clearing month
+                showNotification('ניקוי החודש אינו זמין עדיין', 'warning');
+            }
+        }
+        
+        function refreshData() {
+            loadMonthData();
+        }
+        
+        // Right-click Context Menu System
+        let contextMenu = null;
+        let contextMenuTarget = null;
+        
+        function createContextMenu() {
+            if (contextMenu) return;
+            
+            contextMenu = document.createElement('div');
+            contextMenu.className = 'context-menu';
+            contextMenu.innerHTML = `
+                <div class="context-menu-item" data-action="remove">
+                    <span class="context-menu-icon">🗑️</span>
+                    <span class="context-menu-text">הסר שיבוץ</span>
+                </div>
+                <div class="context-menu-item" data-action="swap">
+                    <span class="context-menu-icon">🔄</span>
+                    <span class="context-menu-text">החלף מדריך</span>
+                </div>
+                <div class="context-menu-item" data-action="copy">
+                    <span class="context-menu-icon">📋</span>
+                    <span class="context-menu-text">העתק שיבוץ</span>
+                </div>
+                <div class="context-menu-divider"></div>
+                <div class="context-menu-item" data-action="details">
+                    <span class="context-menu-icon">ℹ️</span>
+                    <span class="context-menu-text">פרטי שיבוץ</span>
+                </div>
+                <div class="context-menu-item" data-action="history">
+                    <span class="context-menu-icon">📜</span>
+                    <span class="context-menu-text">היסטוריית שינויים</span>
+                </div>
+            `;
+            
+            document.body.appendChild(contextMenu);
+            setupContextMenuEvents();
+        }
+        
+        function setupContextMenuEvents() {
+            // Handle context menu item clicks
+            contextMenu.addEventListener('click', async (e) => {
+                const item = e.target.closest('.context-menu-item');
+                if (!item || !contextMenuTarget) return;
+                
+                const action = item.dataset.action;
+                const slot = contextMenuTarget;
+                const date = slot.dataset.date;
+                const slotType = slot.dataset.slot;
+                
+                hideContextMenu();
+                
+                try {
+                    switch (action) {
+                        case 'remove':
+                            await handleContextRemove(date, slotType, slot);
+                            break;
+                        case 'swap':
+                            await handleContextSwap(date, slotType, slot);
+                            break;
+                        case 'copy':
+                            handleContextCopy(date, slotType, slot);
+                            break;
+                        case 'details':
+                            showAssignmentDetails(date, slotType, slot);
+                            break;
+                        case 'history':
+                            showAssignmentHistory(date, slotType);
+                            break;
+                    }
+                } catch (error) {
+                    console.error('Context menu action error:', error);
+                    showNotification('שגיאה בביצוע הפעולה', 'error');
+                }
+            });
+            
+            // Hide context menu when clicking outside
+            document.addEventListener('click', (e) => {
+                if (contextMenu && !contextMenu.contains(e.target)) {
+                    hideContextMenu();
+                }
+            });
+            
+            // Hide context menu on escape
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && contextMenu && contextMenu.style.display !== 'none') {
+                    hideContextMenu();
+                }
+            });
+        }
+        
+        function showContextMenu(e, slot) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            if (!contextMenu) createContextMenu();
+            
+            contextMenuTarget = slot;
+            
+            // Check if slot has assignment
+            const hasAssignment = slot.classList.contains('occupied') || slot.classList.contains('overlap-occupied');
+            
+            // Update menu items based on slot state
+            updateContextMenuItems(hasAssignment, slot);
+            
+            // Position context menu
+            const rect = slot.getBoundingClientRect();
+            const menuWidth = 200;
+            const menuHeight = 180;
+            
+            let x = e.clientX;
+            let y = e.clientY;
+            
+            // Adjust position if menu would go off screen
+            if (x + menuWidth > window.innerWidth) {
+                x = window.innerWidth - menuWidth - 10;
+            }
+            if (y + menuHeight > window.innerHeight) {
+                y = window.innerHeight - menuHeight - 10;
+            }
+            
+            contextMenu.style.left = x + 'px';
+            contextMenu.style.top = y + 'px';
+            contextMenu.style.display = 'block';
+            
+            // Add visual highlight to target slot
+            slot.classList.add('context-target');
+        }
+        
+        function hideContextMenu() {
+            if (contextMenu) {
+                contextMenu.style.display = 'none';
+            }
+            
+            // Remove highlight from target slot
+            if (contextMenuTarget) {
+                contextMenuTarget.classList.remove('context-target');
+                contextMenuTarget = null;
+            }
+        }
+        
+        function updateContextMenuItems(hasAssignment, slot) {
+            const items = contextMenu.querySelectorAll('.context-menu-item');
+            
+            items.forEach(item => {
+                const action = item.dataset.action;
+                
+                switch (action) {
+                    case 'remove':
+                    case 'swap':
+                    case 'details':
+                    case 'history':
+                        item.style.display = hasAssignment ? 'flex' : 'none';
+                        break;
+                    case 'copy':
+                        item.style.display = hasAssignment ? 'flex' : 'none';
+                        break;
+                }
+            });
+            
+            // Show/hide divider based on available items
+            const divider = contextMenu.querySelector('.context-menu-divider');
+            const hasVisibleItems = Array.from(items).some(item => 
+                item.style.display !== 'none' && item.dataset.action !== 'details' && item.dataset.action !== 'history'
+            );
+            divider.style.display = hasVisibleItems && hasAssignment ? 'block' : 'none';
+        }
+        
+        async function handleContextRemove(date, slotType, slot) {
+            const assignedGuide = slot.querySelector('.assigned-guide');
+            const guideName = assignedGuide ? assignedGuide.textContent : 'המדריך';
+            
+            const confirmed = confirm(`האם אתה בטוח שברצונך להסיר את השיבוץ של ${guideName} מ-${formatDateForDisplay(date)}?`);
+            
+            if (confirmed) {
+                // Add to undo stack before removing
+                const currentAssignment = await getCurrentAssignment(date, slotType);
+                if (currentAssignment) {
+                    undoStack.push({
+                        action: 'remove',
+                        date: date,
+                        slot_type: slotType,
+                        guide_id: currentAssignment.guide_id,
+                        guide_name: currentAssignment.guide_name,
+                        assignment: currentAssignment
+                    });
+                }
+                
+                await removeAssignment(date, slotType);
+                showNotification(`השיבוץ של ${guideName} הוסר בהצלחה`, 'success');
+                updateUndoButton();
+            }
+        }
+        
+        async function handleContextSwap(date, slotType, slot) {
+            showNotification('פונקציית החלפה תהיה זמינה בגרסה הבאה', 'info');
+            // TODO: Implement guide swapping functionality
+        }
+        
+        function handleContextCopy(date, slotType, slot) {
+            const assignedGuide = slot.querySelector('.assigned-guide');
+            if (assignedGuide) {
+                const guideName = assignedGuide.textContent;
+                
+                // Store in clipboard-like system
+                copiedAssignment = {
+                    guide_name: guideName,
+                    slot_type: slotType,
+                    date: date
+                };
+                
+                showNotification(`שיבוץ של ${guideName} הועתק`, 'success');
+            }
+        }
+        
+        function showAssignmentDetails(date, slotType, slot) {
+            const assignedGuide = slot.querySelector('.assigned-guide');
+            if (!assignedGuide) return;
+            
+            const guideName = assignedGuide.textContent;
+            const formattedDate = formatDateForDisplay(date);
+            const slotLabel = slotType === 'normal' ? 'רגיל' : 'חפיפה';
+            
+            const details = `
+פרטי השיבוץ:
+מדריך: ${guideName}
+תאריך: ${formattedDate}
+סוג משמרת: ${slotLabel}
+נוצר: ידנית
+סטטוס: פעיל
+            `.trim();
+            
+            alert(details);
+        }
+        
+        function showAssignmentHistory(date, slotType) {
+            showNotification('היסטוריית השינויים תהיה זמינה בגרסה הבאה', 'info');
+            // TODO: Implement assignment history functionality
+        }
+        
+        async function getCurrentAssignment(date, slotType) {
+            try {
+                // Get current assignment info for undo purposes
+                const slot = document.querySelector(`[data-date="${date}"] [data-slot="${slotType}"]`);
+                if (!slot) return null;
+                
+                const assignedGuide = slot.querySelector('.assigned-guide');
+                if (!assignedGuide) return null;
+                
+                const guideName = assignedGuide.textContent;
+                const guide = guides.find(g => g.name === guideName);
+                
+                return {
+                    guide_id: guide ? guide.id : null,
+                    guide_name: guideName,
+                    date: date,
+                    slot_type: slotType
+                };
+            } catch (error) {
+                console.error('Error getting current assignment:', error);
+                return null;
+            }
+        }
+        
+        // Assignment Conflict Resolution System
+        let conflictDialog = null;
+        
+        function createConflictDialog() {
+            if (conflictDialog) return;
+            
+            conflictDialog = document.createElement('div');
+            conflictDialog.className = 'conflict-dialog-overlay';
+            conflictDialog.innerHTML = `
+                <div class="conflict-dialog">
+                    <div class="conflict-header">
+                        <h3>⚠️ זוהה קונפליקט בשיבוץ</h3>
+                        <button class="conflict-close-btn">×</button>
+                    </div>
+                    <div class="conflict-content">
+                        <div class="conflict-details"></div>
+                        <div class="conflict-options">
+                            <div class="conflict-option">
+                                <input type="radio" id="conflict-replace" name="conflictAction" value="replace" checked>
+                                <label for="conflict-replace">החלף את השיבוץ הקיים</label>
+                            </div>
+                            <div class="conflict-option">
+                                <input type="radio" id="conflict-swap" name="conflictAction" value="swap">
+                                <label for="conflict-swap">החלף מדריכים בין התאריכים</label>
+                            </div>
+                            <div class="conflict-option">
+                                <input type="radio" id="conflict-cancel" name="conflictAction" value="cancel">
+                                <label for="conflict-cancel">בטל את השיבוץ החדש</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="conflict-actions">
+                        <button class="btn btn-primary conflict-confirm">אשר</button>
+                        <button class="btn btn-secondary conflict-cancel-btn">בטל</button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(conflictDialog);
+            setupConflictDialogEvents();
+        }
+        
+        function setupConflictDialogEvents() {
+            const closeBtn = conflictDialog.querySelector('.conflict-close-btn');
+            const cancelBtn = conflictDialog.querySelector('.conflict-cancel-btn');
+            const confirmBtn = conflictDialog.querySelector('.conflict-confirm');
+            
+            closeBtn.addEventListener('click', hideConflictDialog);
+            cancelBtn.addEventListener('click', hideConflictDialog);
+            
+            confirmBtn.addEventListener('click', () => {
+                const selectedAction = conflictDialog.querySelector('input[name="conflictAction"]:checked').value;
+                resolveConflict(selectedAction);
+            });
+            
+            // Close on overlay click
+            conflictDialog.addEventListener('click', (e) => {
+                if (e.target === conflictDialog) {
+                    hideConflictDialog();
+                }
+            });
+        }
+        
+        function showConflictDialog(conflictInfo) {
+            if (!conflictDialog) createConflictDialog();
+            
+            const detailsElement = conflictDialog.querySelector('.conflict-details');
+            detailsElement.innerHTML = `
+                <div class="conflict-info">
+                    <p><strong>מדריך חדש:</strong> ${conflictInfo.newGuide.name}</p>
+                    <p><strong>תאריך:</strong> ${formatDateForDisplay(conflictInfo.date)}</p>
+                    <p><strong>סוג משמרת:</strong> ${conflictInfo.slotType === 'normal' ? 'רגיל' : 'חפיפה'}</p>
+                    ${conflictInfo.existingAssignment ? 
+                        `<p><strong>שיבוץ קיים:</strong> ${conflictInfo.existingAssignment.guide_name}</p>` : 
+                        ''
+                    }
+                    <div class="conflict-reasons">
+                        <strong>סיבות הקונפליקט:</strong>
+                        <ul>
+                            ${conflictInfo.reasons.map(reason => `<li>${reason}</li>`).join('')}
+                        </ul>
+                    </div>
+                </div>
+            `;
+            
+            // Store conflict info for resolution
+            conflictDialog.conflictInfo = conflictInfo;
+            
+            conflictDialog.style.display = 'flex';
+        }
+        
+        function hideConflictDialog() {
+            if (conflictDialog) {
+                conflictDialog.style.display = 'none';
+                conflictDialog.conflictInfo = null;
+            }
+        }
+        
+        async function resolveConflict(action) {
+            const conflictInfo = conflictDialog.conflictInfo;
+            if (!conflictInfo) return;
+            
+            hideConflictDialog();
+            
+            try {
+                switch (action) {
+                    case 'replace':
+                        await handleConflictReplace(conflictInfo);
+                        break;
+                    case 'swap':
+                        await handleConflictSwap(conflictInfo);
+                        break;
+                    case 'cancel':
+                        showNotification('השיבוץ החדש בוטל', 'info');
+                        break;
+                }
+            } catch (error) {
+                console.error('Error resolving conflict:', error);
+                showNotification('שגיאה בפתרון הקונפליקט', 'error');
+            }
+        }
+        
+        async function handleConflictReplace(conflictInfo) {
+            const { date, slotType, newGuide, existingAssignment } = conflictInfo;
+            
+            // Add existing assignment to undo stack before replacing
+            if (existingAssignment) {
+                undoStack.push({
+                    action: 'replace',
+                    date: date,
+                    slot_type: slotType,
+                    old_guide_id: existingAssignment.guide_id,
+                    old_guide_name: existingAssignment.guide_name,
+                    new_guide_id: newGuide.id,
+                    new_guide_name: newGuide.name
+                });
+            }
+            
+            // Remove existing assignment
+            if (existingAssignment) {
+                await removeAssignment(date, slotType);
+            }
+            
+            // Create new assignment
+            await createAssignment(newGuide.id, date, slotType);
+            
+            showNotification(`השיבוץ הוחלף בהצלחה: ${newGuide.name} ב-${formatDateForDisplay(date)}`, 'success');
+            updateUndoButton();
+        }
+        
+        async function handleConflictSwap(conflictInfo) {
+            showNotification('פונקציית החלפת מדריכים תהיה זמינה בגרסה הבאה', 'info');
+            // TODO: Implement guide swapping between dates
+        }
+        
+        async function detectAssignmentConflicts(guideId, date, slotType) {
+            const conflicts = [];
+            const reasons = [];
+            
+            // Check if slot is already occupied
+            const slot = document.querySelector(`[data-date="${date}"] [data-slot="${slotType}"]`);
+            let existingAssignment = null;
+            
+            if (slot && (slot.classList.contains('occupied') || slot.classList.contains('overlap-occupied'))) {
+                const assignedGuide = slot.querySelector('.assigned-guide');
+                if (assignedGuide) {
+                    const guideName = assignedGuide.textContent;
+                    const guide = guides.find(g => g.name === guideName);
+                    
+                    existingAssignment = {
+                        guide_id: guide ? guide.id : null,
+                        guide_name: guideName,
+                        date: date,
+                        slot_type: slotType
+                    };
+                    
+                    reasons.push(`המשבצת כבר תפוסה על ידי ${guideName}`);
+                }
+            }
+            
+            // Check for guide double-booking on same day
+            const daySlots = document.querySelectorAll(`[data-date="${date}"] .day-slot`);
+            let hasOtherAssignment = false;
+            
+            daySlots.forEach(daySlot => {
+                if (daySlot.dataset.slot !== slotType) {
+                    const assignedGuide = daySlot.querySelector('.assigned-guide');
+                    if (assignedGuide) {
+                        const assignedGuideName = assignedGuide.textContent;
+                        const assignedGuideData = guides.find(g => g.name === assignedGuideName);
+                        
+                        if (assignedGuideData && assignedGuideData.id == guideId) {
+                            hasOtherAssignment = true;
+                            reasons.push(`המדריך כבר משובץ באותו יום במשמרת אחרת`);
+                        }
+                    }
+                }
+            });
+            
+            // Validate against constraints
+            const guide = guides.find(g => g.id == guideId);
+            if (guide) {
+                const validation = await validateAssignment(guideId, date, slotType);
+                
+                if (!validation.is_valid) {
+                    reasons.push(...validation.reasons);
+                }
+            }
+            
+            return {
+                hasConflicts: reasons.length > 0,
+                reasons: reasons,
+                existingAssignment: existingAssignment,
+                guide: guide
+            };
+        }
+        
+        // Bulk Operations System
+        function toggleBulkMode() {
+            bulkSelectionMode = !bulkSelectionMode;
+            const panel = document.getElementById('bulk-operations-panel');
+            const btn = document.getElementById('bulk-mode-btn');
+            
+            if (bulkSelectionMode) {
+                panel.style.display = 'block';
+                btn.classList.add('active');
+                btn.innerHTML = '<span>📋</span> יצא ממצב בחירה';
+                showNotification('מצב בחירה מרובה הופעל - לחץ על תאריכים לבחירה', 'info');
+            } else {
+                panel.style.display = 'none';
+                btn.classList.remove('active');
+                btn.innerHTML = '<span>📋</span> מצב בחירה מרובה';
+                clearBulkSelection();
+                showNotification('מצב בחירה מרובה הופסק', 'info');
+            }
+        }
+        
+        function setupBulkOperationListeners() {
+            document.getElementById('bulk-close-btn').addEventListener('click', toggleBulkMode);
+            document.getElementById('bulk-assign-btn').addEventListener('click', showBulkAssignSelector);
+            document.getElementById('bulk-clear-btn').addEventListener('click', performBulkClear);
+            document.getElementById('bulk-confirm-assign').addEventListener('click', performBulkAssign);
+            document.getElementById('bulk-cancel-assign').addEventListener('click', hideBulkAssignSelector);
+        }
+        
+        function handleDayClick(date, dayElement) {
+            if (bulkSelectionMode) {
+                if (selectedDates.has(date)) {
+                    selectedDates.delete(date);
+                    dayElement.classList.remove('bulk-selected');
+                } else {
+                    selectedDates.add(date);
+                    dayElement.classList.add('bulk-selected');
+                }
+                updateBulkSelectionCount();
+            }
+        }
+        
+        function updateBulkSelectionCount() {
+            const count = selectedDates.size;
+            document.getElementById('selected-count').textContent = `${count} תאריכים נבחרו`;
+            
+            const buttons = document.querySelectorAll('.bulk-action-btn');
+            buttons.forEach(btn => {
+                btn.disabled = count === 0;
+            });
+        }
+        
+        function clearBulkSelection() {
+            selectedDates.clear();
+            document.querySelectorAll('.calendar-day.bulk-selected').forEach(day => {
+                day.classList.remove('bulk-selected');
+            });
+            updateBulkSelectionCount();
+        }
+        
+        function showBulkAssignSelector() {
+            // Populate guide dropdown
+            const select = document.getElementById('bulk-guide-select');
+            select.innerHTML = '<option value="">-- בחר מדריך --</option>';
+            guides.forEach(guide => {
+                const option = document.createElement('option');
+                option.value = guide.id;
+                option.textContent = guide.name;
+                select.appendChild(option);
+            });
+            
+            document.getElementById('bulk-guide-selector').style.display = 'block';
+        }
+        
+        function hideBulkAssignSelector() {
+            document.getElementById('bulk-guide-selector').style.display = 'none';
+        }
+        
+        async function performBulkAssign() {
+            const guideId = document.getElementById('bulk-guide-select').value;
+            const normalSlot = document.getElementById('bulk-normal-slot').checked;
+            const overlapSlot = document.getElementById('bulk-overlap-slot').checked;
+            
+            if (!guideId || (!normalSlot && !overlapSlot)) {
+                showNotification('בחר מדריך וסוג משמרת', 'error');
+                return;
+            }
+            
+            const guide = guides.find(g => g.id == guideId);
+            if (!guide) return;
+            
+            const dates = Array.from(selectedDates);
+            let successCount = 0;
+            let errorCount = 0;
+            
+            bulkOperationInProgress = true;
+            showNotification(`מבצע שיבוץ מרובה ל-${dates.length} תאריכים...`, 'info');
+            
+            for (const date of dates) {
+                try {
+                    if (normalSlot) {
+                        await createAssignment(guideId, date, 'normal');
+                        successCount++;
+                    }
+                    if (overlapSlot) {
+                        await createAssignment(guideId, date, 'overlap');
+                        successCount++;
+                    }
+                } catch (error) {
+                    console.error(`Error assigning ${guide.name} to ${date}:`, error);
+                    errorCount++;
+                }
+            }
+            
+            bulkOperationInProgress = false;
+            hideBulkAssignSelector();
+            clearBulkSelection();
+            await refreshGuideStats();
+            
+            if (errorCount === 0) {
+                showNotification(`שיבוץ מרובה הושלם בהצלחה: ${successCount} שיבוצים`, 'success');
+            } else {
+                showNotification(`שיבוץ מרובה הושלם חלקית: ${successCount} הצליחו, ${errorCount} נכשלו`, 'warning');
+            }
+        }
+        
+        async function performBulkClear() {
+            if (!confirm('האם אתה בטוח שברצונך לנקות את כל השיבוצים מהתאריכים הנבחרים?')) {
+                return;
+            }
+            
+            const dates = Array.from(selectedDates);
+            let successCount = 0;
+            let errorCount = 0;
+            
+            bulkOperationInProgress = true;
+            showNotification(`מנקה שיבוצים מ-${dates.length} תאריכים...`, 'info');
+            
+            for (const date of dates) {
+                try {
+                    await removeAssignment(date, 'normal');
+                    await removeAssignment(date, 'overlap');
+                    successCount++;
+                } catch (error) {
+                    console.error(`Error clearing assignments for ${date}:`, error);
+                    errorCount++;
+                }
+            }
+            
+            bulkOperationInProgress = false;
+            clearBulkSelection();
+            await refreshGuideStats();
+            
+            if (errorCount === 0) {
+                showNotification(`ניקוי מרובה הושלם בהצלחה: ${successCount} תאריכים נוקו`, 'success');
+            } else {
+                showNotification(`ניקוי מרובה הושלם חלקית: ${successCount} הצליחו, ${errorCount} נכשלו`, 'warning');
+            }
+        }
+        
+        async function loadAssignments() {
+            try {
+                // Load existing assignments for the month
+                const response = await apiFetch(`/api/schedule/${currentYear}/${currentMonth}`);
+                const data = await response.json();
+                
+                assignments = data || [];
+                renderExistingAssignments();
+            } catch (error) {
+                console.error('Error loading assignments:', error);
+            }
+        }
+        
+        function renderExistingAssignments() {
+            // Clear existing assignments display
+            document.querySelectorAll('.day-slot').forEach(slot => {
+                slot.classList.remove('occupied');
+                const placeholder = slot.querySelector('.assignment-placeholder');
+                if (placeholder) {
+                    placeholder.textContent = 'לחץ כאן לשיבוץ';
+                    placeholder.style.display = 'block';
+                }
+                
+                const assignmentDisplay = slot.querySelector('.assignment-display');
+                if (assignmentDisplay) {
+                    assignmentDisplay.remove();
+                }
+            });
+            
+            // Display current assignments
+            assignments.forEach(assignment => {
+                if (assignment.guide1_id) {
+                    const guide = guides.find(g => g.id === assignment.guide1_id);
+                    updateSlotDisplay(assignment.date, 'normal', {
+                        id: assignment.guide1_id,
+                        name: guide?.name || assignment.guide1_name || `מדריך ${assignment.guide1_id}`,
+                        role: assignment.guide1_role || 'רגיל'
+                    });
+                }
+                if (assignment.guide2_id) {
+                    const guide = guides.find(g => g.id === assignment.guide2_id);
+                    updateSlotDisplay(assignment.date, 'overlap', {
+                        id: assignment.guide2_id,
+                        name: guide?.name || assignment.guide2_name || `מדריך ${assignment.guide2_id}`,
+                        role: assignment.guide2_role || 'חפיפה'
+                    });
+                }
+            });
+        }
+        
+        function updateSlotDisplay(date, slotType, guide) {
+            const slot = document.querySelector(`[data-date="${date}"][data-slot="${slotType}"]`);
+            if (!slot) return;
+            
+            // Mark slot as occupied
+            slot.classList.add('occupied');
+            
+            // Hide placeholder
+            const placeholder = slot.querySelector('.assignment-placeholder');
+            if (placeholder) {
+                placeholder.style.display = 'none';
+            }
+            
+            // Remove existing assignment display
+            const existingDisplay = slot.querySelector('.assignment-display');
+            if (existingDisplay) {
+                existingDisplay.remove();
+            }
+            
+            // Create assignment display
+            const assignmentDisplay = document.createElement('div');
+            assignmentDisplay.className = 'assignment-display';
+            assignmentDisplay.innerHTML = `
+                <div class="assigned-guide-name">${guide.name}</div>
+                <div class="assigned-guide-role">${guide.role}</div>
+            `;
+            
+            const slotContent = slot.querySelector('.slot-content');
+            slotContent.appendChild(assignmentDisplay);
+            
+            // Update day stats
+            updateDayStats(date);
+        }
+        
+        function showAssignmentDetails(slot) {
+            const date = slot.dataset.date;
+            const slotType = slot.dataset.slot;
+            
+            // Find assignment for this slot
+            const assignment = assignments.find(a => a.date === date);
+            if (!assignment) return;
+            
+            const guideId = slotType === 'normal' ? assignment.guide1_id : assignment.guide2_id;
+            const guideName = slotType === 'normal' ? assignment.guide1_name : assignment.guide2_name;
+            const guideRole = slotType === 'normal' ? assignment.guide1_role : assignment.guide2_role;
+            
+            if (!guideId) return;
+            
+            // Show assignment details in notification
+            const formattedDate = formatDateForDisplay(date);
+            showNotification(`
+                שיבוץ: ${guideName} <br>
+                תאריך: ${formattedDate} <br>
+                סוג: ${slotType === 'normal' ? 'רגיל' : 'חפיפה'} <br>
+                תפקיד: ${guideRole}
+            `, 'info', 3000);
+        }
+        
+        function updateDayStats(date) {
+            const dayElement = document.querySelector(`[data-date="${date}"]`);
+            if (!dayElement) return;
+            
+            const slots = dayElement.querySelectorAll('.day-slot.occupied');
+            const shiftCount = slots.length;
+            
+            const statsElement = dayElement.querySelector('.shift-count');
+            if (statsElement) {
+                statsElement.textContent = shiftCount;
+            }
+        }
+        
+        async function refreshGuideStatistics() {
+            try {
+                // Reload guides with updated statistics
+                await loadGuides();
+                
+                // Update guide cards display
+                renderGuideCards();
+                
+                // Update status
+                updateStatus();
+                
+            } catch (error) {
+                console.error('Error refreshing guide statistics:', error);
+            }
+        }
+        
+        function handleKeyboardShortcuts(e) {
+            switch(e.key) {
+                case 'Escape':
+                    if (draggedGuide) {
+                        // Cancel drag operation
+                        cancelDragOperation();
+                    } else {
+                        clearGuideSelection();
+                    }
+                    break;
+                case 'Delete':
+                    if (selectedGuide) {
+                        // Remove selected guide from current day (if applicable)
+                    }
+                    break;
+                case 'z':
+                    if (e.ctrlKey) {
+                        undoLastAction();
+                    }
+                    break;
+                case 's':
+                    if (e.ctrlKey) {
+                        e.preventDefault();
+                        saveChanges();
+                    }
+                    break;
+            }
+        }
+        
+        console.log('📝 Enhanced Manual Scheduler JavaScript loaded');
+    </script>
+</body>
+</html>

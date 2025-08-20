@@ -1,7 +1,9 @@
 // ========== AUTH & HEADER FUNCTIONS ==========
 // בדיקת הרשאות - אם המשתמש לא מחובר, העבר לדף התחברות
+// אבל לא בדף ההתחברות עצמו כדי למנוע לולאה אינסופית
 var role = localStorage.getItem('role');
-if (!role) {
+var currentPage = window.location.pathname.split('/').pop() || window.location.pathname;
+if (!role && currentPage !== 'login.html') {
     window.location.href = "login.html";
 }
 

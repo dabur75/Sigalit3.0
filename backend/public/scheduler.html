@@ -2279,6 +2279,10 @@
                     <span class="icon">🤖</span>
                     שבץ אוטומטית
                 </button>
+                <button class="btn btn-primary" onclick="openAIScheduler()" style="display: none;">
+                    <span class="icon">🧠</span>
+                    שבץ אוטומטית עם סוכן
+                </button>
                 <button class="btn btn-danger" onclick="removeAutoScheduled()">
                     <span class="icon">🗑️</span>
                     מחק שיבוץ אוטומטי
@@ -3066,12 +3070,14 @@
             availableContainer.innerHTML = '';
             blockedContainer.innerHTML = '';
             
-            // Filter out already selected guides
-            const selectedGuideNames = selectedGuides.map(name => name);
-            const filteredAvailability = availability.filter(guide => !selectedGuideNames.includes(guide.guide_name));
             
-            console.log('Processing availability data:', filteredAvailability);
-            console.log('Selected guides to filter out:', selectedGuideNames);
+            // Filter out already selected guides and the locked conan (cannot be re-selected)
+            const selectedGuideNames = selectedGuides.map(name => name);
+            const filteredAvailability = availability.filter(guide => !selectedGuideNames.includes(guide.guide_name) && (!window.lockedConanId || String(guide.guide_id) !== String(window.lockedConanId)) );
+            
+            console.log('🚦 Processing availability data - Total guides:', availability.length);
+            console.log('🚦 Selected guides to filter out:', selectedGuideNames);
+            console.log('🚦 Filtered availability - Remaining guides:', filteredAvailability.length);
             
             // Separate guides by traffic light status
             const recommendedGuides = [];
@@ -3116,6 +3122,7 @@
             }
             
             if (blockedGuides.length > 0) {
+                
                 blockedGuides.forEach(guide => {
                     const guideElement = createGuideElement(guide);
                     blockedContainer.appendChild(guideElement);
@@ -3649,33 +3656,79 @@
             const container = document.querySelector('.selected-guides-container');
             container.innerHTML = '';
             
+            // Clear and repopulate selectedGuides array with current assignments
+            selectedGuides = [];
+            
+            // Reset locked conan by default
+            window.lockedConanId = null;
+  // If editing a Saturday and Friday has a standby (כונן), show it as a locked, non-editable chip
+  try {
+    const isSaturday = new Date(assignment.date).getDay() === 6;
+    if (isSaturday && Array.isArray(window.currentMonthSchedule)) {
+      const friday = new Date(assignment.date);
+      friday.setDate(friday.getDate() - 1);
+      const fridayStr = friday.toISOString().split('T')[0];
+      const fri = window.currentMonthSchedule.find(d => d.date === fridayStr);
+      const fridayConan = fri && (fri.guide1_role === 'כונן' ? { id: fri.guide1_id, name: fri.guide1_name } : (fri.guide2_role === 'כונן' ? { id: fri.guide2_id, name: fri.guide2_name } : null));
+      if (fridayConan && fridayConan.id) {
+        window.lockedConanId = fridayConan.id;
+        // Add locked Friday conan to selectedGuides array
+        selectedGuides.push(fridayConan.name);
+        
+        
+        container.innerHTML += `
+          <div class="selected-guide-item">
+            <div class="guide-info">
+              <span class="guide-name">${fridayConan.name}</span>
+              <span class="guide-role">כונן</span>
+              <span class="manual-badge">🔒 נעול משישי</span>
+            </div>
+          </div>
+        `;
+      }
+    }
+  } catch (e) { console.warn('locked conan render failed:', e.message); }
+            
             if (assignment.guide1_name) {
-                container.innerHTML += `
-                    <div class="selected-guide-item">
-                        <div class="guide-info">
-                            <span class="guide-name">${assignment.guide1_name}</span>
-                            <span class="guide-role">${assignment.guide1_role}</span>
-                            ${assignment.is_manual ? '<span class="manual-badge">🔒 ידני</span>' : '<span class="auto-badge">🤖 אוטומטי</span>'}
+                // Only add if not already in selectedGuides (avoid duplicates with locked conan)
+                if (!selectedGuides.includes(assignment.guide1_name)) {
+                    selectedGuides.push(assignment.guide1_name);
+                    
+                    container.innerHTML += `
+                        <div class="selected-guide-item">
+                            <div class="guide-info">
+                                <span class="guide-name">${assignment.guide1_name}</span>
+                                <span class="guide-role">${assignment.guide1_role}</span>
+                                ${assignment.is_manual ? '<span class="manual-badge">🔒 ידני</span>' : '<span class="auto-badge">🤖 אוטומטי</span>'}
+                            </div>
+            ${ (window.lockedConanId && String(assignment.guide1_id) === String(window.lockedConanId)) ? '' : `<button class="remove-guide-btn" onclick="removeGuide('${assignment.guide1_id}')">×</button>` }
                         </div>
-                        <button class="remove-guide-btn" onclick="removeGuide('${assignment.guide1_id}')">×</button>
-                    </div>
-                `;
+                    `;
+                }
             }
             
             if (assignment.guide2_name) {
-                container.innerHTML += `
-                    <div class="selected-guide-item">
-                        <div class="guide-info">
-                            <span class="guide-name">${assignment.guide2_name}</span>
-                            <span class="guide-role">${assignment.guide2_role}</span>
-                            ${assignment.is_manual ? '<span class="manual-badge">🔒 ידני</span>' : '<span class="auto-badge">🤖 אוטומטי</span>'}
+                // Only add if not already in selectedGuides (avoid duplicates with locked conan)
+                if (!selectedGuides.includes(assignment.guide2_name)) {
+                    selectedGuides.push(assignment.guide2_name);
+                    
+                    container.innerHTML += `
+                        <div class="selected-guide-item">
+                            <div class="guide-info">
+                                <span class="guide-name">${assignment.guide2_name}</span>
+                                <span class="guide-role">${assignment.guide2_role}</span>
+                                ${assignment.is_manual ? '<span class="manual-badge">🔒 ידני</span>' : '<span class="auto-badge">🤖 אוטומטי</span>'}
+                            </div>
+            ${ (window.lockedConanId && String(assignment.guide2_id) === String(window.lockedConanId)) ? '' : `<button class=\"remove-guide-btn\" onclick=\"removeGuide('${assignment.guide2_id}')\">×</button>` }
                         </div>
-                        <button class="remove-guide-btn" onclick="removeGuide('${assignment.guide2_id}')">×</button>
-                    </div>
-                `;
+                    `;
+                }
             }
             
             updateAssignmentStatus();
+            
+            // Debug log to verify selectedGuides array is populated
+            console.log('📋 selectedGuides array updated:', selectedGuides);
         }
         
         function updateSelectedGuidesFromArray() {
@@ -4313,6 +4366,12 @@
             }
         }
 
+        // Navigate to AI scheduler with current month/year parameters
+        function openAIScheduler() {
+            const [year, month] = currentMonth.split('-');
+            window.location.href = `ai_scheduler.html?year=${year}&month=${month}`;
+        }
+
         // Backend-owned auto-scheduling trigger
         async function runAutoScheduling() {
             try {
@@ -4320,20 +4379,24 @@
                 
                 const [year, month] = currentMonth.split('-');
                 console.log('Running auto-scheduling for:', { year, month });
-                // Call new backend endpoint per docs plan
-                const response = await fetch(`${API_BASE}/schedule/auto/${year}/${month}?overwrite=true`, {
+                // Call advanced scheduler with state-of-the-art algorithm
+                const response = await fetch(`${API_BASE}/schedule/auto-advanced/${year}/${month}?overwrite=true`, {
                     method: 'POST'
                 });
                 
                 const result = await response.json();
                 
                 if (result.success) {
-                    showNotification(`שיבוץ אוטומטי הושלם בהצלחה! ${result.stats.assigned} שיבוצים נוצרו`, 'success');
+                    const fairnessMsg = result.fairness_score ? ` | ציון הוגנות: ${result.fairness_score}` : '';
+                    showNotification(`שיבוץ מתקדם הושלם בהצלחה! ${result.total_assignments} שיבוצים נוצרו${fairnessMsg}`, 'success');
+                    
+                    // Log detailed results for debugging
+                    console.log('Advanced scheduling result:', result);
                     
                     // Reload the schedule to show changes
                     await loadMonthSchedule(year, month);
                 } else {
-                    showNotification(`שגיאה בשיבוץ אוטומטי: ${result.error}`, 'error');
+                    showNotification(`שגיאה בשיבוץ מתקדם: ${result.error || result.message}`, 'error');
                 }
                 
             } catch (error) {
@@ -4568,13 +4631,16 @@
                 }
                 
                 // Save the new schedule
+                // Temporarily disabled during scheduler refactor
                 const response = await fetch(`${API_BASE}/schedule/auto-assign`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ year, month, schedule })
                 });
-                
                 const result = await response.json();
+                if (result && result.disabled) {
+                    showNotification('שיבוץ אוטומטי מושבת זמנית בזמן ריפקטור', 'warning');
+                }
                 return result;
                 
             } catch (error) {
@@ -5706,6 +5772,9 @@
         }
 
         function populateIndividualCalendar(guideName, scheduleData) {
+            console.log(`🗓️ Populating individual calendar for: ${guideName}`);
+            console.log(`📊 Schedule data contains ${scheduleData.length} entries`);
+            
             const calendarGrid = document.getElementById('individual-calendar-grid');
             calendarGrid.innerHTML = '';
             
@@ -5732,6 +5801,9 @@
             }
             
             // Add days of month
+            let workingDays = 0;
+            let totalDays = lastDay.getDate();
+            
             for (let day = 1; day <= lastDay.getDate(); day++) {
                 const dayCell = document.createElement('div');
                 dayCell.className = 'calendar-day';
@@ -5739,24 +5811,36 @@
                 
                 // Find if this guide worked on this day
                 const dateString = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                const daySchedule = scheduleData.find(d => d.date === dateString);
+                const daySchedule = scheduleData.find(d => d.date_str === dateString);
+                
+                if (day <= 5) { // Debug first few days
+                    console.log(`🔍 Day ${day} (${dateString}): schedule found = ${!!daySchedule}, data = `, daySchedule);
+                }
                 
                 if (daySchedule) {
                     let isThisGuide = false;
                     let shiftType = '';
                     let isManual = false;
                     
-                    if (daySchedule.guide1_name === guideName) {
+                    // More robust name matching - trim whitespace and handle case variations
+                    const normalizedGuideName = guideName.trim();
+                    const guide1Name = (daySchedule.guide1_name || '').trim();
+                    const guide2Name = (daySchedule.guide2_name || '').trim();
+                    
+                    if (guide1Name === normalizedGuideName) {
                         isThisGuide = true;
                         shiftType = daySchedule.guide1_role || 'רגיל';
                         isManual = daySchedule.is_manual;
-                    } else if (daySchedule.guide2_name === guideName) {
+                    } else if (guide2Name === normalizedGuideName) {
                         isThisGuide = true;
                         shiftType = daySchedule.guide2_role || 'חפיפה';
                         isManual = daySchedule.is_manual;
                     }
                     
                     if (isThisGuide) {
+                        workingDays++;
+                        console.log(`✅ ${guideName} works on ${dateString}: ${shiftType}`);
+                        
                         // Determine CSS class based on shift type and day
                         const dayOfWeek = getDayOfWeekLocal(dateString);
                         const isWeekend = dayOfWeek === 5 || dayOfWeek === 6;
@@ -5778,13 +5862,33 @@
                         // Add tooltip with shift details
                         dayCell.title = `${shiftType}${isManual ? ' (ידני)' : ' (אוטומטי)'}`;
                     } else {
+                        // Guide doesn't work this day - make it clearly empty
                         dayCell.classList.add('empty');
+                        dayCell.style.backgroundColor = '#f8f9fa';
+                        dayCell.style.color = '#6c757d';
+                        dayCell.title = 'לא עובד ביום זה';
                     }
                 } else {
+                    // No schedule data for this day - completely empty
                     dayCell.classList.add('empty');
+                    dayCell.style.backgroundColor = '#f8f9fa';
+                    dayCell.style.color = '#6c757d';
+                    dayCell.title = 'אין נתונים ליום זה';
                 }
                 
                 calendarGrid.appendChild(dayCell);
+            }
+            
+            // Log summary
+            console.log(`📋 Calendar populated for ${guideName}: ${workingDays} working days out of ${totalDays} total days`);
+            
+            // Update calendar title with guide name and month info
+            const monthNames = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 
+                               'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
+            const monthName = monthNames[parseInt(month) - 1];
+            const calendarMonthElement = document.getElementById('individual-calendar-month');
+            if (calendarMonthElement) {
+                calendarMonthElement.textContent = `${monthName} ${year} - ${guideName}`;
             }
         }
 

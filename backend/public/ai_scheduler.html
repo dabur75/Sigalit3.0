@@ -1,0 +1,847 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <title>AI Scheduler Workspace</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <script src="/header-functions.js"></script>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; margin: 0; padding: 0; }
+    .toolbar { display: flex; gap: 8px; padding: 12px; border-bottom: 1px solid #eee; align-items: center; }
+    .calendar { width: 100%; margin-top: 10px; }
+    .schedule-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      margin-top: 10px;
+      table-layout: auto;
+    }
+    .schedule-table th,
+    .schedule-table td {
+      width: 14.28%; /* 100% / 7 days = 14.28% */
+      box-sizing: border-box;
+    }
+    .schedule-table tr {
+      height: 80px;
+    }
+    .schedule-table th {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 4px 6px;
+      text-align: center;
+      font-weight: 600;
+      border-radius: 6px 6px 0 0;
+      font-size: 11px;
+      line-height: 1.2;
+    }
+    .schedule-table td {
+      background: white;
+      border: 1px solid #e2e8f0;
+      padding: 6px 4px;
+      text-align: center;
+      vertical-align: top;
+      min-height: 80px;
+      max-height: 120px;
+      border-radius: 4px;
+      transition: all 0.2s ease;
+      overflow: hidden;
+      position: relative;
+    }
+    .schedule-table td:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .day-number {
+      font-weight: 700;
+      font-size: 12px;
+      color: #1e293b;
+      margin-bottom: 1px;
+      line-height: 1;
+    }
+    .day-guides {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+      margin-bottom: 1px;
+    }
+    .guide-item-display {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 3px;
+      padding: 2px 4px;
+      font-size: 10px;
+      text-align: center;
+      transition: all 0.2s ease;
+      line-height: 1.1;
+      margin: 1px 0;
+      word-wrap: break-word;
+    }
+    .guide-item-display:hover {
+      background: #e2e8f0;
+      transform: scale(1.02);
+    }
+    
+    /* Role Color Coding from scheduler.html */
+    .guide-overlap {
+      border-color: #3b82f6;
+      color: #1e40af;
+      font-weight: 600;
+    }
+    
+    .guide-regular {
+      border-color: #10b981;
+      color: #065f46;
+      font-weight: 500;
+    }
+    
+    .guide-conan-friday {
+      border-color: #f59e0b;
+      color: #92400e;
+      font-weight: 600;
+      background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    }
+    
+    .guide-role-label {
+      font-size: 9px;
+      opacity: 0.8;
+      font-weight: 400;
+    }
+    
+    .guide-name {
+      font-size: 10px;
+      font-weight: 600;
+    }
+    .row { display: flex; gap: 8px; align-items: center; }
+    .status { padding: 0 12px; color: #666; font-size: 12px; }
+    .day.has-warn { border-color: #e67a7a; box-shadow: 0 0 0 2px rgba(230,122,122,0.15) inset; }
+    .chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+    .chip { font-size: 11px; padding: 2px 6px; border-radius: 10px; background: #eef; color: #334; border: 1px solid #ccd; }
+    .chip.role-רגיל { background: #e9f7ef; border-color: #cdebd8; color: #2e7d32; }
+    .chip.role-חפיפה { background: #fff3e0; border-color: #ffe0b2; color: #ef6c00; }
+    .chip.role-כונן { background: #e3f2fd; border-color: #bbdefb; color: #1565c0; }
+    .chip.role-מוצ״ש { background: #f3e5f5; border-color: #e1bee7; color: #6a1b9a; }
+    .warn-badge { position: absolute; top: 6px; left: 6px; font-size: 10px; color: #b00020; }
+    .overlay { position: fixed; inset: 0; background: rgba(255,255,255,0.6); display: none; align-items: center; justify-content: center; font-size: 16px; color: #333; z-index: 10; }
+    .legend { display: flex; gap: 12px; margin: 8px 0; font-size: 11px; flex-wrap: wrap; }
+    .legend-item { display: flex; align-items: center; gap: 4px; }
+    .legend-color { width: 12px; height: 12px; border-radius: 2px; border: 1px solid #ccc; }
+  </style>
+</head>
+<body>
+  <div id="header"></div>
+  <div class="toolbar">
+    <div class="row">
+      <label>שנה</label>
+      <input type="number" id="year" value="2025" style="width:80px" />
+      <label>חודש</label>
+      <input type="number" id="month" value="8" style="width:60px" />
+      <button id="btnGenerate">שפר לוח קיים</button>
+      <button id="btnApprove" disabled>אשר כטיוטה</button>
+      <button id="btnFill" disabled>מלא ימים ריקים</button>
+      <button id="btnCost">הצג עלות AI</button>
+      <button id="btnTest" style="background:#ff9800; color:white;">בדיקה</button>
+      <button id="btnReset" style="background:#e53e3e; color:white;">איפוס לוח - חזרה לשיבוצים ידניים בלבד</button>
+      <span class="status" id="status"></span>
+    </div>
+    <div class="row" id="completionStatus" style="margin-top:8px; display:none;">
+      <div id="progressBar" style="background:#eee; border:1px solid #ccc; border-radius:4px; width:200px; height:20px; overflow:hidden;">
+        <div id="progressFill" style="background:#4caf50; height:100%; width:0%; transition:width 0.3s;"></div>
+      </div>
+      <span id="progressText" style="margin-right:8px; font-size:12px;"></span>
+      <span id="completionDetails" style="font-size:11px; color:#666;"></span>
+    </div>
+    <div class="legend">
+      <div class="legend-item">
+        <div class="legend-color" style="background:#e8f5e8; border-color:#4caf50;"></div>
+        <span>🔒 ידני</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color" style="background:#e3f2fd; border-color:#2196f3;"></div>
+        <span>🧠 AI</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color" style="background:#fff3e0; border-color:#ff9800;"></div>
+        <span>🚑 מולא</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color" style="background:#ffebee; border-color:#f44336;"></div>
+        <span>❌ ריק</span>
+      </div>
+    </div>
+  </div>
+  <div class="calendar">
+    <table class="schedule-table" id="main-schedule-table">
+      <thead>
+        <tr>
+          <th>ראשון</th>
+          <th>שני</th>
+          <th>שלישי</th>
+          <th>רביעי</th>
+          <th>חמישי</th>
+          <th>שישי</th>
+          <th>שבת</th>
+        </tr>
+      </thead>
+      <tbody id="calendarBody">
+        <!-- Calendar days will be populated here -->
+      </tbody>
+    </table>
+  </div>
+  <div class="overlay" id="overlay">טוען...</div>
+
+  <script>
+    // Inject site header markup so header-functions.js can find elements
+    (async function loadHeader(){
+      try {
+        const resp = await fetch('header.html');
+        const html = await resp.text();
+        const container = document.getElementById('header');
+        if (container) container.innerHTML = html;
+      } catch (e) {
+        console.warn('Failed to load header.html:', e);
+      }
+    })();
+    
+    // Auto-import existing schedule on page load
+    window.addEventListener('DOMContentLoaded', async () => {
+      // Get URL parameters if available (passed from scheduler.html)
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlYear = urlParams.get('year');
+      const urlMonth = urlParams.get('month');
+      
+      // Set input values from URL parameters or defaults
+      if (urlYear) document.getElementById('year').value = urlYear;
+      if (urlMonth) document.getElementById('month').value = urlMonth;
+      
+      const year = parseInt(document.getElementById('year').value, 10);
+      const month = parseInt(document.getElementById('month').value, 10);
+      
+      console.log('AI Scheduler loading with:', { year, month, fromURL: !!urlYear });
+      
+      // Import existing schedule automatically
+      const importedSchedule = await importExistingSchedule(year, month);
+      console.log('Imported schedule:', importedSchedule.length, 'days');
+      
+      if (importedSchedule.length > 0) {
+        PROPOSAL = importedSchedule;
+        renderCalendar(year, month, PROPOSAL);
+        updateCompletionStatus({
+          totalDays: new Date(year, month, 0).getDate(),
+          coveredDays: importedSchedule.filter(d => d.assignments.length > 0).length,
+          missingDays: importedSchedule.filter(d => d.assignments.length === 0).length,
+          gapsFilled: 0,
+          criticalGaps: 0,
+          isComplete: importedSchedule.every(d => d.assignments.length > 0)
+        });
+      }
+    });
+    const statusEl = document.getElementById('status');
+    const calendarBody = document.querySelector('#calendarBody');
+    let SESSION_ID = null;
+    let PROPOSAL = [];
+    let WARNINGS = [];
+    let GUIDE_MAP = new Map();
+    let COMPLETION_STATUS = null;
+
+    function pad(n){ return String(n).padStart(2,'0'); }
+    function setStatus(msg){ statusEl.textContent = msg; }
+    
+    function updateCompletionStatus(completionData) {
+      const statusDiv = document.getElementById('completionStatus');
+      const progressFill = document.getElementById('progressFill');
+      const progressText = document.getElementById('progressText');
+      const detailsSpan = document.getElementById('completionDetails');
+      
+      if (!completionData) {
+        statusDiv.style.display = 'none';
+        return;
+      }
+      
+      const { totalDays, coveredDays, missingDays, gapsFilled, criticalGaps, isComplete } = completionData;
+      const percentage = Math.round((coveredDays / totalDays) * 100);
+      
+      // Update progress bar
+      progressFill.style.width = `${percentage}%`;
+      progressFill.style.background = isComplete ? '#4caf50' : (percentage > 80 ? '#ff9800' : '#f44336');
+      
+      // Update text
+      progressText.textContent = `${coveredDays}/${totalDays} ימים (${percentage}%)`;
+      
+      // Update details
+      const details = [];
+      if (missingDays > 0) details.push(`${missingDays} חסרים`);
+      if (gapsFilled > 0) details.push(`${gapsFilled} מולאו`);
+      if (criticalGaps > 0) details.push(`${criticalGaps} קריטיים`);
+      
+      detailsSpan.textContent = details.length > 0 ? details.join(' • ') : 'הושלם בהצלחה';
+      detailsSpan.style.color = isComplete ? '#4caf50' : '#f44336';
+      
+      statusDiv.style.display = 'flex';
+      statusDiv.style.alignItems = 'center';
+      statusDiv.style.gap = '8px';
+    }
+
+    // Match scheduler.html column order: ראשון, שני, שלישי, רביעי, חמישי, שישי, שבת
+    const WEEKDAYS = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
+    function firstDayOffset(year, month){
+      // month is 1-based; JS Date month is 0-based
+      const d = new Date(year, month - 1, 1);
+      return d.getDay(); // 0=Sunday ... 6=Saturday
+    }
+    // New table-based rendering to match scheduler.html
+    function renderCalendar(year, month, proposal) {
+      if (!calendarBody) return;
+      calendarBody.innerHTML = '';
+      
+      const weeks = generateCalendarDays(year, month, proposal);
+      
+      weeks.forEach((week, weekIndex) => {
+        const row = document.createElement('tr');
+        week.forEach((day, columnIndex) => {
+          const cell = document.createElement('td');
+          if (day) {
+            cell.innerHTML = createDayCell(day);
+            // Debug: log position of days with assignments
+            if (day.assignments && day.assignments.length > 0) {
+              const dayNames = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
+              console.log(`🗓️ Day ${day.date} (${day.dayNumber}) appears in week ${weekIndex}, column ${columnIndex} (${dayNames[columnIndex]})`);
+            }
+          } else {
+            cell.innerHTML = '<div class="day-number">-</div>';
+          }
+          row.appendChild(cell);
+        });
+        calendarBody.appendChild(row);
+      });
+    }
+    
+    function generateCalendarDays(year, month, proposal) {
+      const weeks = [];
+      let currentWeek = [];
+      
+      // Match scheduler.html exactly: month is 1-based input, but Date constructor needs 0-based
+      const firstDay = new Date(year, month - 1, 1);
+      const lastDay = new Date(year, month, 0);
+      const firstDayOfWeek = firstDay.getDay();
+      
+      console.log(`📅 Calendar debug: ${year}-${month}`);
+      console.log(`   First day: ${firstDay.toDateString()} (day of week: ${firstDayOfWeek})`);
+      console.log(`   Days in month: ${lastDay.getDate()}`);
+      console.log(`   Empty cells needed at start: ${firstDayOfWeek}`);
+      console.log(`   Should match scheduler.html logic`);
+      
+      // Add empty cells for days before the first day of the month
+      for (let i = 0; i < firstDayOfWeek; i++) {
+        currentWeek.push(null);
+      }
+      
+      // Add all days of the month
+      for (let day = 1; day <= lastDay.getDate(); day++) {
+        const dateStr = `${year}-${pad(month)}-${pad(day)}`;
+        const dayData = proposal.find(x => x.date === dateStr) || { 
+          date: dateStr, 
+          assignments: [], 
+          explanation_he: '',
+          is_manual: false,
+          is_gap_filled: false 
+        };
+        
+        const dayObj = {
+          date: dateStr,
+          dayNumber: day,
+          ...dayData
+        };
+        
+        // Debug: log non-empty days
+        if (dayObj.assignments && dayObj.assignments.length > 0) {
+          console.log(`📊 Day ${dateStr} has assignments:`, dayObj.assignments);
+        }
+        
+        currentWeek.push(dayObj);
+        
+        if (currentWeek.length === 7) {
+          weeks.push(currentWeek);
+          currentWeek = [];
+        }
+      }
+      
+      // Fill remaining cells in last week
+      while (currentWeek.length > 0 && currentWeek.length < 7) {
+        currentWeek.push(null);
+      }
+      if (currentWeek.length > 0) {
+        weeks.push(currentWeek);
+      }
+      
+      return weeks;
+    }
+    
+    function createDayCell(day) {
+      const warnings = (WARNINGS || []).filter(w => w.date === day.date);
+      const hasWarnings = warnings.length > 0;
+      
+      // Debug logging for specific days
+      if (day.assignments && day.assignments.length > 0) {
+        console.log(`🎯 Rendering day ${day.date} with ${day.assignments.length} assignments:`, day.assignments);
+      }
+      
+      let cellHtml = `<div class="day-number">${day.dayNumber}</div>`;
+      
+      // Add assignment displays
+      if (day.assignments && day.assignments.length > 0) {
+        cellHtml += '<div class="day-guides">';
+        day.assignments.forEach(assignment => {
+          const name = assignment.guide_name || GUIDE_MAP.get(Number(assignment.guide_id)) || `#${assignment.guide_id}`;
+          const role = assignment.role || 'רגיל';
+          const roleClass = getRoleClass(role, day.is_manual);
+          const nameClass = `guide-${name.toLowerCase().replace(/\s+/g, '')}`;
+          
+          cellHtml += `
+            <div class="guide-item-display ${roleClass} ${nameClass}">
+              <span class="guide-role-label">${role}</span>
+              <span class="guide-name">${name}</span>
+            </div>
+          `;
+        });
+        cellHtml += '</div>';
+      }
+      
+      // Add status indicators
+      const statusIndicators = [];
+      if (day.is_manual) statusIndicators.push('🔒');
+      if (day.is_gap_filled) statusIndicators.push('🚑');
+      if (!day.assignments || day.assignments.length === 0) statusIndicators.push('❌');
+      if (hasWarnings) statusIndicators.push(`⚠️${warnings.length}`);
+      
+      if (statusIndicators.length > 0) {
+        cellHtml += `<div style="font-size:10px; margin-top:2px;">${statusIndicators.join(' ')}</div>`;
+      }
+      
+      // Add explanation if available
+      if (day.explanation_he) {
+        cellHtml += `<div style="font-size:8px; color:#666; margin-top:1px;" title="${day.explanation_he}">${day.explanation_he.substring(0, 30)}${day.explanation_he.length > 30 ? '...' : ''}</div>`;
+      }
+      
+      return cellHtml;
+    }
+    
+    function getRoleClass(role, isManual) {
+      if (isManual) return 'guide-overlap'; // Manual assignments get overlap styling
+      
+      switch(role) {
+        case 'חפיפה': return 'guide-overlap';
+        case 'כונן': return 'guide-conan-friday';
+        case 'מוצ״ש': return 'guide-overlap';
+        case 'רגיל':
+        default: return 'guide-regular';
+      }
+    }
+
+    // Import existing schedule from scheduler.html
+    async function importExistingSchedule(year, month) {
+      try {
+        setStatus('מייבא לוח קיים...');
+        // Use same API as scheduler.html
+        console.log(`Importing schedule from: /api/schedule/enhanced/${year}/${month}`);
+        const response = await apiFetch(`/api/schedule/enhanced/${year}/${month}`);
+        const schedule = await response.json();
+        
+        console.log('Raw schedule data:', schedule);
+        console.log('Schedule type:', Array.isArray(schedule), 'Length:', Array.isArray(schedule) ? schedule.length : 'not array');
+        
+        // Log details of existing assignments with expected vs actual dates
+        if (Array.isArray(schedule) && schedule.length > 0) {
+          schedule.forEach(day => {
+            if (day.guide1_id || day.guide2_id) {
+              const normalizedDate = day.date.includes('T') ? day.date.substring(0, 10) : day.date;
+              console.log(`📅 RAW: ${day.date} → NORMALIZED: ${normalizedDate}`);
+              console.log(`   Guide1: ${day.guide1_id}(${day.guide1_name}), Guide2: ${day.guide2_id}(${day.guide2_name}), Manual: ${day.is_manual}`);
+              
+              // Show what scheduler.html would display vs what we're showing
+              if (day.guide1_name === 'אלדד שרייבר') {
+                console.log(`   ⭐ This should be August 1st assignment (אלדד + יפתח) in scheduler.html`);
+              }
+              if (day.guide1_name === 'עמית יחזקאלי' && day.guide2_name === 'עופרי שפינט') {
+                console.log(`   ⭐ This should be August 7th assignment (עמית + עופרי) in scheduler.html`);
+              }
+            }
+          });
+        }
+        
+        // Convert scheduler.html format to AI scheduler format
+        const convertedSchedule = convertScheduleFormat(schedule, year, month);
+        console.log('Converted schedule:', convertedSchedule.length, 'days');
+        
+        // Load guide names
+        try {
+          const gResp = await apiFetch('/api/users');
+          const users = await gResp.json();
+          GUIDE_MAP = new Map(users.map(u => [u.id, u.name]));
+          console.log('Loaded guide map:', GUIDE_MAP.size, 'guides');
+        } catch (e) {
+          console.error('Failed to load guide names:', e);
+        }
+        
+        // Ensure we have all days of the month, even if empty
+        const fullMonthSchedule = generateFullMonthSchedule(year, month, convertedSchedule);
+        
+        setStatus(`נטען לוח קיים עם ${fullMonthSchedule.length} ימים`);
+        return fullMonthSchedule;
+      } catch (error) {
+        console.error('Error importing existing schedule:', error);
+        setStatus('שגיאה בייבוא לוח קיים: ' + error.message);
+        return [];
+      }
+    }
+    
+    // Convert scheduler.html format to AI scheduler format
+    function convertScheduleFormat(schedulerData, year, month) {
+      const converted = [];
+      
+      if (!Array.isArray(schedulerData)) {
+        console.warn('Schedule data is not an array:', schedulerData);
+        return converted;
+      }
+      
+      schedulerData.forEach(day => {
+        if (!day.date) {
+          console.warn('Day missing date:', day);
+          return;
+        }
+        
+        // Normalize date to YYYY-MM-DD format (handle timezone correctly)
+        let normalizedDate;
+        if (day.date.includes('T')) {
+          // Handle timezone offset by parsing as UTC and adding time to fix the shift
+          const utcDate = new Date(day.date);
+          // Add 12 hours to handle timezone offset (moves evening times to next day)
+          utcDate.setHours(utcDate.getHours() + 12);
+          const year = utcDate.getFullYear();
+          const month = String(utcDate.getMonth() + 1).padStart(2, '0');
+          const dayNum = String(utcDate.getDate()).padStart(2, '0');
+          normalizedDate = `${year}-${month}-${dayNum}`;
+          console.log(`📅 Date conversion with timezone fix: ${day.date} → ${normalizedDate}`);
+        } else {
+          normalizedDate = day.date;
+        }
+        
+        // Filter out dates that don't belong to the requested month
+        const dateYear = parseInt(normalizedDate.split('-')[0]);
+        const dateMonth = parseInt(normalizedDate.split('-')[1]);
+        
+        // Skip dates from other months (July 31st shouldn't appear in August calendar)
+        if (dateYear !== year || dateMonth !== month) {
+          console.log(`🚫 Skipping date ${normalizedDate} - not in requested month ${year}-${month}`);
+          return;
+        }
+        
+        const assignments = [];
+        
+        // Convert guide1 to assignment format
+        if (day.guide1_id) {
+          assignments.push({
+            guide_id: day.guide1_id,
+            guide_name: day.guide1_name,
+            role: day.guide1_role || 'רגיל'
+          });
+        }
+        
+        // Convert guide2 to assignment format  
+        if (day.guide2_id) {
+          assignments.push({
+            guide_id: day.guide2_id,
+            guide_name: day.guide2_name,
+            role: day.guide2_role || 'רגיל'
+          });
+        }
+        
+        const convertedDay = {
+          date: normalizedDate,
+          assignments: assignments,
+          explanation_he: day.is_manual ? 'שיבוץ ידני' : (assignments.length > 0 ? 'שיבוץ אוטומטי' : 'יום ריק'),
+          is_manual: day.is_manual || false,
+          is_imported: true,
+          is_empty: assignments.length === 0
+        };
+        
+        // Debug: log days with assignments
+        if (assignments.length > 0) {
+          console.log(`✅ Converted ${normalizedDate} (from ${day.date}): ${assignments.length} assignments`, assignments);
+        }
+        
+        converted.push(convertedDay);
+      });
+      
+      console.log(`Converted ${converted.length} days from scheduler format`);
+      return converted;
+    }
+    
+    // Generate full month schedule with empty days filled in
+    function generateFullMonthSchedule(year, month, existingSchedule) {
+      const fullMonth = [];
+      const daysInMonth = new Date(year, month, 0).getDate();
+      
+      // Create a map of existing schedule by date
+      const scheduleMap = new Map();
+      existingSchedule.forEach(day => {
+        scheduleMap.set(day.date, day);
+      });
+      
+      // Generate all days of the month
+      for (let day = 1; day <= daysInMonth; day++) {
+        const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        
+        if (scheduleMap.has(dateStr)) {
+          // Use existing schedule data
+          fullMonth.push(scheduleMap.get(dateStr));
+        } else {
+          // Create empty day
+          fullMonth.push({
+            date: dateStr,
+            assignments: [],
+            explanation_he: 'יום ריק - טרם שובץ',
+            is_manual: false,
+            is_imported: true,
+            is_empty: true
+          });
+        }
+      }
+      
+      console.log(`Generated full month: ${fullMonth.length} days (${existingSchedule.length} existing + ${fullMonth.length - existingSchedule.length} empty)`);
+      return fullMonth;
+    }
+
+    document.getElementById('btnGenerate').onclick = async () => {
+      const year = parseInt(document.getElementById('year').value, 10);
+      const month = parseInt(document.getElementById('month').value, 10);
+      setStatus('משפר לוח קיים...');
+      try {
+        showOverlay(true);
+        
+        // Get existing schedule first (convert to AI scheduler format)
+        const existingSchedule = PROPOSAL.length > 0 ? PROPOSAL : await importExistingSchedule(year, month);
+        
+        // Call new enhance-existing endpoint with existing data
+        const resp = await apiFetch('/api/schedule/ai/enhance-existing', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            year, 
+            month, 
+            house_id: 'dror', 
+            existingSchedule: existingSchedule,
+            force: true 
+          })
+        });
+        const data = await resp.json();
+        if (!data.success) return setStatus('שגיאה: ' + (data.error || '')); 
+        SESSION_ID = data.sessionId;
+        PROPOSAL = data.proposal || [];
+        WARNINGS = data.warnings || [];
+        COMPLETION_STATUS = data.completionStatus || null;
+        try {
+          // Use users endpoint to include coordinators too
+          const gResp = await apiFetch('/api/users');
+          const users = await gResp.json();
+          GUIDE_MAP = new Map(users.map(u => [u.id, u.name]));
+        } catch (_) {}
+        renderCalendar(year, month, PROPOSAL);
+        updateCompletionStatus(COMPLETION_STATUS);
+        setStatus('לוח שופר בהצלחה. מזהה: ' + SESSION_ID);
+        document.getElementById('btnApprove').disabled = false;
+        document.getElementById('btnFill').disabled = COMPLETION_STATUS?.isComplete !== false;
+        showOverlay(false);
+      } catch (e) { setStatus('שגיאה: ' + e.message); }
+    };
+
+    document.getElementById('btnApprove').onclick = async () => {
+      const year = parseInt(document.getElementById('year').value, 10);
+      const month = parseInt(document.getElementById('month').value, 10);
+      const monthStr = `${year}-${pad(month)}`;
+      try {
+        showOverlay(true);
+        // 1) Create draft
+        await apiFetch(`/api/workflow/create-draft/${monthStr}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ notes: 'AI draft' }) });
+        // 2) Overwrite with AI proposal
+        const resp = await apiFetch('/api/schedule/ai/overwrite-draft', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionId: SESSION_ID }) });
+        const data = await resp.json();
+        if (data.success) setStatus('טיוטה נשמרה בהצלחה'); else setStatus('שגיאה בשמירה');
+        showOverlay(false);
+      } catch (e) { setStatus('שגיאה: ' + e.message); }
+    };
+
+    document.getElementById('btnCost').onclick = async () => {
+      try {
+        const resp = await apiFetch('/api/schedule/ai/usage/summary');
+        const data = await resp.json();
+        alert(`עלות חודשית: $${data.total_cost_usd.toFixed(4)}\nTokens in: ${data.total_input_tokens}\nTokens out: ${data.total_output_tokens}`);
+      } catch (e) { alert('שגיאה בקריאת נתוני עלות: ' + e.message); }
+    };
+    function showOverlay(show){
+      const ov = document.getElementById('overlay');
+      ov.style.display = show ? 'flex' : 'none';
+    }
+
+    // Handle click on warning badges (event delegation)
+    calendarBody.addEventListener('click', (e) => {
+      const target = e.target;
+      if (target && target.classList.contains('warn-badge')) {
+        const raw = target.getAttribute('data-warn');
+        if (raw) {
+          try {
+            const arr = JSON.parse(decodeURIComponent(raw));
+            const unique = Array.from(new Set(arr.map(w => w.type)));
+            alert('אזהרות:\n' + unique.join('\n'));
+          } catch (_) {}
+        }
+        e.stopPropagation();
+      }
+    });
+
+    // Fill blanks: iterate empty days and call refine-day with constrained instructions
+    document.getElementById('btnFill').onclick = async () => {
+      const year = parseInt(document.getElementById('year').value, 10);
+      const month = parseInt(document.getElementById('month').value, 10);
+      const guideIds = Array.from(GUIDE_MAP.keys());
+      const emptyDays = PROPOSAL.filter(d => !d.assignments || d.assignments.length === 0).map(d => d.date);
+      if (emptyDays.length === 0) { alert('אין ימים ריקים.'); return; }
+      showOverlay(true);
+      setStatus('ממלא ימים ריקים...');
+      for (const dateStr of emptyDays) {
+        try {
+          const instr = `שבץ עד שני מדריכים זמינים מתוך הרשימה: [${guideIds.join(',')}]. תפקידים מותרים: רגיל, חפיפה, כונן, מוצ״ש. כבד את כל האילוצים.`;
+          const resp = await apiFetch('/api/schedule/ai/refine-day', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sessionId: SESSION_ID, date: dateStr, instructions: instr })
+          });
+          const data = await resp.json();
+          if (data.success && data.updated) {
+            const idx = PROPOSAL.findIndex(x => x.date === dateStr);
+            if (idx >= 0) PROPOSAL[idx] = data.day; else PROPOSAL.push(data.day);
+          }
+        } catch (_) {}
+      }
+      renderCalendar(year, month, PROPOSAL);
+      showOverlay(false);
+      setStatus('הושלם מילוי ימים ריקים');
+    };
+
+    // Test different enhancement scenarios
+    document.getElementById('btnTest').onclick = async () => {
+      const year = parseInt(document.getElementById('year').value, 10);
+      const month = parseInt(document.getElementById('month').value, 10);
+      
+      try {
+        setStatus('מבצע בדיקות...');
+        showOverlay(true);
+        
+        // Test 1: Empty schedule (should work like before)
+        console.log('🧪 Test 1: Empty schedule enhancement');
+        const emptyTest = await apiFetch('/api/schedule/ai/enhance-existing', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            year, 
+            month, 
+            house_id: 'dror', 
+            existingSchedule: [], // Empty schedule
+            force: true 
+          })
+        });
+        const emptyResult = await emptyTest.json();
+        console.log('✅ Empty schedule test result:', emptyResult.success ? 'PASS' : 'FAIL', emptyResult.stats);
+        
+        // Test 2: Partially filled schedule 
+        console.log('🧪 Test 2: Partially filled schedule enhancement');
+        const partialSchedule = [
+          {
+            date: `${year}-${String(month).padStart(2,'0')}-01`,
+            assignments: [{ guide_id: 1, role: 'רגיל' }],
+            explanation_he: 'שיבוץ ידני קיים',
+            is_manual: true
+          },
+          {
+            date: `${year}-${String(month).padStart(2,'0')}-15`, 
+            assignments: [],
+            explanation_he: 'יום ריק',
+            is_manual: false
+          }
+        ];
+        
+        const partialTest = await apiFetch('/api/schedule/ai/enhance-existing', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            year, 
+            month, 
+            house_id: 'dror', 
+            existingSchedule: partialSchedule,
+            force: true 
+          })
+        });
+        const partialResult = await partialTest.json();
+        console.log('✅ Partial schedule test result:', partialResult.success ? 'PASS' : 'FAIL', partialResult.stats);
+        
+        // Test 3: Current actual schedule (import and enhance)
+        console.log('🧪 Test 3: Current actual schedule enhancement');
+        const actualSchedule = await importExistingSchedule(year, month);
+        const actualTest = await apiFetch('/api/schedule/ai/enhance-existing', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            year, 
+            month, 
+            house_id: 'dror', 
+            existingSchedule: actualSchedule,
+            force: true 
+          })
+        });
+        const actualResult = await actualTest.json();
+        console.log('✅ Actual schedule test result:', actualResult.success ? 'PASS' : 'FAIL', actualResult.stats);
+        
+        // Display the enhanced result from Test 3 
+        if (actualResult.success) {
+          SESSION_ID = actualResult.sessionId;
+          PROPOSAL = actualResult.proposal || [];
+          WARNINGS = actualResult.warnings || [];
+          COMPLETION_STATUS = actualResult.completionStatus || null;
+          renderCalendar(year, month, PROPOSAL);
+          updateCompletionStatus(COMPLETION_STATUS);
+        }
+        
+        setStatus('בדיקות הושלמו - בדוק קונסול לתוצאות');
+        showOverlay(false);
+        
+      } catch (e) { 
+        console.error('Test error:', e);
+        setStatus('שגיאה בבדיקות: ' + e.message); 
+        showOverlay(false);
+      }
+    };
+
+    // Reset to manual assignments only
+    document.getElementById('btnReset').onclick = async () => {
+      const year = parseInt(document.getElementById('year').value, 10);
+      const month = parseInt(document.getElementById('month').value, 10);
+      
+      setStatus('מאפס לוח - חזרה לשיבוצים ידניים בלבד...');
+      console.log('🔄 RESET: Clearing AI schedule, keeping only manual assignments');
+      
+      // Clear current proposal and reload only manual assignments
+      PROPOSAL = [];
+      SESSION_ID = null;
+      WARNINGS = [];
+      COMPLETION_STATUS = null;
+      
+      // Re-import existing schedule (only manual assignments will remain)
+      const manualSchedule = await importExistingSchedule(year, month);
+      PROPOSAL = manualSchedule;
+      
+      // Re-render calendar with only manual assignments
+      renderCalendar(year, month, PROPOSAL);
+      updateCompletionStatus(null);
+      
+      setStatus('לוח אופס - נשארו רק שיבוצים ידניים. כעת ניתן ללחוץ "שפר לוח קיים"');
+      console.log('✅ RESET: Schedule cleared. Ready for fresh AI enhancement.');
+    };
+  </script>
+</body>
+</html>
+
+

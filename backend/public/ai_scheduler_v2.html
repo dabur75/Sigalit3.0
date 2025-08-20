@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>AI Monthly Scheduler - Proposal Workspace</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="/header-functions.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body { 
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+      margin: 0; padding: 0; background: #f8fafc; color: #334155;
+    }
+    
+    .main-layout {
+      display: flex; height: 100vh;
+    }
+    .main-layout.chat-mode {
+      padding-left: 0;
+    }
+    
+    /* Left Panel - Calendar */
+    .calendar-panel {
+      flex: 2; display: flex; flex-direction: column;
+      background: white; border-left: 1px solid #e2e8f0;
+    }
+    
+    /* Chat Helper Button */
+    .chat-helper {
+      position: fixed; bottom: 20px; left: 20px; z-index: 1000;
+      width: 60px; height: 60px; border-radius: 50%;
+      background: linear-gradient(135deg, #25d366, #128c7e);
+      border: none; color: white; font-size: 24px;
+      cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      transition: all 0.3s ease;
+    }
+    .chat-helper:hover {
+      transform: scale(1.1);
+      box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+    }
+    
+    /* Chat Popup */
+    .chat-popup {
+      position: fixed; bottom: 100px; left: 20px; z-index: 1000;
+      width: 350px; height: 500px; background: white;
+      border-radius: 12px; box-shadow: 0 8px 25px rgba(0,0,0,0.25);
+      display: none; flex-direction: column;
+      border: 1px solid #e2e8f0;
+    }
+    
+    /* Toolbar */
+    .toolbar {
+      display: flex; gap: 12px; padding: 16px; 
+      border-bottom: 1px solid #e2e8f0; align-items: center;
+      background: white; flex-wrap: wrap;
+    }
+    .toolbar label { font-weight: 600; color: #475569; }
+    .toolbar input, .toolbar select { 
+      padding: 6px 10px; border: 1px solid #d1d5db;
+      border-radius: 6px; font-size: 14px;
+    }
+    .btn {
+      padding: 8px 16px; border: none; border-radius: 6px;
+      font-weight: 600; cursor: pointer; font-size: 14px;
+      display: inline-flex; align-items: center; gap: 6px;
+    }
+    .btn-primary { background: #3b82f6; color: white; }
+    .btn-primary:hover { background: #2563eb; }
+    .btn-secondary { background: #64748b; color: white; }
+    .btn-secondary:hover { background: #475569; }
+    .btn-success { background: #059669; color: white; }
+    .btn-success:hover { background: #047857; }
+    .btn-danger { background: #dc2626; color: white; }
+    .btn-danger:hover { background: #b91c1c; }
+    
+    /* Calendar Grid */
+    .calendar {
+      flex: 1; padding: 20px; overflow-y: auto;
+    }
+    .calendar-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 20px;
+    }
+    .calendar-title {
+      font-size: 24px; font-weight: 700; color: #1e293b;
+    }
+    
+    .schedule-table {
+      width: 100%; border-collapse: separate; border-spacing: 2px;
+    }
+    .schedule-table th {
+      background: linear-gradient(135deg, #3b82f6, #1e40af);
+      color: white; padding: 12px; text-align: center; 
+      font-weight: 600; border-radius: 8px; font-size: 14px;
+    }
+    .schedule-table td {
+      background: white; border: 1px solid #e2e8f0;
+      padding: 8px; height: 100px; vertical-align: top;
+      border-radius: 8px; cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .schedule-table td:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+      border-color: #3b82f6;
+    }
+    .schedule-table td.selected {
+      border-color: #3b82f6; border-width: 2px;
+      background: #eff6ff;
+    }
+    
+    .day-number {
+      font-weight: 700; font-size: 16px; color: #1e293b;
+      margin-bottom: 6px;
+    }
+    .day-assignments {
+      display: flex; flex-direction: column; gap: 3px;
+    }
+    .assignment {
+      background: #f1f5f9; border: 1px solid #cbd5e1;
+      border-radius: 4px; padding: 3px 6px; font-size: 11px;
+      text-align: center; line-height: 1.2;
+    }
+    .assignment.ai { background: #dbeafe; border-color: #3b82f6; color: #1e40af; }
+    .assignment.manual { background: #dcfce7; border-color: #16a34a; color: #166534; position: relative; }
+    .assignment.protected { background: #fef3c7; border-color: #f59e0b; color: #92400e; font-weight: bold; }
+    .assignment.locked::after { 
+      content: '🔒'; position: absolute; top: -2px; right: -2px; 
+      font-size: 8px; background: white; border-radius: 50%; 
+      width: 12px; height: 12px; display: flex; align-items: center; justify-content: center;
+    }
+    .assignment.empty { background: #fef3c7; border-color: #f59e0b; color: #92400e; }
+    
+    .day-explanation {
+      font-size: 10px; color: #64748b; margin-top: 4px;
+      line-height: 1.2; max-height: 24px; overflow: hidden;
+    }
+    
+    /* Chat Interface */
+    .chat-header {
+      padding: 16px; border-bottom: 1px solid #e2e8f0;
+      background: white;
+    }
+    .chat-title {
+      font-size: 18px; font-weight: 700; color: #1e293b;
+      margin: 0;
+    }
+    
+    .chat-messages {
+      flex: 1; padding: 16px; overflow-y: auto;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+    .message {
+      padding: 12px; border-radius: 12px; max-width: 85%;
+      word-wrap: break-word; line-height: 1.4;
+    }
+    .message.user {
+      background: #3b82f6; color: white; align-self: flex-end;
+      border-bottom-right-radius: 4px;
+    }
+    .message.assistant {
+      background: white; border: 1px solid #e2e8f0;
+      border-bottom-left-radius: 4px; align-self: flex-start;
+    }
+    .message.system {
+      background: #f8fafc; border: 1px solid #e2e8f0;
+      text-align: center; font-style: italic; color: #64748b;
+      align-self: center; border-radius: 16px;
+    }
+    
+    .chat-input {
+      padding: 16px; border-top: 1px solid #e2e8f0;
+      background: white;
+    }
+    .chat-form {
+      display: flex; gap: 8px;
+    }
+    .chat-form input {
+      flex: 1; padding: 10px; border: 1px solid #d1d5db;
+      border-radius: 8px; font-size: 14px;
+    }
+    
+    /* Status and Loading */
+    .status {
+      padding: 12px 16px; background: #f1f5f9;
+      border-bottom: 1px solid #e2e8f0; font-weight: 500;
+    }
+    .status.loading { background: #fef3c7; }
+    .status.success { background: #dcfce7; }
+    .status.error { background: #fee2e2; }
+    
+    .loading {
+      display: inline-block; width: 16px; height: 16px;
+      border: 2px solid #e2e8f0; border-top-color: #3b82f6;
+      border-radius: 50%; animation: spin 1s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    
+    /* Quick Actions */
+    .quick-actions {
+      padding: 12px 16px; display: flex; gap: 8px; flex-wrap: wrap;
+      border-bottom: 1px solid #e2e8f0; background: #f8fafc;
+    }
+    .quick-btn {
+      padding: 6px 12px; background: white; border: 1px solid #d1d5db;
+      border-radius: 16px; font-size: 12px; cursor: pointer;
+    }
+    .quick-btn:hover { background: #f1f5f9; }
+    
+    /* Budget Display */
+    .budget-info {
+      font-size: 12px; color: #64748b; margin-left: auto;
+    }
+    
+    /* Empty State */
+    .empty-calendar {
+      text-align: center; padding: 60px 20px; color: #64748b;
+    }
+    .empty-calendar h3 { margin: 0 0 8px 0; }
+  </style>
+</head>
+<body>
+  <div class="main-layout">
+    <!-- Chat Helper Button -->
+    <button class="chat-helper" onclick="toggleChat()" id="chat-helper">
+      💬
+    </button>
+
+    <!-- Chat Popup -->
+    <div class="chat-popup" id="chat-popup">
+      <div class="chat-header">
+        <h3 class="chat-title">💬 עוזר AI</h3>
+        <button onclick="toggleChat()" style="float: left; background: none; border: none; font-size: 16px; cursor: pointer;">✖</button>
+      </div>
+      
+      <div class="quick-actions">
+        <button class="quick-btn" onclick="quickAction('תעדף איזון עומס')">איזון עומס</button>
+        <button class="quick-btn" onclick="quickAction('אל תשבץ בסופי שבוע')">ללא סופ"ש</button>
+        <button class="quick-btn" onclick="quickAction('שנה את יום 15')">שנה יום</button>
+      </div>
+      
+      <div class="chat-messages" id="chat-messages">
+        <div class="message system">ברוך הבא למתכנן AI! צור הצעה חדשה או שוחח איתי לשיפורים</div>
+      </div>
+      
+      <div class="chat-input">
+        <form class="chat-form" onsubmit="sendMessage(event)">
+          <input type="text" id="chat-input" placeholder="כתוב הודעה..." disabled>
+          <button type="submit" class="btn btn-primary" disabled>שלח</button>
+        </form>
+      </div>
+    </div>
+    
+    <!-- Main Panel: Calendar -->
+    <div class="calendar-panel" style="flex: 1;">
+      <div class="toolbar">
+        <label>שנה:</label>
+        <input type="number" id="year" value="2025" min="2024" max="2030" style="width: 80px;">
+        
+        <label>חודש:</label>
+        <select id="month">
+          <option value="1">ינואר</option>
+          <option value="2">פברואר</option>
+          <option value="3">מרץ</option>
+          <option value="4">אפריל</option>
+          <option value="5">מאי</option>
+          <option value="6">יוני</option>
+          <option value="7">יולי</option>
+          <option value="8" selected>אוגוסט</option>
+          <option value="9">ספטמבר</option>
+          <option value="10">אוקטובר</option>
+          <option value="11">נובמבר</option>
+          <option value="12">דצמבר</option>
+        </select>
+        
+        <button class="btn btn-primary" onclick="generateProposal()">
+          🤖 צור הצעה
+        </button>
+        
+        <button class="btn btn-success" onclick="approveAsDraft()" id="btn-approve" disabled>
+          ✅ אשר כטיוטה
+        </button>
+        
+        <button class="btn btn-secondary" onclick="showUsage()">
+          💰 עלות AI
+        </button>
+        
+        <button class="btn btn-danger" onclick="clearCalendar()">
+          🗑️ נקה לוח
+        </button>
+        
+        <div class="budget-info" id="budget-info">
+          טוען...
+        </div>
+      </div>
+      
+      <div class="status" id="status">
+        בחר שנה וחודש וצור הצעה חדשה
+      </div>
+      
+      <div class="calendar">
+        <div class="calendar-header">
+          <div class="calendar-title" id="calendar-title">לוח שיבוץ AI</div>
+        </div>
+        
+        <div id="calendar-content">
+          <div class="empty-calendar">
+            <h3>🗓️ אין הצעה פעילה</h3>
+            <p>לחץ על "צור הצעה" כדי להתחיל</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentSession = null;
+    let currentProposal = [];
+    let selectedDate = null;
+    let guides = new Map();
+
+    // Initialize
+    window.addEventListener('DOMContentLoaded', async () => {
+      const params = new URLSearchParams(window.location.search);
+      if (params.has('year')) document.getElementById('year').value = params.get('year');
+      if (params.has('month')) document.getElementById('month').value = params.get('month');
+      
+      loadBudgetInfo();
+      
+      // Auto-load existing manual schedules
+      await loadExistingScheduleOnInit();
+    });
+
+    function setStatus(message, type = '') {
+      const statusEl = document.getElementById('status');
+      statusEl.textContent = message;
+      statusEl.className = `status ${type}`;
+    }
+
+    // Toggle chat popup
+    function toggleChat() {
+      const popup = document.getElementById('chat-popup');
+      const helper = document.getElementById('chat-helper');
+      
+      if (popup.style.display === 'flex') {
+        popup.style.display = 'none';
+        helper.textContent = '💬';
+      } else {
+        popup.style.display = 'flex';
+        helper.textContent = '✖';
+      }
+    }
+    
+    // Clear calendar and reset
+    function clearCalendar() {
+      if (confirm('האם אתה בטוח שברצונך לנקות את הלוח? פעולה זו תמחק את כל ההצעות הנוכחיות.')) {
+        currentSession = null;
+        currentProposal = [];
+        selectedDate = null;
+        
+        document.getElementById('calendar-content').innerHTML = `
+          <div class="empty-calendar">
+            <h3>🗓️ אין הצעה פעילה</h3>
+            <p>לחץ על "צור הצעה" כדי להתחיל</p>
+          </div>
+        `;
+        
+        document.getElementById('btn-approve').disabled = true;
+        document.getElementById('chat-input').disabled = true;
+        document.querySelector('button[type="submit"]').disabled = true;
+        
+        setStatus('הלוח נוקה בהצלחה', 'success');
+        
+        // Clear chat messages
+        document.getElementById('chat-messages').innerHTML = `
+          <div class="message system">ברוך הבא למתכנן AI! צור הצעה חדשה או שוחח איתי לשיפורים</div>
+        `;
+      }
+    }
+    
+    // Load existing manual assignments on page init
+    async function loadExistingScheduleOnInit() {
+      const year = parseInt(document.getElementById('year').value);
+      const month = parseInt(document.getElementById('month').value);
+      
+      try {
+        setStatus('📋 טוען שיבוצים קיימים...', 'loading');
+        
+        const response = await apiFetch(`/api/schedule/ai/existing-schedule/${year}/${month}/dror`);
+        const data = await response.json();
+        
+        if (data.success && data.schedule.length > 0) {
+          currentProposal = data.schedule;
+          renderCalendar(year, month);
+          setStatus(`✅ נטענו ${data.count} שיבוצים ידניים`, 'success');
+          
+          // Enable chat for refinements
+          document.getElementById('chat-input').disabled = false;
+          document.querySelector('button[type="submit"]').disabled = false;
+          
+        } else {
+          setStatus('📅 אין שיבוצים ידניים - מוכן ליצירת הצעה חדשה', '');
+        }
+        
+      } catch (error) {
+        console.warn('Could not load existing schedule:', error.message);
+        setStatus('📅 מוכן ליצירת הצעה חדשה', '');
+      }
+    }
+    
+    // Load existing manual assignments for AI enhancement
+    async function loadExistingSchedule(year, month) {
+      try {
+        const response = await apiFetch(`/api/schedule/ai/existing-schedule/${year}/${month}/dror`);
+        const data = await response.json();
+        
+        if (data.success) {
+          return data.schedule || [];
+        }
+      } catch (error) {
+        console.warn('Could not load existing schedule:', error.message);
+      }
+      return [];
+    }
+
+    // Generate new proposal using propose-month endpoint
+    async function generateProposal() {
+      const year = parseInt(document.getElementById('year').value);
+      const month = parseInt(document.getElementById('month').value);
+      
+      setStatus('🤖 יוצר הצעה חדשה...', 'loading');
+      document.querySelector('[onclick="generateProposal()"]').disabled = true;
+      
+      try {
+        // Load existing manual assignments first
+        setStatus('📋 טוען שיבוצים קיימים...', 'loading');
+        const existingSchedule = await loadExistingSchedule(year, month);
+        
+        // Merge with currently displayed manual schedules
+        const protectedDays = currentProposal.filter(d => d.is_protected || d.is_manual);
+        const allExistingSchedule = [...existingSchedule, ...protectedDays];
+        
+        const response = await apiFetch('/api/schedule/ai/propose-month', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            year, 
+            month, 
+            house_id: 'dror',
+            existingSchedule: allExistingSchedule 
+          })
+        });
+        
+        const result = await response.json();
+        
+        if (!result.success) {
+          throw new Error(result.error || 'Failed to generate proposal');
+        }
+        
+        console.log('✅ Proposal generated:', result);
+        
+        currentSession = result.sessionId;
+        
+        // Merge AI proposal with protected manual schedules
+        const aiProposal = result.proposal || [];
+        const mergedProposal = [];
+        
+        // Create a map of existing protected schedules
+        const protectedMap = new Map();
+        protectedDays.forEach(day => protectedMap.set(day.date, day));
+        
+        // Generate all dates in month
+        const daysInMonth = new Date(year, month, 0).getDate();
+        for (let day = 1; day <= daysInMonth; day++) {
+          const dateStr = `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+          
+          // Use protected schedule if exists, otherwise AI proposal
+          if (protectedMap.has(dateStr)) {
+            mergedProposal.push(protectedMap.get(dateStr));
+          } else {
+            const aiDay = aiProposal.find(d => d.date === dateStr);
+            if (aiDay) {
+              mergedProposal.push(aiDay);
+            }
+          }
+        }
+        
+        currentProposal = mergedProposal;
+        
+        renderCalendar(year, month);
+        
+        const enhancedCount = currentProposal.filter(d => d.assignments && d.assignments.length > 0).length;
+        const protectedCount = protectedDays.length;
+        setStatus(`✅ הצעה נוצרה: ${enhancedCount} ימים מתוכננים (${protectedCount} מוגנים, ${result.warnings?.length || 0} אזהרות)`, 'success');
+        
+        document.getElementById('btn-approve').disabled = false;
+        document.getElementById('chat-input').disabled = false;
+        document.querySelector('button[type="submit"]').disabled = false;
+        
+        addChatMessage('system', `הצעה חדשה נוצרה עבור ${month}/${year} עם ${enhancedCount} ימים מתוכננים`);
+        
+        if (result.warnings && result.warnings.length > 0) {
+          console.warn('Proposal warnings:', result.warnings);
+        }
+        
+        loadBudgetInfo();
+        
+      } catch (error) {
+        console.error('Proposal generation error:', error);
+        setStatus(`❌ שגיאה: ${error.message}`, 'error');
+      } finally {
+        document.querySelector('[onclick="generateProposal()"]').disabled = false;
+      }
+    }
+
+    // Render calendar with current proposal
+    function renderCalendar(year, month) {
+      const monthNames = ['', 'ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 
+                         'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
+      
+      document.getElementById('calendar-title').textContent = `${monthNames[month]} ${year}`;
+      
+      const daysInMonth = new Date(year, month, 0).getDate();
+      const firstDay = new Date(year, month - 1, 1).getDay();
+      
+      let html = `
+        <table class="schedule-table">
+          <thead>
+            <tr>
+              <th>ראשון</th><th>שני</th><th>שלישי</th><th>רביעי</th>
+              <th>חמישי</th><th>שישי</th><th>שבת</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+      
+      let dayCount = 1;
+      let weekCount = 0;
+      
+      while (dayCount <= daysInMonth) {
+        html += '<tr>';
+        
+        for (let dayOfWeek = 0; dayOfWeek < 7; dayOfWeek++) {
+          if (weekCount === 0 && dayOfWeek < firstDay) {
+            html += '<td></td>';
+          } else if (dayCount <= daysInMonth) {
+            const dateStr = `${year}-${String(month).padStart(2,'0')}-${String(dayCount).padStart(2,'0')}`;
+            const dayData = currentProposal.find(d => d.date === dateStr);
+            const isSelected = selectedDate === dateStr;
+            
+            html += `<td class="${isSelected ? 'selected' : ''}" onclick="selectDate('${dateStr}')">`;
+            html += `<div class="day-number">${dayCount}</div>`;
+            html += '<div class="day-assignments">';
+            
+            if (dayData && dayData.assignments && dayData.assignments.length > 0) {
+              dayData.assignments.forEach(assignment => {
+                let className = 'assignment';
+                let icon = '🤖';
+                
+                if (dayData.is_manual) {
+                  className += ' manual';
+                  icon = '👤';
+                }
+                if (dayData.is_protected) {
+                  className += ' protected locked';
+                  icon = '🔒';
+                }
+                if (!dayData.is_manual && !dayData.is_protected) {
+                  className += ' ai';
+                }
+                
+                html += `<div class="${className}">${icon} ${assignment.guide_name || `Guide ${assignment.guide_id}`}<br><small>${assignment.role}</small></div>`;
+              });
+            } else {
+              html += '<div class="assignment empty">❌ ריק</div>';
+            }
+            
+            html += '</div>';
+            
+            if (dayData && dayData.explanation_he) {
+              html += `<div class="day-explanation">${dayData.explanation_he}</div>`;
+            }
+            
+            html += '</td>';
+            dayCount++;
+          } else {
+            html += '<td></td>';
+          }
+        }
+        
+        html += '</tr>';
+        weekCount++;
+      }
+      
+      html += '</tbody></table>';
+      
+      document.getElementById('calendar-content').innerHTML = html;
+    }
+
+    // Select a date for refinement
+    function selectDate(dateStr) {
+      // Remove previous selection
+      document.querySelectorAll('.schedule-table td').forEach(td => td.classList.remove('selected'));
+      
+      // Add selection to clicked date
+      event.target.closest('td').classList.add('selected');
+      selectedDate = dateStr;
+      
+      const dayData = currentProposal.find(d => d.date === dateStr);
+      const formattedDate = new Date(dateStr + 'T00:00:00').toLocaleDateString('he-IL');
+      
+      if (dayData && dayData.assignments && dayData.assignments.length > 0) {
+        const assignmentText = dayData.assignments.map(a => `${a.guide_name || `מדריך ${a.guide_id}`} (${a.role})`).join(', ');
+        const protection = dayData.is_protected ? ' 🔒 מוגן' : '';
+        addChatMessage('system', `נבחר ${formattedDate}: ${assignmentText}${protection}`);
+      } else {
+        addChatMessage('system', `נבחר ${formattedDate}: יום ריק`);
+      }
+    }
+
+    // Chat functionality
+    function addChatMessage(role, content) {
+      const messagesEl = document.getElementById('chat-messages');
+      const messageEl = document.createElement('div');
+      messageEl.className = `message ${role}`;
+      messageEl.textContent = content;
+      messagesEl.appendChild(messageEl);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    function quickAction(action) {
+      document.getElementById('chat-input').value = action;
+    }
+
+    async function sendMessage(event) {
+      event.preventDefault();
+      
+      if (!currentSession) {
+        addChatMessage('system', 'נדרש להציע לוח תחילה');
+        return;
+      }
+      
+      const input = document.getElementById('chat-input');
+      const message = input.value.trim();
+      if (!message) return;
+      
+      input.value = '';
+      addChatMessage('user', message);
+      addChatMessage('system', '💭 עובד...');
+      
+      try {
+        const response = await apiFetch('/api/schedule/ai/refine-day', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sessionId: currentSession,
+            date: selectedDate,
+            instructions: message
+          })
+        });
+        
+        const result = await response.json();
+        
+        if (!result.success) {
+          throw new Error(result.error || 'Refinement failed');
+        }
+        
+        // Remove "working" message
+        const messages = document.getElementById('chat-messages');
+        messages.removeChild(messages.lastChild);
+        
+        addChatMessage('assistant', result.explanation || 'השיבוץ עודכן');
+        
+        // Update proposal if day was changed
+        if (result.updatedDay) {
+          const dayIndex = currentProposal.findIndex(d => d.date === result.updatedDay.date);
+          if (dayIndex >= 0) {
+            currentProposal[dayIndex] = result.updatedDay;
+          } else {
+            currentProposal.push(result.updatedDay);
+          }
+          
+          const year = parseInt(document.getElementById('year').value);
+          const month = parseInt(document.getElementById('month').value);
+          renderCalendar(year, month);
+        }
+        
+        loadBudgetInfo();
+        
+      } catch (error) {
+        // Remove "working" message
+        const messages = document.getElementById('chat-messages');
+        messages.removeChild(messages.lastChild);
+        
+        addChatMessage('system', `❌ שגיאה: ${error.message}`);
+      }
+    }
+
+    // Approve proposal as draft
+    async function approveAsDraft() {
+      if (!currentSession) return;
+      
+      setStatus('💾 שומר כטיוטה...', 'loading');
+      
+      try {
+        const response = await apiFetch('/api/schedule/ai/approve-as-draft', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sessionId: currentSession,
+            draftName: `AI Proposal ${new Date().toLocaleDateString('he-IL')}`,
+            notes: 'Generated by AI Monthly Scheduler'
+          })
+        });
+        
+        const result = await response.json();
+        
+        if (!result.success) {
+          throw new Error(result.error || 'Failed to approve as draft');
+        }
+        
+        setStatus(`✅ נשמר כטיוטה: ${result.draftName}`, 'success');
+        addChatMessage('system', `✅ הלוח נשמר כטיוטה: ${result.draftName}`);
+        
+      } catch (error) {
+        console.error('Approve as draft error:', error);
+        setStatus(`❌ שגיאה בשמירה: ${error.message}`, 'error');
+      }
+    }
+
+    // Load budget information
+    async function loadBudgetInfo() {
+      try {
+        const response = await apiFetch('/api/schedule/ai/usage/summary');
+        const result = await response.json();
+        
+        if (result.success) {
+          const costStr = (result.total_cost_usd || 0).toFixed(3);
+          document.getElementById('budget-info').textContent = `עלות: $${costStr}`;
+        }
+      } catch (error) {
+        console.error('Budget load error:', error);
+        document.getElementById('budget-info').textContent = 'עלות: שגיאה';
+      }
+    }
+
+    // Show detailed usage
+    async function showUsage() {
+      try {
+        const response = await apiFetch('/api/schedule/ai/usage/summary');
+        const result = await response.json();
+        
+        if (result.success) {
+          const details = `
+עלויות AI:
+• סה"כ tokens קלט: ${(result.total_input_tokens || 0).toLocaleString()}
+• סה"כ tokens פלט: ${(result.total_output_tokens || 0).toLocaleString()}  
+• עלות כוללת: $${(result.total_cost_usd || 0).toFixed(4)}
+          `;
+          alert(details.trim());
+        }
+      } catch (error) {
+        alert('שגיאה בטעינת נתוני עלות');
+      }
+    }
+  </script>
+</body>
+</html>

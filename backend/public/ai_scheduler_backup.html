@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <title>AI Scheduler Workspace</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <script src="/header-functions.js"></script>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; margin: 0; padding: 0; }
+    .toolbar { display: flex; gap: 8px; padding: 12px; border-bottom: 1px solid #eee; align-items: center; }
+    .calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; padding: 12px; }
+    .calendar-header { display: contents; }
+    .weekday { font-weight: 600; text-align: center; padding: 4px 0; color: #334; }
+    .day { border: 1px solid #ddd; padding: 8px; border-radius: 6px; min-height: 90px; background: #fafafa; position: relative; }
+    .day.empty { background: transparent; border: none; }
+    .day h4 { margin: 0 0 6px 0; font-size: 12px; color: #333; }
+    .day p { margin: 0; font-size: 12px; color: #555; }
+    .row { display: flex; gap: 8px; align-items: center; }
+    .status { padding: 0 12px; color: #666; font-size: 12px; }
+    .day.has-warn { border-color: #e67a7a; box-shadow: 0 0 0 2px rgba(230,122,122,0.15) inset; }
+    .chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+    .chip { font-size: 11px; padding: 2px 6px; border-radius: 10px; background: #eef; color: #334; border: 1px solid #ccd; }
+    .chip.role-רגיל { background: #e9f7ef; border-color: #cdebd8; color: #2e7d32; }
+    .chip.role-חפיפה { background: #fff3e0; border-color: #ffe0b2; color: #ef6c00; }
+    .chip.role-כונן { background: #e3f2fd; border-color: #bbdefb; color: #1565c0; }
+    .chip.role-מוצ״ש { background: #f3e5f5; border-color: #e1bee7; color: #6a1b9a; }
+    .warn-badge { position: absolute; top: 6px; left: 6px; font-size: 10px; color: #b00020; }
+    .overlay { position: fixed; inset: 0; background: rgba(255,255,255,0.6); display: none; align-items: center; justify-content: center; font-size: 16px; color: #333; z-index: 10; }
+    .legend { display: flex; gap: 12px; margin: 8px 0; font-size: 11px; flex-wrap: wrap; }
+    .legend-item { display: flex; align-items: center; gap: 4px; }
+    .legend-color { width: 12px; height: 12px; border-radius: 2px; border: 1px solid #ccc; }
+  </style>
+</head>
+<body>
+  <div id="header"></div>
+  <div class="toolbar">
+    <div class="row">
+      <label>שנה</label>
+      <input type="number" id="year" value="2025" style="width:80px" />
+      <label>חודש</label>
+      <input type="number" id="month" value="8" style="width:60px" />
+      <button id="btnGenerate">צור הצעה</button>
+      <button id="btnApprove" disabled>אשר כטיוטה</button>
+      <button id="btnFill" disabled>מלא ימים ריקים</button>
+      <button id="btnCost">הצג עלות AI</button>
+      <span class="status" id="status"></span>
+    </div>
+    <div class="row" id="completionStatus" style="margin-top:8px; display:none;">
+      <div id="progressBar" style="background:#eee; border:1px solid #ccc; border-radius:4px; width:200px; height:20px; overflow:hidden;">
+        <div id="progressFill" style="background:#4caf50; height:100%; width:0%; transition:width 0.3s;"></div>
+      </div>
+      <span id="progressText" style="margin-right:8px; font-size:12px;"></span>
+      <span id="completionDetails" style="font-size:11px; color:#666;"></span>
+    </div>
+    <div class="legend">
+      <div class="legend-item">
+        <div class="legend-color" style="background:#e8f5e8; border-color:#4caf50;"></div>
+        <span>🔒 ידני</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color" style="background:#e3f2fd; border-color:#2196f3;"></div>
+        <span>🧠 AI</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color" style="background:#fff3e0; border-color:#ff9800;"></div>
+        <span>🚑 מולא</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color" style="background:#ffebee; border-color:#f44336;"></div>
+        <span>❌ ריק</span>
+      </div>
+    </div>
+  </div>
+  <div class="calendar" id="calendar"></div>
+  <div class="overlay" id="overlay">טוען...</div>
+
+  <script>
+    // Inject site header markup so header-functions.js can find elements
+    (async function loadHeader(){
+      try {
+        const resp = await fetch('header.html');
+        const html = await resp.text();
+        const container = document.getElementById('header');
+        if (container) container.innerHTML = html;
+      } catch (e) {
+        console.warn('Failed to load header.html:', e);
+      }
+    })();
+    const statusEl = document.getElementById('status');
+    const calEl = document.getElementById('calendar');
+    let SESSION_ID = null;
+    let PROPOSAL = [];
+    let WARNINGS = [];
+    let GUIDE_MAP = new Map();
+    let COMPLETION_STATUS = null;
+
+    function pad(n){ return String(n).padStart(2,'0'); }
+    function setStatus(msg){ statusEl.textContent = msg; }
+    
+    function updateCompletionStatus(completionData) {
+      const statusDiv = document.getElementById('completionStatus');
+      const progressFill = document.getElementById('progressFill');
+      const progressText = document.getElementById('progressText');
+      const detailsSpan = document.getElementById('completionDetails');
+      
+      if (!completionData) {
+        statusDiv.style.display = 'none';
+        return;
+      }
+      
+      const { totalDays, coveredDays, missingDays, gapsFilled, criticalGaps, isComplete } = completionData;
+      const percentage = Math.round((coveredDays / totalDays) * 100);
+      
+      // Update progress bar
+      progressFill.style.width = `${percentage}%`;
+      progressFill.style.background = isComplete ? '#4caf50' : (percentage > 80 ? '#ff9800' : '#f44336');
+      
+      // Update text
+      progressText.textContent = `${coveredDays}/${totalDays} ימים (${percentage}%)`;
+      
+      // Update details
+      const details = [];
+      if (missingDays > 0) details.push(`${missingDays} חסרים`);
+      if (gapsFilled > 0) details.push(`${gapsFilled} מולאו`);
+      if (criticalGaps > 0) details.push(`${criticalGaps} קריטיים`);
+      
+      detailsSpan.textContent = details.length > 0 ? details.join(' • ') : 'הושלם בהצלחה';
+      detailsSpan.style.color = isComplete ? '#4caf50' : '#f44336';
+      
+      statusDiv.style.display = 'flex';
+      statusDiv.style.alignItems = 'center';
+      statusDiv.style.gap = '8px';
+    }
+
+    // Match scheduler.html column order: ראשון, שני, שלישי, רביעי, חמישי, שישי, שבת
+    const WEEKDAYS = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
+    function firstDayOffset(year, month){
+      // month is 1-based; JS Date month is 0-based
+      const d = new Date(year, month - 1, 1);
+      return d.getDay(); // 0=Sunday ... 6=Saturday
+    }
+    function renderCalendar(year, month, proposal){
+      calEl.innerHTML = '';
+      // Header row
+      WEEKDAYS.forEach(w => {
+        const h = document.createElement('div');
+        h.className = 'weekday';
+        h.textContent = w;
+        calEl.appendChild(h);
+      });
+      const days = new Date(year, month, 0).getDate();
+      const warnByDate = new Map();
+      (WARNINGS || []).forEach(w => { if (w.date) { const arr = warnByDate.get(w.date) || []; arr.push(w); warnByDate.set(w.date, arr); } });
+      const offset = firstDayOffset(year, month);
+      // leading blanks
+      for (let i=0;i<offset;i++) {
+        const e = document.createElement('div');
+        e.className = 'day empty';
+        calEl.appendChild(e);
+      }
+      for(let d=1; d<=days; d++){
+        const dateStr = `${year}-${pad(month)}-${pad(d)}`;
+        const day = proposal.find(x => x.date === dateStr) || { date: dateStr, assignments: [], explanation_he: '' };
+        const div = document.createElement('div');
+        const warnings = warnByDate.get(dateStr) || [];
+        div.className = 'day' + (warnings.length ? ' has-warn' : '');
+        const chipsHtml = (day.assignments || []).map(a => {
+          const name = a.guide_name || GUIDE_MAP.get(Number(a.guide_id)) || `#${a.guide_id}`;
+          const roleClass = `role-${a.role}`;
+          return `<span class="chip ${roleClass}">${name} · ${a.role}</span>`;
+        }).join('');
+        const warnData = warnings.length ? encodeURIComponent(JSON.stringify(warnings)) : '';
+        const lockHtml = day.is_manual ? ' 🔒' : '';
+        const gapFilledHtml = day.is_gap_filled ? ' 🚑' : '';
+        const emptyHtml = (!day.assignments || day.assignments.length === 0) ? ' ❌' : '';
+        const warnHtml = warnings.length ? `<span class=\"warn-badge\" data-warn=\"${warnData}\">⚠️ ${warnings.length}</span>` : '';
+        
+        // Color code the day based on status
+        if (day.is_manual) {
+          div.style.background = '#e8f5e8'; // Light green for manual
+          div.style.border = '2px solid #4caf50';
+        } else if (day.is_gap_filled) {
+          div.style.background = '#fff3e0'; // Light orange for gap-filled
+          div.style.border = '2px solid #ff9800';
+        } else if (!day.assignments || day.assignments.length === 0) {
+          div.style.background = '#ffebee'; // Light red for empty
+          div.style.border = '2px solid #f44336';
+        } else {
+          div.style.background = '#e3f2fd'; // Light blue for AI-generated
+          div.style.border = '2px solid #2196f3';
+        }
+        
+        const statusText = day.is_manual ? 'ידני' : (day.is_gap_filled ? 'מולא' : (emptyHtml ? 'ריק' : 'AI'));
+        div.innerHTML = `${warnHtml}<h4>${dateStr}${lockHtml}${gapFilledHtml}${emptyHtml} <small>(${statusText})</small></h4><p>${day.explanation_he || ''}</p><div class="chips">${chipsHtml}</div>`;
+        if (!day.is_manual) div.onclick = async () => {
+          const instr = prompt('הוראות לשיפור היום:', 'שבץ שני מדריכים זמינים ומתאימים;');
+          if (!instr) return;
+          try {
+            showOverlay(true);
+            const resp = await apiFetch('/api/schedule/ai/refine-day', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ sessionId: SESSION_ID, date: dateStr, instructions: instr })
+            });
+            const data = await resp.json();
+            if (data.success && data.updated) {
+              const idx = PROPOSAL.findIndex(x => x.date === dateStr);
+              if (idx >= 0) PROPOSAL[idx] = data.day; else PROPOSAL.push(data.day);
+              renderCalendar(year, month, PROPOSAL);
+            } else {
+              alert('לא עודכן: ' + (data.error || '')); 
+            }
+            showOverlay(false);
+          } catch (e) { alert('שגיאה: ' + e.message); }
+        };
+        calEl.appendChild(div);
+      }
+    }
+
+    document.getElementById('btnGenerate').onclick = async () => {
+      const year = parseInt(document.getElementById('year').value, 10);
+      const month = parseInt(document.getElementById('month').value, 10);
+      setStatus('מבקש הצעה...');
+      try {
+        showOverlay(true);
+        const resp = await apiFetch('/api/schedule/ai/propose-month', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ year, month, house_id: 'dror', force: true })
+        });
+        const data = await resp.json();
+        if (!data.success) return setStatus('שגיאה: ' + (data.error || '')); 
+        SESSION_ID = data.sessionId;
+        PROPOSAL = data.proposal || [];
+        WARNINGS = data.warnings || [];
+        COMPLETION_STATUS = data.completionStatus || null;
+        try {
+          // Use users endpoint to include coordinators too
+          const gResp = await apiFetch('/api/users');
+          const users = await gResp.json();
+          GUIDE_MAP = new Map(users.map(u => [u.id, u.name]));
+        } catch (_) {}
+        renderCalendar(year, month, PROPOSAL);
+        updateCompletionStatus(COMPLETION_STATUS);
+        setStatus('הצעה נוצרה. מזהה: ' + SESSION_ID);
+        document.getElementById('btnApprove').disabled = false;
+        document.getElementById('btnFill').disabled = COMPLETION_STATUS?.isComplete !== false;
+        showOverlay(false);
+      } catch (e) { setStatus('שגיאה: ' + e.message); }
+    };
+
+    document.getElementById('btnApprove').onclick = async () => {
+      const year = parseInt(document.getElementById('year').value, 10);
+      const month = parseInt(document.getElementById('month').value, 10);
+      const monthStr = `${year}-${pad(month)}`;
+      try {
+        showOverlay(true);
+        // 1) Create draft
+        await apiFetch(`/api/workflow/create-draft/${monthStr}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ notes: 'AI draft' }) });
+        // 2) Overwrite with AI proposal
+        const resp = await apiFetch('/api/schedule/ai/overwrite-draft', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionId: SESSION_ID }) });
+        const data = await resp.json();
+        if (data.success) setStatus('טיוטה נשמרה בהצלחה'); else setStatus('שגיאה בשמירה');
+        showOverlay(false);
+      } catch (e) { setStatus('שגיאה: ' + e.message); }
+    };
+
+    document.getElementById('btnCost').onclick = async () => {
+      try {
+        const resp = await apiFetch('/api/schedule/ai/usage/summary');
+        const data = await resp.json();
+        alert(`עלות חודשית: $${data.total_cost_usd.toFixed(4)}\nTokens in: ${data.total_input_tokens}\nTokens out: ${data.total_output_tokens}`);
+      } catch (e) { alert('שגיאה בקריאת נתוני עלות: ' + e.message); }
+    };
+    function showOverlay(show){
+      const ov = document.getElementById('overlay');
+      ov.style.display = show ? 'flex' : 'none';
+    }
+
+    // Handle click on warning badges (event delegation)
+    calEl.addEventListener('click', (e) => {
+      const target = e.target;
+      if (target && target.classList.contains('warn-badge')) {
+        const raw = target.getAttribute('data-warn');
+        if (raw) {
+          try {
+            const arr = JSON.parse(decodeURIComponent(raw));
+            const unique = Array.from(new Set(arr.map(w => w.type)));
+            alert('אזהרות:\n' + unique.join('\n'));
+          } catch (_) {}
+        }
+        e.stopPropagation();
+      }
+    });
+
+    // Fill blanks: iterate empty days and call refine-day with constrained instructions
+    document.getElementById('btnFill').onclick = async () => {
+      const year = parseInt(document.getElementById('year').value, 10);
+      const month = parseInt(document.getElementById('month').value, 10);
+      const guideIds = Array.from(GUIDE_MAP.keys());
+      const emptyDays = PROPOSAL.filter(d => !d.assignments || d.assignments.length === 0).map(d => d.date);
+      if (emptyDays.length === 0) { alert('אין ימים ריקים.'); return; }
+      showOverlay(true);
+      setStatus('ממלא ימים ריקים...');
+      for (const dateStr of emptyDays) {
+        try {
+          const instr = `שבץ עד שני מדריכים זמינים מתוך הרשימה: [${guideIds.join(',')}]. תפקידים מותרים: רגיל, חפיפה, כונן, מוצ״ש. כבד את כל האילוצים.`;
+          const resp = await apiFetch('/api/schedule/ai/refine-day', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sessionId: SESSION_ID, date: dateStr, instructions: instr })
+          });
+          const data = await resp.json();
+          if (data.success && data.updated) {
+            const idx = PROPOSAL.findIndex(x => x.date === dateStr);
+            if (idx >= 0) PROPOSAL[idx] = data.day; else PROPOSAL.push(data.day);
+          }
+        } catch (_) {}
+      }
+      renderCalendar(year, month, PROPOSAL);
+      showOverlay(false);
+      setStatus('הושלם מילוי ימים ריקים');
+    };
+  </script>
+</body>
+</html>
+
+
