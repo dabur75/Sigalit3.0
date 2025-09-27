@@ -66,6 +66,16 @@ try {
 } catch (e) {
   console.log('Enhanced manual scheduler routes not available:', e.message);
 }
+
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    timestamp: new Date().toISOString(),
+    service: 'sigalit-backend'
+  });
+});
+
 app.get('/', (req, res) => {
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
   res.setHeader('Pragma', 'no-cache');
@@ -1507,7 +1517,7 @@ app.post('/api/login', async (req, res) => {
   try {
     console.log('🔐 Login attempt:', req.body);
     const { username, password } = req.body;
-
+    
     const rawUsername = String(username || '').trim();
     const isEmailLogin = rawUsername.includes('@');
 
@@ -1520,7 +1530,7 @@ app.post('/api/login', async (req, res) => {
     `;
     const queryByName = `
       SELECT id, name, role, house_id, email, phone, is_active, accessible_houses
-      FROM users
+      FROM users 
       WHERE name = $1 AND password = $2 AND is_active = true
     `;
 
@@ -1560,7 +1570,7 @@ app.get('/api/guides', async (req, res) => {
     const result = await pool.query(`
       SELECT id, name, role, house_id, email, phone, is_active, created_at, updated_at
       FROM users
-      WHERE role = 'מדריך'
+      WHERE role = 'מדריך' AND is_active = true
       ORDER BY name
     `);
 
@@ -1735,23 +1745,46 @@ app.put('/api/guides/:id', async (req, res) => {
   }
 });
 
-// Delete user
+// Soft delete user (mark as inactive instead of hard delete)
 app.delete('/api/guides/:id', async (req, res) => {
   try {
     const { id } = req.params;
     
+    // Instead of deleting, mark the user as inactive
+    // This preserves all historical data while making the user "deleted" from the UI
     const result = await pool.query(`
-      DELETE FROM users WHERE id = $1
+      UPDATE users SET is_active = false, updated_at = CURRENT_TIMESTAMP WHERE id = $1
     `, [id]);
     
     if (result.rowCount > 0) {
-      res.json({ success: true, message: 'Guide deleted successfully' });
+      res.json({ success: true, message: 'Guide marked as inactive successfully' });
     } else {
       res.status(404).json({ error: 'Guide not found' });
     }
   } catch (error) {
-    console.error('Error deleting guide:', error);
-    res.status(500).json({ error: 'Failed to delete guide' });
+    console.error('Error marking guide as inactive:', error);
+    res.status(500).json({ error: 'Failed to mark guide as inactive' });
+  }
+});
+
+// Reactivate user (mark as active again)
+app.patch('/api/guides/:id/reactivate', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Mark the user as active again
+    const result = await pool.query(`
+      UPDATE users SET is_active = true, updated_at = CURRENT_TIMESTAMP WHERE id = $1
+    `, [id]);
+    
+    if (result.rowCount > 0) {
+      res.json({ success: true, message: 'Guide reactivated successfully' });
+    } else {
+      res.status(404).json({ error: 'Guide not found' });
+    }
+  } catch (error) {
+    console.error('Error reactivating guide:', error);
+    res.status(500).json({ error: 'Failed to reactivate guide' });
   }
 });
 
@@ -1859,7 +1892,12 @@ app.get('/api/schedule/:year/:month', async (req, res) => {
 // Create manual assignment
 app.post('/api/schedule/manual', async (req, res) => {
   try {
-    const { date, guide1_id, guide2_id, type, created_by = null } = req.body;
+    const { date, guide1_id, guide2_id, type, created_by = null, manual_override = false } = req.body;
+    
+    // Debug logging
+    console.log('Manual assignment request:', { date, guide1_id, guide2_id, type, created_by, manual_override });
+    console.log('guide1_id type:', typeof guide1_id, 'value:', guide1_id);
+    console.log('guide2_id type:', typeof guide2_id, 'value:', guide2_id);
 
     if (!date) {
       return res.status(400).json({ error: 'date is required' });
@@ -1870,6 +1908,31 @@ app.post('/api/schedule/manual', async (req, res) => {
       return res.status(400).json({ error: 'invalid date' });
     }
 
+    // Check constraints for manual assignment (override)
+    const constraintChecks = [];
+    const constraintType = manual_override ? 'manual-override' : 'manual';
+    if (guide1_id) {
+      constraintChecks.push(checkGuideConstraints(guide1_id, date, constraintType));
+    }
+    if (guide2_id) {
+      constraintChecks.push(checkGuideConstraints(guide2_id, date, constraintType));
+    }
+
+    const constraintResults = await Promise.all(constraintChecks);
+    const blockedGuides = constraintResults.filter(result => !result.isValid);
+
+    if (blockedGuides.length > 0) {
+      const blockedNames = blockedGuides.map(result => result.guideName).join(', ');
+      return res.status(400).json({ 
+        error: `שיבוץ נכשל: ${blockedNames} חסומים לתאריך זה`,
+        details: blockedGuides.map(result => ({
+          guideId: result.guideId,
+          guideName: result.guideName,
+          reasons: result.reasons
+        }))
+      });
+    }
+
     const hebrewWeekdays = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
     const dow = jsDate.getDay();
     const weekday = hebrewWeekdays[dow];
@@ -1878,6 +1941,9 @@ app.post('/api/schedule/manual', async (req, res) => {
     // Derive roles from the provided assignment type
     let guide1_role = null;
     let guide2_role = null;
+    
+    console.log(`🎯 Role assignment: type="${type}", guide1_id=${guide1_id}, guide2_id=${guide2_id}`);
+    
     if (type === 'כונן') {
       guide1_role = 'כונן';
     } else if (type === 'רגיל') {
@@ -1887,7 +1953,18 @@ app.post('/api/schedule/manual', async (req, res) => {
       guide2_role = 'חפיפה';
     } else if (type === 'מוצ״ש') {
       guide1_role = 'מוצ״ש';
+    } else if (type === 'כונן+מוצ״ש') {
+      // Special case for closed Saturday: guide1 continues as כונן, guide2 is מוצ״ש
+      guide1_role = 'כונן';
+      guide2_role = 'מוצ״ש';
+      console.log(`🎯 Closed Saturday weekend: guide1=${guide1_id} as כונן, guide2=${guide2_id} as מוצ״ש`);
+    } else if (type === null || type === undefined) {
+      // When clearing assignment, roles will be null
+      guide1_role = null;
+      guide2_role = null;
     }
+    
+    console.log(`🎯 Final roles: guide1_role="${guide1_role}", guide2_role="${guide2_role}"`);
 
     // Normalize to YYYY-MM-DD for date-only store
     const yyyy = jsDate.getFullYear();
@@ -1899,29 +1976,29 @@ app.post('/api/schedule/manual', async (req, res) => {
     const existingRes = await pool.query('SELECT * FROM schedule WHERE date::date = $1::date', [dateOnly]);
     let savedRow;
     if (existingRes.rows.length === 0) {
-      const insert = await pool.query(`
-        INSERT INTO schedule (
-          date, weekday, type, 
-          guide1_id, guide2_id, 
-          guide1_role, guide2_role,
-          is_manual, is_locked,
-          created_by, created_at, updated_at,
-          house_id
-        ) VALUES (
-          $1::date, $2, $3,
-          $4, $5,
-          $6, $7,
-          true, false,
-          $8, NOW(), NOW(),
-          'dror'
-        )
-        RETURNING *
-      `, [
-        dateOnly, weekday, scheduleType,
-        guide1_id || null, guide2_id || null,
+    const insert = await pool.query(`
+      INSERT INTO schedule (
+        date, weekday, type, 
+        guide1_id, guide2_id, 
         guide1_role, guide2_role,
-        created_by
-      ]);
+        is_manual, is_locked,
+        created_by, created_at, updated_at,
+        house_id
+      ) VALUES (
+        $1::date, $2, $3,
+        $4, $5,
+        $6, $7,
+        true, false,
+        $8, NOW(), NOW(),
+        'dror'
+      )
+      RETURNING *
+    `, [
+      dateOnly, weekday, scheduleType,
+      guide1_id || null, guide2_id || null,
+      guide1_role, guide2_role,
+      created_by
+    ]);
       savedRow = insert.rows[0];
     } else {
       const existing = existingRes.rows[0];
@@ -1930,89 +2007,30 @@ app.post('/api/schedule/manual', async (req, res) => {
       let newGuide1Role = existing.guide1_role;
       let newGuide2Role = existing.guide2_role;
 
-      // Special handling for Saturday: never override existing כונן; place new selection in the other slot
-      const isSaturday = dow === 6;
-      if (isSaturday) {
-        // Detect existing standby slot
-        const standbyInG1 = newGuide1Role === 'כונן' && newGuide1Id != null;
-        const standbyInG2 = newGuide2Role === 'כונן' && newGuide2Id != null;
-        const standbyId = standbyInG1 ? newGuide1Id : (standbyInG2 ? newGuide2Id : null);
-
-        // Determine weekend closed status (from Friday)
-        let isClosedSaturday = false;
-        try {
-          const base = new Date(dateOnly + 'T00:00:00');
-          base.setDate(base.getDate() - 1);
-          const friY = base.getFullYear();
-          const friM = String(base.getMonth() + 1).padStart(2, '0');
-          const friD = String(base.getDate()).padStart(2, '0');
-          const fridayOnly = `${friY}-${friM}-${friD}`;
-          const wt = await pool.query('SELECT is_closed FROM weekend_types WHERE date = $1::date', [fridayOnly]);
-          isClosedSaturday = wt.rows[0]?.is_closed === true;
-        } catch (_) {}
-
-        // Choose requested additional guide (avoid the standby id if sent)
-        let requestedId = null;
-        if (guide2_id && guide2_id !== standbyId) requestedId = guide2_id;
-        else if (guide1_id && guide1_id !== standbyId) requestedId = guide1_id;
-
-        if (requestedId != null) {
-          const desiredRole = (type === 'מוצ״ש' || guide1_role === 'מוצ״ש' || guide2_role === 'מוצ״ש' || isClosedSaturday) ? 'מוצ״ש' : (guide1_role || guide2_role || 'רגיל');
-          if (standbyInG1) {
-            // Put the new guide into slot 2
-            newGuide2Id = requestedId;
-            newGuide2Role = desiredRole;
-          } else if (standbyInG2) {
-            // Put the new guide into slot 1
-            newGuide1Id = requestedId;
-            newGuide1Role = desiredRole;
-          } else {
-            // No existing standby; fill the first empty slot
-            if (newGuide1Id == null) { newGuide1Id = requestedId; newGuide1Role = desiredRole; }
-            else if (newGuide2Id == null) { newGuide2Id = requestedId; newGuide2Role = desiredRole; }
-          }
-        }
-
-        // Extra safety: if this is Saturday and we're not seeing a standby on this row,
-        // try to pull the conan from Friday (closed weekend scenario) and preserve it.
-        try {
-          if (!(newGuide1Role === 'כונן' || newGuide2Role === 'כונן')) {
-            const base2 = new Date(dateOnly + 'T00:00:00');
-            base2.setDate(base2.getDate() - 1);
-            const fy = base2.getFullYear();
-            const fm = String(base2.getMonth() + 1).padStart(2, '0');
-            const fd = String(base2.getDate()).padStart(2, '0');
-            const fridayOnly2 = `${fy}-${fm}-${fd}`;
-            const friRow = await pool.query('SELECT guide1_id, guide2_id, guide1_role, guide2_role FROM schedule WHERE date::date = $1::date', [fridayOnly2]);
-            if (friRow.rows.length > 0) {
-              const fr = friRow.rows[0];
-              const fridayConanId = fr.guide1_role === 'כונן' ? fr.guide1_id : (fr.guide2_role === 'כונן' ? fr.guide2_id : null);
-              if (fridayConanId) {
-                if (newGuide1Id == null) { newGuide1Id = fridayConanId; newGuide1Role = 'כונן'; }
-                else if (newGuide2Id == null) { newGuide2Id = fridayConanId; newGuide2Role = 'כונן'; }
-                else if (newGuide1Role !== 'כונן' && newGuide2Role !== 'כונן') {
-                  // Replace slot 2 if none are standby
-                  newGuide2Id = fridayConanId; newGuide2Role = 'כונן';
-                }
-              }
-            }
-          }
-        } catch (_) {}
+      // Clear existing assignments and set new ones
+      // This ensures that when guides are removed from the form, they are also removed from the database
+      console.log('Checking null condition:', { guide1_id, guide2_id });
+      console.log('guide1_id === null:', guide1_id === null);
+      console.log('guide2_id === null:', guide2_id === null);
+      console.log('guide1_id == null:', guide1_id == null);
+      console.log('guide2_id == null:', guide2_id == null);
+      console.log('Both null (strict)?:', guide1_id === null && guide2_id === null);
+      console.log('Both null (loose)?:', guide1_id == null && guide2_id == null);
+      
+      if ((guide1_id === null || guide1_id === undefined) && (guide2_id === null || guide2_id === undefined)) {
+        // If no guides selected, clear everything
+        console.log('Clearing all assignments');
+        newGuide1Id = null;
+        newGuide2Id = null;
+        newGuide1Role = null;
+        newGuide2Role = null;
       } else {
-        // Default merge: prefer explicitly provided roles; fill empty slots, otherwise replace non-locked same-role
-        if (guide1_id != null) {
-          if (newGuide1Id == null) { newGuide1Id = guide1_id; newGuide1Role = guide1_role; }
-          else { newGuide2Id = guide1_id; newGuide2Role = guide1_role; }
-        }
-        if (guide2_id != null) {
-          if (newGuide2Id == null) { newGuide2Id = guide2_id; newGuide2Role = guide2_role; }
-          else if (newGuide1Id == null) { newGuide1Id = guide2_id; newGuide1Role = guide2_role; }
-          else {
-            // both filled; replace the non-כונן slot to avoid dropping standby by accident
-            if (newGuide1Role !== 'כונן') { newGuide1Id = guide2_id; newGuide1Role = guide2_role; }
-            else if (newGuide2Role !== 'כונן') { newGuide2Id = guide2_id; newGuide2Role = guide2_role; }
-          }
-        }
+        // Set the new assignments
+        console.log('Setting new assignments:', { guide1_id, guide2_id });
+        newGuide1Id = guide1_id;
+        newGuide2Id = guide2_id;
+        newGuide1Role = guide1_role;
+        newGuide2Role = guide2_role;
       }
 
       const update = await pool.query(`
@@ -2038,48 +2056,7 @@ app.post('/api/schedule/manual', async (req, res) => {
       savedRow = update.rows[0];
     }
 
-    // If it's a Friday conan on a closed weekend, mirror the conan to Saturday as a manual assignment
-    if (dow === 5 && guide1_id && (type === 'כונן' || guide1_role === 'כונן')) {
-      // Check weekend_types for this Friday
-      try {
-        const wt = await pool.query('SELECT is_closed FROM weekend_types WHERE date = $1::date', [dateOnly]);
-        const isClosed = wt.rows[0]?.is_closed === true;
-        if (isClosed) {
-          // Compute Saturday (local) as YYYY-MM-DD without timezone drift
-          const base = new Date(dateOnly + 'T00:00:00');
-          base.setDate(base.getDate() + 1);
-          const satY = base.getFullYear();
-          const satM = String(base.getMonth() + 1).padStart(2, '0');
-          const satD = String(base.getDate()).padStart(2, '0');
-          const saturdayOnly = `${satY}-${satM}-${satD}`;
-
-          const satDow = new Date(base).getDay();
-          const satWeekday = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'][satDow];
-
-          // Upsert Saturday: remove any existing row for that date then insert conan
-          await pool.query('DELETE FROM schedule WHERE date::date = $1::date', [saturdayOnly]);
-          await pool.query(`
-            INSERT INTO schedule (
-              date, weekday, type,
-              guide1_id, guide2_id,
-              guide1_role, guide2_role,
-              is_manual, is_locked,
-              created_by, created_at, updated_at,
-              house_id
-            ) VALUES (
-              $1::date, $2, 'weekend',
-              $3, NULL,
-              'כונן', NULL,
-              true, false,
-              $4, NOW(), NOW(),
-              'dror'
-            )
-          `, [saturdayOnly, satWeekday, guide1_id, created_by]);
-        }
-      } catch (e) {
-        console.warn('Weekend mirror to Saturday failed (non-fatal):', e.message);
-      }
-    }
+    // No automatic mirroring to Saturday - each day is independent
 
     res.json({ success: true, assignment: savedRow });
   } catch (error) {
@@ -2092,9 +2069,10 @@ app.post('/api/schedule/manual', async (req, res) => {
 app.get('/api/guides/availability/:date', async (req, res) => {
   try {
     const { date } = req.params;
+    const { assignment_type = 'auto' } = req.query; // 'auto' or 'manual'
     const weekdayNum = new Date(date).getDay();
     
-    console.log(`🚦 Fetching enhanced availability for ${date}`);
+    console.log(`🚦 Fetching enhanced availability for ${date} (${assignment_type})`);
     
     // Get comprehensive availability data
     const result = await pool.query(`
@@ -2160,7 +2138,7 @@ app.get('/api/guides/availability/:date', async (req, res) => {
         last_shift_date: null 
       };
       
-      const trafficLightData = calculateTrafficLightStatusPG(guide, workload, date);
+      const trafficLightData = calculateTrafficLightStatusPG(guide, workload, date, assignment_type);
       
       return {
         ...guide,
@@ -2189,25 +2167,52 @@ app.get('/api/guides/availability/:date', async (req, res) => {
 // PHASE 2: TRAFFIC LIGHT SYSTEM FUNCTIONS
 // ============================================================================
 
-function calculateTrafficLightStatusPG(guide, workload, date) {
+function calculateTrafficLightStatusPG(guide, workload, date, assignmentType = 'auto') {
+  // Check if this is a manual assignment (override)
+  const isManualAssignment = assignmentType === 'manual';
+  
   // Check hard constraints first (RED status)
   
   // Personal constraints
   if (guide.constraint_id) {
-    return {
-      available: false,
-      status: 'red',
-      reason: 'אילוץ אישי'
-    };
+    // For manual assignments, check if it's an auto-scheduling constraint
+    const isAutoSchedulingConstraint = guide.constraint_details && guide.constraint_details.includes('לא לשבץ אוטומטית');
+    
+    if (!isManualAssignment || !isAutoSchedulingConstraint) {
+      return {
+        available: false,
+        status: 'red',
+        reason: 'אילוץ אישי'
+      };
+    } else {
+      // For manual assignments, auto-scheduling constraints are just warnings
+      return {
+        available: true,
+        status: 'yellow',
+        reason: `אזהרה: ${guide.constraint_details} - שיבוץ ידני מותר`
+      };
+    }
   }
   
   // Fixed constraints (weekly recurring)
   if (guide.fixed_constraint_id) {
-    return {
-      available: false,
-      status: 'red', 
-      reason: 'אילוץ קבוע שבועי'
-    };
+    // For manual assignments, check if it's an auto-scheduling constraint
+    const isAutoSchedulingConstraint = guide.fixed_constraint_details && guide.fixed_constraint_details.includes('לא לשבץ אוטומטית');
+    
+    if (!isManualAssignment || !isAutoSchedulingConstraint) {
+      return {
+        available: false,
+        status: 'red', 
+        reason: 'אילוץ קבוע שבועי'
+      };
+    } else {
+      // For manual assignments, auto-scheduling constraints are just warnings
+      return {
+        available: true,
+        status: 'yellow',
+        reason: `אזהרה: ${guide.fixed_constraint_details} - שיבוץ ידני מותר`
+      };
+    }
   }
   
   // Vacations
@@ -2221,11 +2226,20 @@ function calculateTrafficLightStatusPG(guide, workload, date) {
   
   // Coordinator rules - no auto scheduling
   if (guide.coordinator_rule_no_auto_id) {
-    return {
-      available: false,
-      status: 'red',
-      reason: 'חוק רכז - לא באוטומטי'
-    };
+    if (isManualAssignment) {
+      // For manual assignments, coordinator rules are just warnings
+      return {
+        available: true,
+        status: 'yellow',
+        reason: 'אזהרה: חוק רכז - לא באוטומטי (שיבוץ ידני מותר)'
+      };
+    } else {
+      return {
+        available: false,
+        status: 'red',
+        reason: 'חוק רכז - לא באוטומטי'
+      };
+    }
   }
   
   // Consecutive days rule
@@ -2311,6 +2325,14 @@ app.get('/api/weekend-type/:date', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch weekend type' });
   }
 });
+
+// Helper function to format date to YYYY-MM-DD in local timezone
+function formatDateLocal(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
 
   // Get weekend types for a month
   app.get('/api/weekend-types/:year/:month', async (req, res) => {
@@ -2806,10 +2828,10 @@ app.post('/api/workflow/create-draft/:month', async (req, res) => {
       INSERT INTO drafts (month, version, name, data, created_by, is_final)
       VALUES ($1, $2, $3, $4::jsonb, $5, false)
     `, [
-      month,
-      version,
-      `Draft ${version}`,
-      JSON.stringify(scheduleData),
+      month, 
+      version, 
+      `Draft ${version}`, 
+      JSON.stringify(scheduleData), 
       created_by
     ]);
     
@@ -2917,7 +2939,7 @@ app.post('/api/workflow/reset/:month', async (req, res) => {
 
 // Enhanced auto-scheduling endpoint - disabled during refactor
 app.post('/api/schedule/auto-schedule-enhanced/:year/:month', async (req, res) => {
-  const { year, month } = req.params;
+    const { year, month } = req.params;
   console.log(`ℹ️ [/api/schedule/auto-schedule-enhanced/:year/:month] Disabled for ${year}-${month}.`);
   return res.status(200).json({ success: false, disabled: true, message: 'Auto scheduling is temporarily disabled during refactor.' });
 });
@@ -2991,8 +3013,8 @@ app.post('/api/schedule/auto-advanced/:year/:month', async (req, res) => {
       
     } else {
       console.error(`❌ [Advanced Scheduler] Failed: ${result.error}`);
-      res.status(500).json({
-        success: false,
+      res.status(500).json({ 
+        success: false, 
         error: result.error,
         message: 'כשל בשיבוץ אוטומטי מתקדם'
       });
@@ -3602,6 +3624,141 @@ async function tryOverrideSoftConstraintsPG(guidesWithAvailability, date, contex
   return [];
 }
 
+// Helper function: Check guide constraints for manual assignment
+async function checkGuideConstraints(guideId, date, assignmentType) {
+  const result = {
+    guideId: guideId,
+    guideName: null,
+    isValid: true,
+    reasons: []
+  };
+
+  try {
+    // Get guide name
+    const guideResult = await pool.query('SELECT name FROM users WHERE id = $1', [guideId]);
+    if (guideResult.rows.length === 0) {
+      result.isValid = false;
+      result.reasons.push('מדריך לא נמצא');
+      return result;
+    }
+    result.guideName = guideResult.rows[0].name;
+
+    const dateObj = new Date(date);
+    const dayOfWeek = dateObj.getDay();
+    const year = dateObj.getFullYear();
+    const month = dateObj.getMonth() + 1;
+
+    // Check if this is a manual assignment (override)
+    const isManualAssignment = assignmentType === 'manual';
+
+    // Check regular constraints
+    const constraintResult = await pool.query(`
+      SELECT * FROM constraints 
+      WHERE user_id = $1 AND date = $2::date
+    `, [guideId, date]);
+
+    if (constraintResult.rows.length > 0) {
+      // For manual assignments, only block if it's a hard constraint (not auto-scheduling related)
+      const constraint = constraintResult.rows[0];
+      const isAutoSchedulingConstraint = constraint.details && constraint.details.includes('לא לשבץ אוטומטית');
+
+      if (!isManualAssignment || !isAutoSchedulingConstraint) {
+        result.isValid = false;
+        result.reasons.push(`מדריך חסום בתאריך זה - ${constraint.details || 'אילוץ רגיל'}`);
+      } else {
+        // For manual assignments, auto-scheduling constraints are just warnings
+        result.reasons.push(`אזהרה: ${constraint.details} - שיבוץ ידני מותר`);
+      }
+    }
+
+    // Check fixed constraints
+    const fixedResult = await pool.query(`
+      SELECT * FROM fixed_constraints 
+      WHERE user_id = $1 AND weekday = $2
+    `, [guideId, dayOfWeek]);
+
+    if (fixedResult.rows.length > 0) {
+      // For manual assignments, only block if it's a hard constraint (not auto-scheduling related)
+      const constraint = fixedResult.rows[0];
+      const isAutoSchedulingConstraint = constraint.details && constraint.details.includes('לא לשבץ אוטומטית');
+
+      if (!isManualAssignment || !isAutoSchedulingConstraint) {
+        result.isValid = false;
+        result.reasons.push(`מדריך חסום ביום ${['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'][dayOfWeek]} - ${constraint.details || 'אילוץ קבוע'}`);
+      } else {
+        // For manual assignments, auto-scheduling constraints are just warnings
+        result.reasons.push(`אזהרה: ${constraint.details} - שיבוץ ידני מותר`);
+      }
+    }
+
+    // Check vacation constraints
+    const vacationResult = await pool.query(`
+      SELECT * FROM vacations 
+      WHERE user_id = $1 AND status = 'approved'
+        AND date_start <= $2::date AND date_end >= $2::date
+    `, [guideId, date]);
+
+    if (vacationResult.rows.length > 0) {
+      result.isValid = false;
+      result.reasons.push(`מדריך בחופשה - ${vacationResult.rows[0].note || 'חופשה מאושרת'}`);
+    }
+
+    // Check consecutive days - but allow for closed Saturday weekends
+    const dayBefore = new Date(dateObj);
+    dayBefore.setDate(dayBefore.getDate() - 1);
+    const dayAfter = new Date(dateObj);
+    dayAfter.setDate(dayAfter.getDate() + 1);
+
+    // Check if this is a Saturday and the previous Friday is a closed Saturday weekend
+    let isClosedSaturdayWeekend = false;
+    if (dayOfWeek === 6) { // Saturday
+      const fridayResult = await pool.query(`
+        SELECT wt.is_closed FROM weekend_types wt 
+        WHERE wt.date = $1::date
+      `, [dayBefore.toISOString().split('T')[0]]);
+      
+      if (fridayResult.rows.length > 0 && fridayResult.rows[0].is_closed === true) {
+        isClosedSaturdayWeekend = true;
+      }
+    }
+
+    // Only check consecutive days if it's not a closed Saturday weekend and not a manual override
+    const isManualOverride = assignmentType === 'manual-override';
+    if (!isClosedSaturdayWeekend && !isManualOverride) {
+      const consecutiveResult = await pool.query(`
+        SELECT date::text as date FROM schedule
+        WHERE (guide1_id = $1 OR guide2_id = $1)
+          AND (date = $2::date OR date = $3::date)
+          AND is_manual = true
+      `, [guideId, dayBefore.toISOString().split('T')[0], dayAfter.toISOString().split('T')[0]]);
+
+      if (consecutiveResult.rows.length > 0) {
+        result.isValid = false;
+        result.reasons.push('מדריך משובץ ביום סמוך - חל איסור על ימים עוקבים');
+      }
+    } else if (isManualOverride) {
+      // For manual overrides, just add a warning about consecutive days
+      const consecutiveResult = await pool.query(`
+        SELECT date::text as date FROM schedule
+        WHERE (guide1_id = $1 OR guide2_id = $1)
+          AND (date = $2::date OR date = $3::date)
+          AND is_manual = true
+      `, [guideId, dayBefore.toISOString().split('T')[0], dayAfter.toISOString().split('T')[0]]);
+
+      if (consecutiveResult.rows.length > 0) {
+        result.reasons.push('אזהרה: מדריך משובץ ביום סמוך - שיבוץ ידני עם עקיפה מותר');
+      }
+    }
+
+  } catch (error) {
+    console.error('Error checking guide constraints:', error);
+    result.isValid = false;
+    result.reasons.push('שגיאה בבדיקת אילוצים');
+  }
+
+  return result;
+}
+
 // ============================================================================
 // PHASE 4: UTILITY FUNCTIONS - POSTGRESQL VERSION
 // ============================================================================
@@ -3873,173 +4030,17 @@ function getHebrewWeekday(dayIndex) {
 // PHASE 6: PRECISE HOUR CALCULATIONS AND STATISTICS - POSTGRESQL VERSION
 // ============================================================================
 
+// Import salary calculator service
+const salaryCalculator = require('./services/salary-calculator');
+
 function calculateHoursForShiftPG(day, role, weekendTypes, schedule, dayIndex) {
-  const hours = {
-    regular: 0,
-    night: 0,
-    shabbat: 0,
-    conan: 0,
-    conan_shabbat: 0,
-    motzash: 0
-  };
-  
-  const dayOfWeek = new Date(day.date).getDay();
-  const isFriday = dayOfWeek === 5;
-  const isSaturday = dayOfWeek === 6;
-  
-  // Check if this is a closed Saturday weekend
-  let isClosedSaturday = false;
-  if (isFriday) {
-    // Check Saturday status
-    const saturdayDate = new Date(day.date);
-    saturdayDate.setDate(saturdayDate.getDate() + 1);
-    const saturdayDateStr = saturdayDate.toISOString().split('T')[0];
-    isClosedSaturday = weekendTypes[saturdayDateStr] === true; // PostgreSQL stores boolean
-  } else if (isSaturday) {
-    // Check this Saturday's status
-    isClosedSaturday = weekendTypes[day.date] === true; // PostgreSQL stores boolean
-  }
-  
-  // Calculate hours based on role and day - EXACT SAME LOGIC AS SQLITE VERSION
-  switch (role) {
-    case 'כונן':
-      if (isFriday && isClosedSaturday) {
-        // Friday conan for closed Saturday: Friday 09:00 - Saturday 17:00
-        hours.conan = 10;           // Friday 09:00-19:00 (10 hours weekday conan)
-        hours.conan_shabbat = 22;   // Friday 19:00 - Saturday 17:00 (22 hours Shabbat conan)
-      } else {
-        // Regular conan (shouldn't happen in weekdays)
-        hours.conan = 24;
-      }
-      break;
-      
-    case 'מוצ״ש':
-      if (isSaturday && isClosedSaturday) {
-        // Motzash for closed Saturday: Saturday 17:00 - Sunday 08:00
-        hours.shabbat = 2;    // Saturday 17:00-19:00 (2 hours Shabbat)
-        hours.regular = 5;    // Saturday 19:00-24:00 (5 hours regular)
-        hours.night = 8;      // Sunday 00:00-08:00 (8 hours night)
-        hours.motzash = 15;   // Total motzash hours for salary calculation
-      } else {
-        // Regular Saturday (open)
-        hours.shabbat = 16;   // Saturday shift in open Shabbat
-      }
-      break;
-      
-    case 'רגיל':
-      if (isFriday && !isClosedSaturday) {
-        // Regular Friday (open Shabbat)
-        hours.regular = 10;   // Friday 09:00-19:00
-        hours.shabbat = 14;   // Friday 19:00 - Saturday 09:00
-      } else if (isSaturday && !isClosedSaturday) {
-        // Regular Saturday (open Shabbat)
-        hours.shabbat = 24;   // Full Saturday shift
-      } else if (dayOfWeek >= 0 && dayOfWeek <= 4) {
-        // Weekday (Sunday-Thursday)
-        hours.regular = 16;   // Day shift 09:00 - next day 09:00 (15+1)
-        hours.night = 8;      // Night shift 00:00 - 08:00
-      }
-      break;
-      
-    case 'חפיפה':
-      if (isFriday && !isClosedSaturday) {
-        // Handover Friday (open Shabbat)
-        hours.regular = 10;   // Friday 09:00-19:00
-        hours.shabbat = 15;   // Friday 19:00 - Saturday 10:00 (includes handover)
-      } else if (isSaturday && !isClosedSaturday) {
-        // Handover Saturday (open Shabbat)
-        hours.shabbat = 25;   // Full Saturday + handover hour
-      } else if (dayOfWeek >= 0 && dayOfWeek <= 4) {
-        // Weekday handover (Sunday-Thursday)
-        hours.regular = 17;   // Day shift 09:00 - next day 10:00 (15+2)
-        hours.night = 8;      // Night shift 00:00 - 08:00
-      }
-      break;
-  }
-  
-  return hours;
+  // Use the salary calculator service for accurate hour calculations
+  return salaryCalculator.calculateHoursForShift(day, role, weekendTypes, schedule, dayIndex);
 }
 
 function calculateGuideStatisticsPG(schedule, guideId, year, month, weekendTypes) {
-  const stats = {
-    regular_hours: 0,
-    night_hours: 0,
-    shabbat_hours: 0,
-    conan_hours: 0,
-    conan_shabbat_hours: 0,
-    motzash_hours: 0,
-    total_shifts: 0,
-    weekend_shifts: 0,
-    weekday_shifts: 0,
-    manual_shifts: 0,
-    auto_shifts: 0,
-    regular_shifts: 0,
-    overlap_shifts: 0,
-    conan_shifts: 0,
-    motzash_shifts: 0
-  };
-  
-  schedule.forEach((day, index) => {
-    let role = null;
-    
-    // Determine guide's role for this day
-    if (day.guide1_id === guideId) {
-      role = day.guide1_role || 'רגיל';
-    } else if (day.guide2_id === guideId) {
-      role = day.guide2_role || 'חפיפה';
-    }
-    
-    if (role) {
-      stats.total_shifts++;
-      
-      const dayOfWeek = new Date(day.date).getDay();
-      if (dayOfWeek === 5 || dayOfWeek === 6) {
-        stats.weekend_shifts++;
-      } else {
-        stats.weekday_shifts++;
-      }
-      
-      // Count shift types
-      if (day.guide1_id === guideId && day.is_manual) {
-        stats.manual_shifts++;
-      } else if (day.guide2_id === guideId && day.is_manual) {
-        stats.manual_shifts++;
-      } else {
-        stats.auto_shifts++;
-      }
-      
-      // Count by role type
-      if (role === 'רגיל') stats.regular_shifts++;
-      else if (role === 'חפיפה') stats.overlap_shifts++;
-      else if (role === 'כונן') stats.conan_shifts++;
-      else if (role === 'מוצ״ש') stats.motzash_shifts++;
-      
-      // Calculate hours based on role and day type - EXACT SAME LOGIC AS SQLITE VERSION
-      const hours = calculateHoursForShiftPG(day, role, weekendTypes, schedule, index);
-      
-      stats.regular_hours += hours.regular;
-      stats.night_hours += hours.night;
-      stats.shabbat_hours += hours.shabbat;
-      stats.conan_hours += hours.conan;
-      stats.conan_shabbat_hours += hours.conan_shabbat;
-      stats.motzash_hours += hours.motzash;
-    }
-  });
-  
-  // Calculate total hours and salary factor
-  stats.total_hours = stats.regular_hours + stats.night_hours + stats.shabbat_hours + 
-                      stats.conan_hours + stats.conan_shabbat_hours + stats.motzash_hours;
-  
-  // Calculate salary factor with multipliers:
-  // Regular: ×1.0, Night: ×1.5, Shabbat: ×2.0, Conan: ×0.3, Conan Shabbat: ×0.6, Motzash: ×1.0
-  stats.salary_factor = (stats.regular_hours * 1.0) + 
-                        (stats.night_hours * 1.5) + 
-                        (stats.shabbat_hours * 2.0) + 
-                        (stats.conan_hours * 0.3) + 
-                        (stats.conan_shabbat_hours * 0.6) + 
-                        (stats.motzash_hours * 1.0);
-  
-  return stats;
+  // Use the salary calculator service for comprehensive statistics
+  return salaryCalculator.calculateGuideStatistics(schedule, guideId, year, month, weekendTypes);
 }
 
 function calculateDayStatisticsPG(schedule, year, month) {

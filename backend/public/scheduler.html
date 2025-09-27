@@ -204,18 +204,19 @@
         }
         
         .schedule-table tr {
-            height: 35px;
+            min-height: 80px;
         }
         
         .schedule-table th {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            padding: 4px 6px;
+            padding: 6px 4px;
             text-align: center;
             font-weight: 600;
             border-radius: 6px 6px 0 0;
             font-size: 11px;
             line-height: 1.2;
+            height: 32px;
         }
         
         .schedule-table td {
@@ -224,11 +225,13 @@
             padding: 4px 2px;
             text-align: center;
             vertical-align: top;
-            height: 35px;
+            min-height: 80px;
+            height: auto;
             border-radius: 4px;
             transition: all 0.2s ease;
-            overflow: hidden;
+            overflow: visible;
             position: relative;
+            word-wrap: break-word;
         }
         
         .schedule-table td:hover {
@@ -240,25 +243,30 @@
             font-weight: 700;
             font-size: 12px;
             color: #1e293b;
-            margin-bottom: 1px;
+            margin-bottom: 2px;
             line-height: 1;
+            display: block;
         }
         
         .day-guides {
             display: flex;
             flex-direction: column;
-            gap: 1px;
-            margin-bottom: 1px;
+            gap: 2px;
+            margin-bottom: 3px;
+            align-items: center;
         }
         
         .guide-item-display {
             background: #f8fafc;
             border: 1px solid #e2e8f0;
-            border-radius: 3px;
-            padding: 1px 3px;
+            border-radius: 4px;
+            padding: 2px 4px;
             font-size: 9px;
             text-align: center;
             transition: all 0.2s ease;
+            min-width: 80%;
+            word-wrap: break-word;
+            line-height: 1.2;
         }
         
         .guide-item-display:hover {
@@ -283,6 +291,7 @@
             color: #92400e;
             font-weight: 600;
             background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            font-size: 8px;
         }
         
         /* Individual guide colors - maintaining role distinction but with personal tones */
@@ -326,17 +335,96 @@
         .guide-name {
             font-weight: 600;
             display: block;
+            font-size: 9px;
         }
         
         .edit-day-btn {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-size: 9px;
+            cursor: pointer;
+            margin-top: auto;
+            white-space: nowrap;
+            align-self: center;
+        }
+
+        /* Manual indicator styling */
+        .manual-indicator {
+            position: absolute;
+            top: 25px;
+            right: 4px;
+            font-size: 10px;
+            z-index: 10;
+        }
+        
+        /* Weekend checkbox improvements */
+        .weekend-checkbox {
+            font-size: 9px;
+            margin-top: 2px;
+            padding: 2px 4px;
+            background: rgba(139, 92, 246, 0.1);
+            border-radius: 3px;
+        }
+        
+        /* Fixed height zone for custom text header - compact for A4 landscape */
+        .day-custom-text-zone {
+            height: auto;
+            min-height: 25px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 2px;
+            margin-bottom: 3px;
+        }
+        
+        /* Custom text as prominent day header - compact for A4 landscape */
+        .day-custom-text {
+            font-size: 12px;
+            font-weight: 700;
+            color: #ffffff;
+            background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%);
+            border: 1px solid #6d28d9;
             padding: 4px 8px;
             border-radius: 4px;
-            font-size: 11px;
-            cursor: pointer;
-            margin-top: 8px;
+            text-align: center;
+            word-break: break-word;
+            line-height: 1.1;
+            display: inline-block;
+            max-width: 100%;
+            box-sizing: border-box;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            box-shadow: 0 1px 3px rgba(124, 58, 237, 0.2);
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        /* Custom note/description displayed below title */
+        .day-custom-note {
+            font-size: 10px;
+            font-weight: 500;
+            color: #64748b;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            padding: 2px 6px;
+            border-radius: 3px;
+            text-align: center;
+            word-break: break-word;
+            line-height: 1.2;
+            display: inline-block;
+            max-width: 100%;
+            box-sizing: border-box;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
         }
         
         /* Weekend styles */
@@ -1701,6 +1789,231 @@
             100% { transform: rotate(360deg); }
         }
 
+        
+        .day-custom-text:hover {
+            background: rgba(139, 92, 246, 0.2);
+            transform: scale(1.02);
+        }
+        
+        .day-custom-text.has-text {
+            background: rgba(139, 92, 246, 0.15);
+            border-color: rgba(139, 92, 246, 0.5);
+        }
+        
+        .day-custom-text.empty {
+            background: rgba(139, 92, 246, 0.05);
+            border-color: rgba(139, 92, 246, 0.2);
+            color: #a78bfa;
+            font-style: italic;
+        }
+        
+        /* Custom Text Modal */
+        .custom-text-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1002;
+            backdrop-filter: blur(4px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .custom-text-modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            max-width: 400px;
+            width: 90vw;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        }
+        
+        .custom-text-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .custom-text-modal-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #1e293b;
+            margin: 0;
+        }
+        
+        .custom-text-modal-close {
+            background: #f1f5f9;
+            border: none;
+            color: #64748b;
+            font-size: 20px;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+        
+        .custom-text-modal-close:hover {
+            background: #e2e8f0;
+            color: #475569;
+        }
+        
+        .custom-text-form {
+            margin-bottom: 20px;
+        }
+        
+        .custom-text-form label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #374151;
+        }
+        
+        .custom-text-form input,
+        .custom-text-form textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+            box-sizing: border-box;
+        }
+        
+        .custom-text-form input:focus,
+        .custom-text-form textarea:focus {
+            outline: none;
+            border-color: #8b5cf6;
+            box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+        }
+        
+        .custom-text-form textarea {
+            resize: vertical;
+            min-height: 80px;
+            font-family: inherit;
+        }
+        
+        .custom-text-modal-footer {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+        
+        .custom-text-modal-footer .btn {
+            min-width: 80px;
+        }
+        
+        /* Day Custom Text Section in Side Panel */
+        .day-custom-text-section {
+            margin-top: 16px;
+        }
+        
+        .custom-text-display {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 16px;
+            transition: all 0.2s ease;
+        }
+        
+        .custom-text-placeholder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            text-align: center;
+            color: #64748b;
+        }
+        
+        .placeholder-icon {
+            font-size: 24px;
+            opacity: 0.7;
+        }
+        
+        .placeholder-text {
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 12px;
+            min-width: auto;
+        }
+        
+        .custom-text-content {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .custom-text-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .custom-text-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #1e293b;
+            flex: 1;
+        }
+        
+        .custom-text-actions {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .edit-custom-text-btn, .delete-custom-text-btn {
+            background: #f1f5f9;
+            border: 1px solid #cbd5e1;
+            color: #475569;
+            padding: 6px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s ease;
+            min-width: auto;
+        }
+        
+        .edit-custom-text-btn:hover {
+            background: #e2e8f0;
+            color: #374151;
+            transform: scale(1.05);
+        }
+        
+        .delete-custom-text-btn {
+            background: #fef2f2;
+            border-color: #fecaca;
+            color: #dc2626;
+        }
+        
+        .delete-custom-text-btn:hover {
+            background: #fee2e2;
+            border-color: #fca5a5;
+            color: #b91c1c;
+            transform: scale(1.05);
+        }
+        
+        .custom-text-description {
+            font-size: 13px;
+            color: #64748b;
+            line-height: 1.4;
+            padding: 8px 12px;
+            background: white;
+            border-radius: 6px;
+            border: 1px solid #e2e8f0;
+        }
+
         /* Individual Guide Modal Styles */
         .individual-guide-modal {
             position: fixed;
@@ -2305,6 +2618,10 @@
                     <span class="icon">📈</span>
                     סטטיסטיקות
                 </button>
+                <button class="btn btn-warning" onclick="exportCustomTexts()">
+                    <span class="icon">📤</span>
+                    ייצא טקסטים
+                </button>
             </div>
 
             <!-- Actions -->
@@ -2602,6 +2919,37 @@
                 </div>
             </div>
 
+            <!-- Day Custom Text Section -->
+            <div class="panel-section">
+                <h4 class="section-title">כותרת היום</h4>
+                <div class="day-custom-text-section">
+                    <div class="custom-text-display" id="custom-text-display">
+                        <div class="custom-text-placeholder" id="custom-text-placeholder">
+                            <span class="placeholder-icon">📝</span>
+                            <span class="placeholder-text">אין כותרת מיוחדת ליום זה</span>
+                            <button class="btn btn-secondary btn-sm" onclick="editCustomTextFromPanel()">
+                                <span class="icon">➕</span>
+                                הוסף כותרת
+                            </button>
+                        </div>
+                        <div class="custom-text-content" id="custom-text-content" style="display: none;">
+                            <div class="custom-text-header">
+                                <span class="custom-text-title" id="panel-custom-text-title"></span>
+                                <div class="custom-text-actions">
+                                    <button class="edit-custom-text-btn" onclick="editCustomTextFromPanel()">
+                                        <span class="icon">✏️</span>
+                                    </button>
+                                    <button class="delete-custom-text-btn" onclick="removeCustomTextFromPanel()">
+                                        <span class="icon">🗑️</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="custom-text-description" id="panel-custom-text-description"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Available Guides -->
             <div class="panel-section">
                 <h4 class="section-title">מדריכים זמינים לשיבוץ</h4>
@@ -2640,6 +2988,27 @@
         </div>
     </div>
 
+    <!-- Custom Text Modal -->
+    <div id="custom-text-modal" class="custom-text-modal">
+        <div class="custom-text-modal-content">
+            <div class="custom-text-modal-header">
+                <h3 class="custom-text-modal-title">עריכת טקסט חופשי</h3>
+                <button class="custom-text-modal-close" onclick="closeCustomTextModal()">×</button>
+            </div>
+            <div class="custom-text-form">
+                <label for="custom-text-title">כותרת קצרה:</label>
+                <input type="text" id="custom-text-title" placeholder="למשל: יום הולדת, אירוע מיוחד" maxlength="30">
+                
+                <label for="custom-text-description">תיאור (אופציונלי):</label>
+                <textarea id="custom-text-description" placeholder="פירוט נוסף על האירוע או הפעילות..."></textarea>
+            </div>
+            <div class="custom-text-modal-footer">
+                <button class="btn btn-secondary" onclick="closeCustomTextModal()">ביטול</button>
+                <button class="btn btn-primary" onclick="saveCustomText()">שמור</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // Phase 1 Task 3: Frontend Integration with Backend API
         // Auto-detect API base: when served from dev static server (8080) use localhost:4000, otherwise same-origin '/api'
@@ -2658,6 +3027,10 @@
         let availableDrafts = [];
         let isFinalized = false;
         let statisticsData = null;
+        
+        // Custom text functionality
+        let customTexts = {}; // Store custom texts for each date
+        let currentEditingDate = null; // Track which date is being edited
 
         // Helper function to get first name from full name
         function getFirstName(fullName) {
@@ -2666,6 +3039,242 @@
             return fullName.split(' ')[0];
         }
 
+        // =====================================================
+        // CUSTOM TEXT FUNCTIONS
+        // =====================================================
+        
+        function editCustomText(date) {
+            currentEditingDate = date;
+            const customText = customTexts[date] || {};
+            
+            // Populate modal with existing data
+            document.getElementById('custom-text-title').value = customText.title || '';
+            document.getElementById('custom-text-description').value = customText.description || '';
+            
+            // Show modal
+            document.getElementById('custom-text-modal').style.display = 'flex';
+            
+            // Focus on title input
+            document.getElementById('custom-text-title').focus();
+            
+            // Add keyboard event listeners
+            document.addEventListener('keydown', handleCustomTextKeydown);
+        }
+        
+        function editCustomTextFromPanel() {
+            // Use the current date from the side panel
+            if (currentDate) {
+                editCustomText(currentDate);
+            } else {
+                showNotification('שגיאה: לא נבחר תאריך', 'error');
+            }
+        }
+        
+        function removeCustomTextFromPanel() {
+            // Use the current date from the side panel
+            if (currentDate) {
+                const customText = customTexts[currentDate];
+                if (customText) {
+                    // Show confirmation dialog
+                    const hebrewDate = new Date(currentDate).toLocaleDateString('he-IL');
+                    if (confirm(`האם אתה בטוח שתרצה למחוק את הטקסט "${customText.title}" מתאריך ${hebrewDate}?`)) {
+                        // Remove custom text
+                        delete customTexts[currentDate];
+                        saveCustomTextsToStorage();
+                        
+                        // Refresh calendar
+                        if (window.currentMonthSchedule) {
+                            updateCalendarWithSchedule(window.currentMonthSchedule);
+                        }
+                        
+                        // Update side panel display
+                        updateCustomTextDisplay(currentDate);
+                        
+                        // Refresh the current day cell
+                        refreshCurrentDayCell();
+                        
+                        showNotification('הטקסט נמחק בהצלחה', 'success');
+                    }
+                } else {
+                    showNotification('אין טקסט למחוק בתאריך זה', 'info');
+                }
+            } else {
+                showNotification('שגיאה: לא נבחר תאריך', 'error');
+            }
+        }
+        
+        function updateCustomTextDisplay(date) {
+            const customText = customTexts[date];
+            const placeholder = document.getElementById('custom-text-placeholder');
+            const content = document.getElementById('custom-text-content');
+            const title = document.getElementById('panel-custom-text-title');
+            const description = document.getElementById('panel-custom-text-description');
+            
+            if (customText && customText.title) {
+                // Show content
+                placeholder.style.display = 'none';
+                content.style.display = 'flex';
+                
+                // Update content
+                title.textContent = customText.title;
+                description.textContent = customText.description || '';
+            } else {
+                // Show placeholder
+                placeholder.style.display = 'flex';
+                content.style.display = 'none';
+            }
+        }
+        
+        function handleCustomTextKeydown(event) {
+            if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+                event.preventDefault();
+                saveCustomText();
+            } else if (event.key === 'Escape') {
+                event.preventDefault();
+                closeCustomTextModal();
+            }
+        }
+        
+        function closeCustomTextModal() {
+            document.getElementById('custom-text-modal').style.display = 'none';
+            currentEditingDate = null;
+            
+            // Clear form
+            document.getElementById('custom-text-title').value = '';
+            document.getElementById('custom-text-description').value = '';
+            
+            // Remove keyboard event listeners
+            document.removeEventListener('keydown', handleCustomTextKeydown);
+        }
+        
+        function saveCustomText() {
+            if (!currentEditingDate) return;
+            
+            const title = document.getElementById('custom-text-title').value.trim();
+            const description = document.getElementById('custom-text-description').value.trim();
+            
+            if (title) {
+                // Save custom text
+                customTexts[currentEditingDate] = {
+                    title: title,
+                    description: description,
+                    created_at: new Date().toISOString()
+                };
+                
+                // Save to localStorage
+                saveCustomTextsToStorage();
+                
+                // Refresh calendar to show new text
+                if (window.currentMonthSchedule) {
+                    updateCalendarWithSchedule(window.currentMonthSchedule);
+                }
+                
+                // Update side panel display if it's open
+                if (currentDate) {
+                    updateCustomTextDisplay(currentDate);
+                }
+                
+                // Refresh the current day cell to show custom text
+                refreshCurrentDayCell();
+                
+                showNotification('הטקסט נשמר בהצלחה', 'success');
+            } else {
+                // Remove custom text if title is empty
+                delete customTexts[currentEditingDate];
+                saveCustomTextsToStorage();
+                
+                // Refresh calendar
+                if (window.currentMonthSchedule) {
+                    updateCalendarWithSchedule(window.currentMonthSchedule);
+                }
+                
+                showNotification('הטקסט הוסר', 'info');
+            }
+            
+            closeCustomTextModal();
+        }
+        
+        // Function to refresh the current day cell with custom text
+        function refreshCurrentDayCell() {
+            if (!currentDate) return;
+            
+            // Find the current day cell in the calendar
+            const dayCells = document.querySelectorAll('td');
+            dayCells.forEach(cell => {
+                const editBtn = cell.querySelector('.edit-day-btn');
+                if (editBtn && editBtn.getAttribute('data-date') === currentDate) {
+                    // Get the day data
+                    const dayData = window.currentMonthSchedule?.find(d => d.date === currentDate) || {
+                        date: currentDate,
+                        guide1_name: null,
+                        guide2_name: null,
+                        is_manual: false,
+                        is_locked: false
+                    };
+                    
+                    // Update the cell content
+                    cell.innerHTML = createDayCell(dayData);
+                }
+            });
+        }
+        
+        function saveCustomTextsToStorage() {
+            try {
+                localStorage.setItem('sigalit_custom_texts', JSON.stringify(customTexts));
+            } catch (error) {
+                console.error('Error saving custom texts to localStorage:', error);
+            }
+        }
+        
+        function loadCustomTextsFromStorage() {
+            try {
+                const stored = localStorage.getItem('sigalit_custom_texts');
+                if (stored) {
+                    customTexts = JSON.parse(stored);
+                }
+            } catch (error) {
+                console.error('Error loading custom texts from localStorage:', error);
+                customTexts = {};
+            }
+        }
+        
+        // Load custom texts when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            loadCustomTextsFromStorage();
+        });
+        
+        function exportCustomTexts() {
+            if (Object.keys(customTexts).length === 0) {
+                showNotification('אין טקסטים חופשיים לייצוא', 'info');
+                return;
+            }
+            
+            // Create CSV content
+            let csvContent = 'תאריך,כותרת,תיאור,תאריך יצירה\n';
+            
+            Object.entries(customTexts).forEach(([date, text]) => {
+                const hebrewDate = new Date(date).toLocaleDateString('he-IL');
+                const title = text.title.replace(/"/g, '""'); // Escape quotes
+                const description = (text.description || '').replace(/"/g, '""');
+                const createdAt = new Date(text.created_at).toLocaleDateString('he-IL');
+                
+                csvContent += `"${hebrewDate}","${title}","${description}","${createdAt}"\n`;
+            });
+            
+            // Create and download file
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `טקסטים_חופשיים_${new Date().toISOString().split('T')[0]}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            showNotification('הטקסטים יוצאו בהצלחה', 'success');
+        }
+        
         // =====================================================
         // API INTEGRATION FUNCTIONS
         // =====================================================
@@ -2683,8 +3292,8 @@
         }
 
         async function fetchGuideAvailability(date) {
-            try {
-                const response = await fetch(`${API_BASE}/guides/availability/${date}`);
+  try {
+    const response = await fetch(`${API_BASE}/guides/availability/${date}?assignment_type=manual`);
                 const availability = await response.json();
                 console.log('Availability for', date, ':', availability);
                 return availability;
@@ -2735,12 +3344,14 @@
 
         async function saveManualAssignment(date, guide1Id, guide2Id, type) {
             try {
+                const overrideEnabled = document.getElementById('manual-override').checked;
                 const requestData = {
                     date: date,
                     guide1_id: guide1Id,
                     guide2_id: guide2Id,
                     type: type,
-                    created_by: 1 // TODO: Get from user session
+                    created_by: 1, // TODO: Get from user session
+                    manual_override: overrideEnabled
                 };
                 
                 console.log('Sending request data:', requestData);
@@ -2969,42 +3580,51 @@
                 sat.setDate(sat.getDate() - 1);
                 const fridayString = `${sat.getFullYear()}-${String(sat.getMonth()+1).padStart(2,'0')}-${String(sat.getDate()).padStart(2,'0')}`;
                 
-                // Check if Friday has closed Saturday setting
-                const fridayCheckbox = document.querySelector(`input[data-date="${fridayString}"]`);
-                if (fridayCheckbox && fridayCheckbox.checked) {
+                // Check if Friday has closed Saturday setting by looking at the actual schedule
+                // Only show Friday conan guide if there's actually a conan assignment on Friday
+                const fridayDay = window.currentMonthSchedule?.find(d => d.date === fridayString);
+                if (fridayDay && fridayDay.guide1_role === 'כונן' && fridayDay.guide1_name) {
                     isClosedSaturdayWeekend = true;
-                    
-                    // Get the conan guide from Friday
-                    const fridayDay = window.currentMonthSchedule?.find(d => d.date === fridayString);
-                    if (fridayDay && fridayDay.guide1_name && fridayDay.guide1_role === 'כונן') {
-                        fridayConanGuide = fridayDay.guide1_name;
-                    }
+                    fridayConanGuide = fridayDay.guide1_name;
                 }
             }
             
-            let cellHtml = `<div class="day-number">${dayNumber}</div>`;
+            let cellHtml = '';
             
-            // For closed Saturday, show the conan guide from Friday with special styling
+            // Add fixed-height custom text zone for consistent alignment
+            const customText = customTexts[day.date];
+            cellHtml += '<div class="day-custom-text-zone">';
+            if (customText && customText.title) {
+                cellHtml += `<div class="day-custom-text">${customText.title}</div>`;
+                // Add description/note below title if present
+                if (customText.description && customText.description.trim()) {
+                    cellHtml += `<div class="day-custom-note">${customText.description}</div>`;
+                }
+            }
+            cellHtml += '</div>';
+            
+            cellHtml += `<div class="day-number">${dayNumber}</div>`;
+            
+            // For closed Saturday, show the conan guide from Friday with special styling (non-editable)
+            console.log(`🔍 Saturday ${day.date}: isClosedSaturdayWeekend=${isClosedSaturdayWeekend}, fridayConanGuide="${fridayConanGuide}"`);
             if (isClosedSaturdayWeekend && fridayConanGuide) {
                 cellHtml += `
-                    <div class="guide-item-display guide-conan-friday guide-${fridayConanGuide.toLowerCase()}">
-                        <span class="guide-role-label">כונן שישי/שבת (עד 17:00)</span>
-                        <span class="guide-name">${getFirstName(fridayConanGuide)}</span>
+                    <div class="guide-item-display guide-conan-friday guide-${fridayConanGuide.toLowerCase()}" style="opacity: 0.7; cursor: not-allowed;">
+                        <span class="guide-role-label">כונן שישי/שבת</span>
+                        <span class="guide-name">${fridayConanGuide.split(' ')[0]}</span>
                     </div>
                 `;
             }
             
-            // Show regular assignments (excluding the conan guide if it's already shown)
-            // Guard: never show Motzash on Friday cells (should appear on Saturday only)
-            const guide1IsMotzashOnFriday = isFriday && day.guide1_role && day.guide1_role.includes('מוצ״ש');
-            if (day.guide1_name && (!isClosedSaturdayWeekend || day.guide1_name !== fridayConanGuide) && !guide1IsMotzashOnFriday) {
+            // Show regular assignments for Saturday (including Motzash)
+            if (day.guide1_name) {
                 let guide1Class = isManual ? 'guide-overlap' : 'guide-regular';
                 let guide1Role = day.guide1_role;
                 
                 // For closed Saturday, show the additional guide if exists
                 if (isClosedSaturdayWeekend && day.guide1_name !== fridayConanGuide) {
                     guide1Class = 'guide-overlap';
-                    guide1Role = 'מוצ״ש (17:00-19:00) + רגיל (19:00-24:00)';
+                    guide1Role = 'מוצ״ש';
                 }
                 
                 cellHtml += `
@@ -3015,8 +3635,7 @@
                 `;
             }
             
-            const guide2IsMotzashOnFriday = isFriday && day.guide2_role && day.guide2_role.includes('מוצ״ש');
-            if (day.guide2_name && !guide2IsMotzashOnFriday) {
+            if (day.guide2_name) {
                 const guide2Class = isManual ? 'guide-overlap' : 'guide-regular';
                 cellHtml += `
                     <div class="guide-item-display ${guide2Class} guide-${day.guide2_name.toLowerCase()}">
@@ -3049,9 +3668,9 @@
         }
 
         function updateSidePanelWithAvailability(availability) {
-            // Find the available guides section (second panel-section)
-            const availableSection = document.querySelector('.panel-section:nth-child(2)');
-            const blockedSection = document.querySelector('.panel-section:nth-child(3)');
+            // Find the available guides section (third panel-section after adding custom text section)
+            const availableSection = document.querySelector('.panel-section:nth-child(3)');
+            const blockedSection = document.querySelector('.panel-section:nth-child(4)');
             
             if (!availableSection || !blockedSection) {
                 console.error('Could not find sections:', { availableSection, blockedSection });
@@ -3613,6 +4232,7 @@
             currentDate = date;
             loadDayAvailability(date);
             loadCurrentAssignments(date);
+            updateCustomTextDisplay(date); // Update custom text display
             openSidePanel();
         }
 
@@ -3656,6 +4276,9 @@
             const container = document.querySelector('.selected-guides-container');
             container.innerHTML = '';
             
+            // Store the current assignment globally so removeGuide can access it
+            window.currentDayAssignment = assignment;
+            
             // Clear and repopulate selectedGuides array with current assignments
             selectedGuides = [];
             
@@ -3676,15 +4299,16 @@
         selectedGuides.push(fridayConan.name);
         
         
-        container.innerHTML += `
-          <div class="selected-guide-item">
-            <div class="guide-info">
-              <span class="guide-name">${fridayConan.name}</span>
-              <span class="guide-role">כונן</span>
-              <span class="manual-badge">🔒 נעול משישי</span>
-            </div>
+        const lockedConanItem = document.createElement('div');
+        lockedConanItem.className = 'selected-guide-item';
+        lockedConanItem.innerHTML = `
+          <div class="guide-info">
+            <span class="guide-name">${fridayConan.name}</span>
+            <span class="guide-role">כונן</span>
+            <span class="manual-badge">🔒 נעול משישי</span>
           </div>
         `;
+        container.appendChild(lockedConanItem);
       }
     }
   } catch (e) { console.warn('locked conan render failed:', e.message); }
@@ -3694,16 +4318,24 @@
                 if (!selectedGuides.includes(assignment.guide1_name)) {
                     selectedGuides.push(assignment.guide1_name);
                     
-                    container.innerHTML += `
-                        <div class="selected-guide-item">
-                            <div class="guide-info">
-                                <span class="guide-name">${assignment.guide1_name}</span>
-                                <span class="guide-role">${assignment.guide1_role}</span>
-                                ${assignment.is_manual ? '<span class="manual-badge">🔒 ידני</span>' : '<span class="auto-badge">🤖 אוטומטי</span>'}
-                            </div>
-            ${ (window.lockedConanId && String(assignment.guide1_id) === String(window.lockedConanId)) ? '' : `<button class="remove-guide-btn" onclick="removeGuide('${assignment.guide1_id}')">×</button>` }
+                    const guide1Item = document.createElement('div');
+                    guide1Item.className = 'selected-guide-item';
+                    guide1Item.innerHTML = `
+                        <div class="guide-info">
+                            <span class="guide-name">${assignment.guide1_name}</span>
+                            <span class="guide-role">${assignment.guide1_role}</span>
+                            ${assignment.is_manual ? '<span class="manual-badge">🔒 ידני</span>' : '<span class="auto-badge">🤖 אוטומטי</span>'}
                         </div>
+                        ${ (window.lockedConanId && String(assignment.guide1_id) === String(window.lockedConanId)) ? '' : '<button class="remove-guide-btn">×</button>' }
                     `;
+                    
+                    // Add event listener to remove button if it exists
+                    const removeBtn1 = guide1Item.querySelector('.remove-guide-btn');
+                    if (removeBtn1) {
+                        removeBtn1.addEventListener('click', () => removeGuide(assignment.guide1_id));
+                    }
+                    
+                    container.appendChild(guide1Item);
                 }
             }
             
@@ -3712,16 +4344,24 @@
                 if (!selectedGuides.includes(assignment.guide2_name)) {
                     selectedGuides.push(assignment.guide2_name);
                     
-                    container.innerHTML += `
-                        <div class="selected-guide-item">
-                            <div class="guide-info">
-                                <span class="guide-name">${assignment.guide2_name}</span>
-                                <span class="guide-role">${assignment.guide2_role}</span>
-                                ${assignment.is_manual ? '<span class="manual-badge">🔒 ידני</span>' : '<span class="auto-badge">🤖 אוטומטי</span>'}
-                            </div>
-            ${ (window.lockedConanId && String(assignment.guide2_id) === String(window.lockedConanId)) ? '' : `<button class=\"remove-guide-btn\" onclick=\"removeGuide('${assignment.guide2_id}')\">×</button>` }
+                    const guide2Item = document.createElement('div');
+                    guide2Item.className = 'selected-guide-item';
+                    guide2Item.innerHTML = `
+                        <div class="guide-info">
+                            <span class="guide-name">${assignment.guide2_name}</span>
+                            <span class="guide-role">${assignment.guide2_role}</span>
+                            ${assignment.is_manual ? '<span class="manual-badge">🔒 ידני</span>' : '<span class="auto-badge">🤖 אוטומטי</span>'}
                         </div>
+                        ${ (window.lockedConanId && String(assignment.guide2_id) === String(window.lockedConanId)) ? '' : '<button class="remove-guide-btn">×</button>' }
                     `;
+                    
+                    // Add event listener to remove button if it exists
+                    const removeBtn2 = guide2Item.querySelector('.remove-guide-btn');
+                    if (removeBtn2) {
+                        removeBtn2.addEventListener('click', () => removeGuide(assignment.guide2_id));
+                    }
+                    
+                    container.appendChild(guide2Item);
                 }
             }
             
@@ -3739,16 +4379,24 @@
                 container.innerHTML = '<div class="no-assignments">אין שיבוצים ליום זה</div>';
             } else {
                 selectedGuides.forEach((guideName, index) => {
-                    container.innerHTML += `
-                        <div class="selected-guide-item">
-                            <div class="guide-info">
-                                <span class="guide-name">${guideName}</span>
-                                <span class="guide-role">מדריך</span>
-                                <span class="manual-badge">🔒 ידני</span>
-                            </div>
-                            <button class="remove-guide-btn" onclick="removeGuideByName('${guideName}')">×</button>
+                    const guideItem = document.createElement('div');
+                    guideItem.className = 'selected-guide-item';
+                    guideItem.innerHTML = `
+                        <div class="guide-info">
+                            <span class="guide-name">${guideName}</span>
+                            <span class="guide-role">מדריך</span>
+                            <span class="manual-badge">🔒 ידני</span>
                         </div>
+                        <button class="remove-guide-btn">×</button>
                     `;
+                    
+                    // Add event listener to remove button
+                    const removeBtn = guideItem.querySelector('.remove-guide-btn');
+                    if (removeBtn) {
+                        removeBtn.addEventListener('click', () => removeGuideByName(guideName));
+                    }
+                    
+                    container.appendChild(guideItem);
                 });
             }
             
@@ -3893,23 +4541,38 @@
                         const result = await response.json();
                         
                         if (result.is_closed === 1) {
-                            // Closed Saturday - can have 1 additional guide (מוצ״ש) in addition to the conan from Friday
-                            if (selectedGuides.length === 0) {
-                                showNotification('סופ״ש סגור דורש לפחות מדריך נוסף אחד (מוצ״ש)', 'warning');
-                                return;
+                            // Closed Saturday - handle Friday כונן continuation + מוצ״ש logic
+                            // Count only guides that are NOT the locked Friday כונן
+                            const nonLockedGuides = selectedGuides.filter((guideName, index) => {
+                                if (window.lockedConanId) {
+                                    const guide = guidesData.find(g => g.name === guideName);
+                                    return guide && guide.id !== window.lockedConanId;
+                                }
+                                return true;
+                            });
+                            
+                            console.log('🔍 Closed Saturday weekend detected');
+                            console.log('🔍 selectedGuides:', selectedGuides);
+                            console.log('🔍 window.lockedConanId:', window.lockedConanId);
+                            console.log('🔍 nonLockedGuides:', nonLockedGuides);
+                            console.log('🔍 nonLockedGuides.length:', nonLockedGuides.length);
+                            
+                            if (nonLockedGuides.length === 0) {
+                                // Only Friday כונן continues - no additional assignment needed
+                                assignmentType = 'כונן';
+                            } else if (nonLockedGuides.length === 1) {
+                                // One additional guide - this is מוצ״ש
+                                assignmentType = 'מוצ״ש';
+                                console.log('🎯 Saturday closed weekend: assignmentType set to מוצ״ש, nonLockedGuides:', nonLockedGuides);
+                            } else {
+                                // Multiple additional guides - treat as regular assignment
+                                assignmentType = 'רגיל';
                             }
-                            if (selectedGuides.length > 1) {
-                                showNotification('סופ״ש סגור יכול לקבל מדריך נוסף אחד בלבד (מוצ״ש)', 'warning');
-                                return;
-                            }
-                            assignmentType = 'מוצ״ש';
                         } else {
-                            // Open Saturday - can have 1 or 2 guides (auto will complete)
-                            if (selectedGuides.length > 2) {
-                                showNotification('לא ניתן לשבץ יותר מ-2 מדריכים בשבת', 'warning');
-                                return;
-                            }
-                            if (selectedGuides.length === 2) {
+                            // Open Saturday - any number of guides allowed
+                            if (selectedGuides.length === 1) {
+                                assignmentType = 'רגיל';
+                            } else if (selectedGuides.length === 2) {
                                 assignmentType = 'חפיפה';
                             } else {
                                 assignmentType = 'רגיל';
@@ -3918,11 +4581,9 @@
                     } catch (error) {
                         console.error('Error checking weekend type:', error);
                         // Default to open Saturday if we can't check
-                        if (selectedGuides.length > 2) {
-                            showNotification('לא ניתן לשבץ יותר מ-2 מדריכים בשבת', 'warning');
-                            return;
-                        }
-                        if (selectedGuides.length === 2) {
+                        if (selectedGuides.length === 1) {
+                            assignmentType = 'רגיל';
+                        } else if (selectedGuides.length === 2) {
                             assignmentType = 'חפיפה';
                         } else {
                             assignmentType = 'רגיל';
@@ -3935,19 +4596,21 @@
                         const result = await response.json();
                         
                         if (result.is_closed === 1) {
-                            // Closed Saturday Friday - requires exactly 1 guide (כונן)
-                            if (selectedGuides.length !== 1) {
-                                showNotification('שישי לסופ״ש סגור דורש כונן אחד בלבד', 'warning');
-                                return;
+                            // Closed Saturday Friday - any number of guides allowed
+                            if (selectedGuides.length === 1) {
+                                assignmentType = 'כונן';
+                            } else if (selectedGuides.length === 2) {
+                                assignmentType = 'חפיפה';
+                            } else if (selectedGuides.length === 0) {
+                                assignmentType = 'כונן'; // Empty day
+                            } else {
+                                assignmentType = 'רגיל'; // 3+ guides
                             }
-                            assignmentType = 'כונן';
                         } else {
-                            // Regular Friday - can have 1 or 2 guides (auto will complete)
-                            if (selectedGuides.length > 2) {
-                                showNotification('לא ניתן לשבץ יותר מ-2 מדריכים ביום חול', 'warning');
-                                return;
-                            }
-                            if (selectedGuides.length === 2) {
+                            // Regular Friday - any number of guides allowed
+                            if (selectedGuides.length === 1) {
+                                assignmentType = 'רגיל';
+                            } else if (selectedGuides.length === 2) {
                                 assignmentType = 'חפיפה';
                             } else {
                                 assignmentType = 'רגיל';
@@ -3956,23 +4619,19 @@
                     } catch (error) {
                         console.error('Error checking weekend type:', error);
                         // Default to regular Friday
-                        if (selectedGuides.length > 2) {
-                            showNotification('לא ניתן לשבץ יותר מ-2 מדריכים ביום חול', 'warning');
-                            return;
-                        }
-                        if (selectedGuides.length === 2) {
+                        if (selectedGuides.length === 1) {
+                            assignmentType = 'רגיל';
+                        } else if (selectedGuides.length === 2) {
                             assignmentType = 'חפיפה';
                         } else {
                             assignmentType = 'רגיל';
                         }
                     }
-                } else {
-                    // Regular weekday (Sunday-Thursday) - can have 1 or 2 guides (auto will complete)
-                    if (selectedGuides.length > 2) {
-                        showNotification('לא ניתן לשבץ יותר מ-2 מדריכים ביום חול', 'warning');
-                        return;
-                    }
-                    if (selectedGuides.length === 2) {
+                } else if (!isSaturday) {
+                    // Regular weekday (Sunday-Thursday) - any number of guides allowed
+                    if (selectedGuides.length === 1) {
+                        assignmentType = 'רגיל';
+                    } else if (selectedGuides.length === 2) {
                         assignmentType = 'חפיפה';
                     } else {
                         assignmentType = 'רגיל';
@@ -3983,23 +4642,50 @@
                     console.log('Selected guides:', selectedGuides);
                     console.log('Available guides data:', guidesData.map(g => ({ id: g.id, name: g.name })));
                     
-                    guide1 = guidesData.find(g => g.name === selectedGuides[0]);
-                    guide2 = selectedGuides[1] ? guidesData.find(g => g.name === selectedGuides[1]) : null;
+                    // Special handling for closed Saturday weekend
+                    if (isSaturday && window.lockedConanId && assignmentType === 'מוצ״ש') {
+                        // Friday כונן continues as guide1 (כונן), manually selected guide becomes guide2 (מוצ״ש)
+                        const fridayConanGuide = guidesData.find(g => g.id === window.lockedConanId);
+                        const motzashGuide = guidesData.find(g => g.name === selectedGuides.find(name => {
+                            const guide = guidesData.find(g => g.name === name);
+                            return guide && guide.id !== window.lockedConanId;
+                        }));
+                        
+                        guide1 = fridayConanGuide;  // Friday כונן continues
+                        guide2 = motzashGuide;      // מוצ״ש guide
+                        assignmentType = 'כונן+מוצ״ש'; // Special type for backend to handle correctly
+                    } else {
+                        // Regular assignment logic
+                        guide1 = guidesData.find(g => g.name === selectedGuides[0]);
+                        guide2 = selectedGuides[1] ? guidesData.find(g => g.name === selectedGuides[1]) : null;
+                    }
                     
                     console.log('Found guide1:', guide1);
                     console.log('Found guide2:', guide2);
+                    console.log('🎯 Final assignmentType before API call:', assignmentType);
+                } else {
+                    // If no guides selected, clear the assignment
+                    guide1 = null;
+                    guide2 = null;
+                    assignmentType = null; // Set to null when clearing assignment
+                    console.log('No guides selected, clearing assignment');
                 }
                 
                 const success = await saveManualAssignment(
                     currentDate,
-                    guide1?.id,
-                    guide2?.id,
+                    guide1?.id || null,
+                    guide2?.id || null,
                     assignmentType
                 );
                 
                 if (success) {
                     console.log('Manual assignment saved successfully');
                     console.log('isFriday:', isFriday, 'assignmentType:', assignmentType, 'guide1?.id:', guide1?.id);
+                    
+                    // Refresh the calendar to show the updated data
+                    const currentMonthValue = document.getElementById('month-select').value;
+                    const [refreshYear, refreshMonth] = currentMonthValue.split('-');
+                    await loadMonthSchedule(refreshYear, refreshMonth);
                     
                     // If this is a Friday with closed Saturday and we assigned a conan,
                     // automatically assign the same guide to Saturday as well
@@ -4168,19 +4854,110 @@
             }
         }
         
-        function removeGuide(guideId) {
-            const container = document.querySelector('.selected-guides-container');
-            const guideItem = container.querySelector(`[onclick*="${guideId}"]`).closest('.selected-guide-item');
-            if (guideItem) {
-                const guideName = guideItem.querySelector('.guide-name').textContent;
-                guideItem.remove();
+        // Helper function to get current day assignment
+        async function getCurrentDayAssignment(date) {
+            try {
+                const schedule = await fetchMonthlySchedule(new Date(date).getFullYear(), String(new Date(date).getMonth() + 1).padStart(2, '0'));
+                return schedule.find(day => day.date === date);
+            } catch (error) {
+                console.error('Error getting current day assignment:', error);
+                return null;
+            }
+        }
+        
+        async function removeGuide(guideId) {
+            try {
+                const container = document.querySelector('.selected-guides-container');
+                // Find the guide item by searching through all selected guide items
+                const guideItems = container.querySelectorAll('.selected-guide-item');
+                let guideItem = null;
                 
-                // Remove from selectedGuides array
-                selectedGuides = selectedGuides.filter(name => name !== guideName);
+                for (const item of guideItems) {
+                    const removeBtn = item.querySelector('.remove-guide-btn');
+                    if (removeBtn && removeBtn.onclick && removeBtn.onclick.toString().includes(guideId)) {
+                        guideItem = item;
+                        break;
+                    }
+                }
                 
-                updateAssignmentStatus();
+                // If not found by onclick, try to find by guide name comparison with current assignment
+                if (!guideItem) {
+                    const currentAssignment = await getCurrentDayAssignment(currentDate);
+                    if (currentAssignment) {
+                        for (const item of guideItems) {
+                            const guideName = item.querySelector('.guide-name')?.textContent;
+                            if ((String(currentAssignment.guide1_id) === String(guideId) && guideName === currentAssignment.guide1_name) ||
+                                (String(currentAssignment.guide2_id) === String(guideId) && guideName === currentAssignment.guide2_name)) {
+                                guideItem = item;
+                                break;
+                            }
+                        }
+                    }
+                }
+                if (guideItem) {
+                    const guideName = guideItem.querySelector('.guide-name').textContent;
+                    
+                    // Show confirmation dialog
+                    const confirmed = confirm(`האם אתה בטוח שברצונך להסיר את ${guideName} מהתאריך ${currentDate}?`);
+                    if (!confirmed) {
+                        return;
+                    }
+                    
+                    // Remove the guide from UI immediately for better UX
+                    guideItem.remove();
+                    
+                    // Remove from selectedGuides array
+                    selectedGuides = selectedGuides.filter(name => name !== guideName);
+                    
+                    updateAssignmentStatus();
+                    
+                    // Save the removal to database by setting the guide slot to null
+                    // First, determine which slot this guide was in
+                    const currentAssignment = await getCurrentDayAssignment(currentDate);
+                    let guide1Id = null;
+                    let guide2Id = null;
+                    let assignmentType = null;
+                    
+                    if (currentAssignment) {
+                        // Keep the other guide if there was one
+                        if (String(currentAssignment.guide1_id) === String(guideId)) {
+                            // Removing guide1, keep guide2
+                            guide1Id = null;
+                            guide2Id = currentAssignment.guide2_id;
+                        } else if (String(currentAssignment.guide2_id) === String(guideId)) {
+                            // Removing guide2, keep guide1
+                            guide1Id = currentAssignment.guide1_id;
+                            guide2Id = null;
+                        }
+                        assignmentType = currentAssignment.type;
+                    }
+                    
+                    // Save the updated assignment (with one guide removed)
+                    const success = await saveManualAssignment(currentDate, guide1Id, guide2Id, assignmentType);
+                    
+                    if (success) {
+                        showNotification(`${guideName} הוסר בהצלחה מתאריך ${currentDate}`, 'success');
+                        
+                        // Refresh the calendar and availability
+                        if (currentDate) {
+                            loadDayAvailability(currentDate);
+                        }
+                        
+                        // Reload the month to reflect changes
+                        const [year, month] = currentMonth.split('-');
+                        await loadMonthSchedule(year, month);
+                    } else {
+                        // If save failed, restore the guide to the UI
+                        selectedGuides.push(guideName);
+                        updateSelectedGuidesFromArray();
+                        showNotification('שגיאה בהסרת המדריך. נסה שוב.', 'error');
+                    }
+                }
+            } catch (error) {
+                console.error('Error removing guide:', error);
+                showNotification('שגיאה בהסרת המדריך', 'error');
                 
-                // Refresh availability list to show the removed guide again
+                // Refresh to restore correct state
                 if (currentDate) {
                     loadDayAvailability(currentDate);
                 }
@@ -4695,8 +5472,8 @@
         }
 
         async function checkGuideAvailability(guideId, date) {
-            try {
-                const response = await fetch(`${API_BASE}/guides/availability/${date}`);
+  try {
+    const response = await fetch(`${API_BASE}/guides/availability/${date}?assignment_type=manual`);
                 const availability = await response.json();
                 const guideAvailability = availability.find(a => a.guide_id === guideId);
                 
@@ -5008,19 +5785,20 @@
                                         <thead>
                                             <tr>
                                                 <th style="text-align: right;">מדריך</th>
-                                                <th>סה"כ</th>
-                                                <th>רגיל</th>
-                                                <th>חפיפה</th>
+                                                <th>סה"כ משמרות</th>
+                                                <th>רגיל (24ש)</th>
+                                                <th>חפיפה (25ש)</th>
                                                 <th>כונן</th>
-                                                <th>ס"ש</th>
+                                                <th>מוצ"ש</th>
+                                                <th>סופ"ש</th>
                                                 <th>איזון</th>
-                                                <th>הפרש</th>
+                                                <th>הפרש מממוצע</th>
                                                 <th>פעולות</th>
                                             </tr>
                                         </thead>
                                         <tbody id="statisticsTableBody">
                                             <tr class="statistics-loading">
-                                                <td colspan="9">
+                                                <td colspan="10">
                                                     <div class="statistics-loading-spinner"></div>
                                                     טוען נתונים...
                                                 </td>
@@ -5149,6 +5927,7 @@
                     <td>${guide.regular_shifts || 0}</td>
                     <td>${guide.overlap_shifts || 0}</td>
                     <td>${guide.conan_shifts || 0}</td>
+                    <td>${guide.motzash_shifts || 0}</td>
                     <td>${guide.weekend_shifts || 0}</td>
                     <td>
                         <span class="statistics-balance-indicator statistics-balance-${balanceStatus.class}">
@@ -5263,12 +6042,15 @@
 
         function getStatisticsBalanceStatus(shifts, average) {
             const diff = shifts - average;
+            // Based on Scheduling Bible balancing principles
             if (diff > 2) {
                 return { class: 'critical', text: 'עומס גבוה' };
             } else if (diff < -2) {
                 return { class: 'warning', text: 'עומס נמוך' };
+            } else if (Math.abs(diff) <= 1) {
+                return { class: 'good', text: 'איזון מושלם' };
             } else {
-                return { class: 'good', text: 'מאוזן' };
+                return { class: 'good', text: 'איזון טוב' };
             }
         }
 
@@ -6531,20 +7313,24 @@
                 }
                 
                 // Get current user info for created_by field
-                const currentUser = localStorage.getItem('name') || 'מערכת';
+                const currentUserId = Number(localStorage.getItem('userId')) || 1; // Default to user ID 1 if not set
+                console.log('Current user ID:', currentUserId, 'from localStorage:', localStorage.getItem('userId'));
+                
+                const requestBody = {
+                    rule_type: ruleType,
+                    guide1_id: parseInt(guide1Id),
+                    guide2_id: guide2Id ? parseInt(guide2Id) : null,
+                    description: description || null,
+                    created_by: currentUserId
+                };
+                console.log('Sending request body:', requestBody);
                 
                 const response = await fetch(`${API_BASE}/coordinator-rules`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({
-                        rule_type: ruleType,
-                        guide1_id: parseInt(guide1Id),
-                        guide2_id: guide2Id ? parseInt(guide2Id) : null,
-                        description: description || null,
-                        created_by: currentUser
-                    })
+                    body: JSON.stringify(requestBody)
                 });
                 
                 const result = await response.json();
