@@ -452,6 +452,9 @@
     </div>
 
 <script>
+// API base URL - uses localhost:4000 in development, relative URLs in production
+const API_BASE = window.API_BASE_URL || '';
+
 // Load user info on page load
 document.addEventListener('DOMContentLoaded', function() {
     loadUserInfo();
@@ -459,22 +462,22 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 async function fetchAllGuides() {
-    const res = await fetch('http://localhost:4000/api/guides');
+    const res = await fetch(`${API_BASE}/api/guides`);
     allGuides = await res.json();
 }
 async function fetchAllRules() {
-    const res = await fetch('http://localhost:4000/api/scheduling-rules');
+    const res = await fetch(`${API_BASE}/api/scheduling-rules`);
     allRules = await res.json();
 }
 async function fetchShabbatStatuses() {
-  const res = await fetch('http://localhost:4000/api/shabbat-status/all');
+  const res = await fetch(`${API_BASE}/api/shabbat-status/all`);
   const data = await res.json();
   shabbatStatuses = {};
   data.forEach(row => shabbatStatuses[row.date] = row.status);
 }
 
 async function setShabbatStatus(date, status) {
-  await fetch('http://localhost:4000/api/shabbat-status', {
+  await fetch(`${API_BASE}/api/shabbat-status`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ date, status })
@@ -602,7 +605,7 @@ async function addRule() {
         guide2_id = Number(document.getElementById('rule-guide2').value);
         if (guide_id === guide2_id) { alert('בחר שני מדריכים שונים'); return; }
     }
-    const res = await fetch('http://localhost:4000/api/scheduling-rules', {
+    const res = await fetch(`${API_BASE}/api/scheduling-rules`, {
         method: 'POST',
         headers: {'Content-Type':'application/json'},
         body: JSON.stringify({
@@ -618,7 +621,7 @@ async function addRule() {
     renderRulesList();
 }
 async function deleteRule(id) {
-    const res = await fetch(`http://localhost:4000/api/scheduling-rules/${id}`, {
+    const res = await fetch(`${API_BASE}/api/scheduling-rules/${id}`, {
         method: 'DELETE',
         headers: {'Content-Type':'application/json'},
         body: JSON.stringify({ role: localStorage.getItem('role') })
@@ -669,10 +672,10 @@ function renderHeaderUser() {
 // =============== LOAD DATA ===============
 window.onload = () => {
     Promise.all([
-        fetch('http://localhost:4000/api/guides').then(res => res.json()),
-        fetch('http://localhost:4000/api/constraints').then(res => res.json()),
-        fetch('http://localhost:4000/api/fixed-constraints').then(res => res.json()),
-        fetch('http://localhost:4000/api/vacations').then(res => res.json())
+        fetch(`${API_BASE}/api/guides`).then(res => res.json()),
+        fetch(`${API_BASE}/api/constraints`).then(res => res.json()),
+        fetch(`${API_BASE}/api/fixed-constraints`).then(res => res.json()),
+        fetch(`${API_BASE}/api/vacations`).then(res => res.json())
     ]).then(([guidesData, constraintsData, fixedData, vacsData]) => {
         guides = guidesData.filter(g => g.role === "מדריך");
         console.log('Loaded guides:', guides);
@@ -701,7 +704,7 @@ function showMonthPicker() {
 }
 async function loadDraft() {
     if (!allGuides.length) await fetchAllGuides();
-    fetch('http://localhost:4000/api/schedule-draft')
+    fetch(`${API_BASE}/api/schedule-draft`)
         .then(res => res.json())
         .then(draft => {
             if (!draft || !Array.isArray(draft) || !draft.length) {
@@ -748,7 +751,7 @@ async function generateDaysList() {
     // טען נתונים נחוצים
     if (!allGuides.length) await fetchAllGuides();
     if (!guides.length) {
-        const res = await fetch('http://localhost:4000/api/guides');
+        const res = await fetch(`${API_BASE}/api/guides`);
         guides = await res.json();
     }
     await fetchConstraintsAndVacations();
@@ -777,9 +780,9 @@ async function generateDaysList() {
 async function fetchConstraintsAndVacations() {
     try {
         const [constraintsRes, fixedRes, vacationsRes] = await Promise.all([
-            fetch('http://localhost:4000/api/constraints'),
-            fetch('http://localhost:4000/api/fixed-constraints'),
-            fetch('http://localhost:4000/api/vacations')
+            fetch(`${API_BASE}/api/constraints`),
+            fetch(`${API_BASE}/api/fixed-constraints`),
+            fetch(`${API_BASE}/api/vacations`)
         ]);
         constraints = await constraintsRes.json();
         fixedConstraints = await fixedRes.json();
@@ -796,7 +799,7 @@ async function fetchConstraintsAndVacations() {
 async function loadShabbatStatusesForMonth(month) {
     weekendsState = {};
     try {
-        const response = await fetch('http://localhost:4000/api/shabbat-status/all');
+        const response = await fetch(`${API_BASE}/api/shabbat-status/all`);
         const shabbatData = await response.json();
         shabbatData.forEach(row => {
             if (!month || row.date.startsWith(month)) {
@@ -1071,7 +1074,7 @@ style.innerHTML = `
 document.head.appendChild(style);
 // פונקציה חדשה לעדכון סטטוס שבת
 window.setShabbatStatusForShabbat = async function(shabbatIso, status) {
-  await fetch('http://localhost:4000/api/shabbat-status', {
+  await fetch(`${API_BASE}/api/shabbat-status`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ date: shabbatIso, status })
@@ -1364,7 +1367,7 @@ async function setWeekend(iso, val) {
     
     // שמור למסד הנתונים
     try {
-        await fetch('http://localhost:4000/api/shabbat-status', {
+        await fetch(`${API_BASE}/api/shabbat-status`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
@@ -2182,7 +2185,7 @@ async function saveDraft() {
                 guide2_id: guide2_id
             };
         });
-    fetch('http://localhost:4000/api/schedule-draft', {
+    fetch(`${API_BASE}/api/schedule-draft`, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify(draft)
@@ -2219,7 +2222,7 @@ async function saveDraftWithName() {
             };
         });
     try {
-        const response = await fetch('http://localhost:4000/api/schedule-draft', {
+        const response = await fetch(`${API_BASE}/api/schedule-draft`, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({ name: draftName, data: draft })
@@ -2239,7 +2242,7 @@ async function saveDraftWithName() {
 async function loadDraftsList() {
     try {
         console.log('Loading drafts list...');
-        const response = await fetch('http://localhost:4000/api/schedule-drafts');
+        const response = await fetch(`${API_BASE}/api/schedule-drafts`);
         const drafts = await response.json();
         console.log('Received drafts:', drafts);
         
@@ -2271,7 +2274,7 @@ async function loadSelectedDraft() {
     }
 
     try {
-        const response = await fetch(`http://localhost:4000/api/schedule-draft?name=${encodeURIComponent(draftName)}`);
+        const response = await fetch(`${API_BASE}/api/schedule-draft?name=${encodeURIComponent(draftName)}`);
         if (!response.ok) {
             alert("טיוטה לא נמצאה");
             return;
@@ -2323,7 +2326,7 @@ async function deleteSelectedDraft() {
     }
 
     try {
-        const response = await fetch(`http://localhost:4000/api/schedule-draft?name=${encodeURIComponent(draftName)}`, {
+        const response = await fetch(`${API_BASE}/api/schedule-draft?name=${encodeURIComponent(draftName)}`, {
             method: 'DELETE'
         });
         
@@ -2394,7 +2397,7 @@ async function sendDraftForApproval() {
             };
         });
     try {
-        await fetch('http://localhost:4000/api/schedule-draft', {
+        await fetch(`${API_BASE}/api/schedule-draft`, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify(draft)
@@ -2418,7 +2421,7 @@ async function approveFinalSchedule() {
             guide1: manualShibutz[d.iso]?.overlap || "",
             guide2: manualShibutz[d.iso]?.regular || ""
         }));
-    fetch('http://localhost:4000/api/schedule', {
+    fetch(`${API_BASE}/api/schedule`, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify(schedule)

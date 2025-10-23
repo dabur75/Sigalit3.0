@@ -86,10 +86,13 @@ if (document.readyState === 'loading') {
 // Centralized API base and a thin fetch wrapper. This does not change existing
 // behavior yet; pages will be incrementally migrated to use these helpers.
 (() => {
-  const isDevStaticServer = window.location && window.location.port === '8080';
+  // Detect if running on localhost (development) or production
+  const isLocalhost = window.location && window.location.hostname === 'localhost';
 
   if (!('API_BASE_URL' in window)) {
-    const baseUrl = isDevStaticServer ? 'http://localhost:4000' : '';
+    // In production (Fly.io), use relative URLs (empty base)
+    // In localhost development, use full URL to backend server
+    const baseUrl = isLocalhost ? 'http://localhost:4000' : '';
     Object.defineProperty(window, 'API_BASE_URL', {
       value: baseUrl,
       writable: false,
