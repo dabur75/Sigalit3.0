@@ -1,4 +1,4 @@
-# Hour Calculation System - Sigalit Project
+w# Hour Calculation System - Sigalit Project
 
 ## Overview
 This document describes the complete method of how hours are calculated in the Sigalit project, including all factors, multipliers, and calculation rules for different shift types and roles.

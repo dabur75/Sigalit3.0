@@ -304,6 +304,7 @@ class AdvancedScheduler {
    * Get guides available for a specific date
    */
   getAvailableGuides(date, dayOfWeek) {
+    
     return this.guides.filter(guide => {
       // Check personal constraints (fix date comparison: handle timezone properly)
       const personalConstraint = this.constraints.personal.find(
@@ -325,10 +326,20 @@ class AdvancedScheduler {
       );
       if (onVacation) return false;
 
+      // Check coordinator rules for auto-scheduling restrictions
+      const noAutoSchedulingRule = this.constraints.coordinator.find(
+        rule => rule.guide1_id === guide.id && 
+               (rule.rule_type === 'no_auto_scheduling' || rule.rule_type === 'manual_only')
+      );
+      if (noAutoSchedulingRule) {
+        console.log(`🚫 COORDINATOR FILTER: Guide ${guide.id}:${guide.name} excluded due to ${noAutoSchedulingRule.rule_type} rule`);
+        return false;
+      }
+
       // Check weekend restrictions
       if ((dayOfWeek === 5 || dayOfWeek === 6)) { // Friday or Saturday
         const noWeekendsRule = this.constraints.coordinator.find(
-          rule => rule.user_id === guide.id && rule.rule_type === 'no_weekends'
+          rule => rule.guide1_id === guide.id && rule.rule_type === 'no_weekends'
         );
         if (noWeekendsRule) return false;
       }
@@ -440,7 +451,6 @@ class AdvancedScheduler {
    */
   generateDayAssignment(day, monthlyPlan, existingSchedule) {
     console.log(`🗓️ Assigning ${day.date} (${day.dayName}) - isWeekend: ${day.isWeekend}, weekendType: ${day.weekendType}`);
-    console.log(`🔍 Debug - weekendType === true: ${day.weekendType === true}, typeof weekendType: ${typeof day.weekendType}`);
     
     // Handle different day types
     if (day.isWeekend && day.weekendType === true) {
@@ -518,9 +528,6 @@ class AdvancedScheduler {
       console.log(`✅ Continuing Saturday with Friday כונן: ${fridayConanGuide?.name}`);
       
       // Select מוצ״ש guide for Saturday (excluding the כונן guide)
-      console.log(`🔍 DEBUG: Starting מוצ״ש selection for ${day.date}`);
-      console.log(`🔍 DEBUG: Friday כונן guide ID: ${fridayAssignment.guide1_id}`);
-      console.log(`🔍 DEBUG: Total guides in system: ${this.guides.length}`);
       
       const allAvailableForMotzash = this.getAvailableGuidesForRole(day.date, day.dayOfWeek, 'מוצ״ש');
       console.log(`📋 All available guides for מוצ״ש on ${day.date}: ${allAvailableForMotzash.length} guides`);
@@ -546,7 +553,6 @@ class AdvancedScheduler {
           explanation: `${fridayConanGuide?.name} - המשך כונן מיום שישי + ${motzashGuide.name} - מוצ״ש לסופ״ש סגור`
         };
         console.log(`✅ Adding מוצ״ש guide for Saturday: ${motzashGuide.name}`);
-        console.log(`🔍 CRITICAL DEBUG: Returning assignment object:`, JSON.stringify(assignmentObject, null, 2));
         return assignmentObject;
       } else {
         console.log(`⚠️ No מוצ״ש guide available for Saturday ${day.date}`);
@@ -651,7 +657,7 @@ class AdvancedScheduler {
       // Filter out guides who can't do כונן
       availableGuides = availableGuides.filter(guide => {
         const noConanRule = this.constraints.coordinator.find(
-          rule => rule.user_id === guide.id && rule.rule_type === 'no_conan'
+          rule => rule.guide1_id === guide.id && rule.rule_type === 'no_conan'
         );
         return !noConanRule;
       });

@@ -284,7 +284,7 @@ router.post('/validate-assignment', async (req, res) => {
 // Create a manual assignment (similar to existing /api/schedule/manual but enhanced)
 router.post('/assign', async (req, res) => {
   try {
-    const { guide_id, date, slot_type, assignment_type, created_by = 'enhanced-manual' } = req.body;
+    const { guide_id, date, slot_type, assignment_type, created_by = null } = req.body;
     
     if (!guide_id || !date || !slot_type) {
       return res.status(400).json({
@@ -296,7 +296,7 @@ router.post('/assign', async (req, res) => {
     console.log(`📝 Creating assignment: Guide ${guide_id} on ${date} (${slot_type})`);
     
     // Validate before creating
-    const validation = await validateAssignment(guide_id, date, slot_type, assignment_type);
+    const validation = await validateAssignment(guide_id, date, slot_type, 'enhanced-manual');
     if (!validation.isValid) {
       return res.status(400).json({
         success: false,
@@ -570,6 +570,9 @@ async function validateAssignment(guideId, date, slotType, assignmentType) {
     const year = dateObj.getFullYear();
     const month = dateObj.getMonth() + 1;
     
+    // Check if this is a manual assignment (override)
+    const isManualAssignment = assignmentType === 'manual' || assignmentType === 'enhanced-manual';
+    
     // Check regular constraints
     const constraintResult = await pool.query(`
       SELECT * FROM constraints 
@@ -577,8 +580,17 @@ async function validateAssignment(guideId, date, slotType, assignmentType) {
     `, [guideId, date]);
     
     if (constraintResult.rows.length > 0) {
-      validation.isValid = false;
-      validation.reasons.push(`מדריך חסום בתאריך זה - ${constraintResult.rows[0].details || 'אילוץ רגיל'}`);
+      // For manual assignments, only block if it's a hard constraint (not auto-scheduling related)
+      const constraint = constraintResult.rows[0];
+      const isAutoSchedulingConstraint = constraint.details && constraint.details.includes('לא לשבץ אוטומטית');
+      
+      if (!isManualAssignment || !isAutoSchedulingConstraint) {
+        validation.isValid = false;
+        validation.reasons.push(`מדריך חסום בתאריך זה - ${constraint.details || 'אילוץ רגיל'}`);
+      } else {
+        // For manual assignments, auto-scheduling constraints are just warnings
+        validation.warnings.push(`אזהרה: ${constraint.details} - שיבוץ ידני מותר`);
+      }
     }
     
     // Check fixed constraints
@@ -588,8 +600,17 @@ async function validateAssignment(guideId, date, slotType, assignmentType) {
     `, [guideId, dayOfWeek]);
     
     if (fixedResult.rows.length > 0) {
-      validation.isValid = false;
-      validation.reasons.push(`מדריך חסום ביום ${['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'][dayOfWeek]} - ${fixedResult.rows[0].details || 'אילוץ קבוע'}`);
+      // For manual assignments, only block if it's a hard constraint (not auto-scheduling related)
+      const constraint = fixedResult.rows[0];
+      const isAutoSchedulingConstraint = constraint.details && constraint.details.includes('לא לשבץ אוטומטית');
+      
+      if (!isManualAssignment || !isAutoSchedulingConstraint) {
+        validation.isValid = false;
+        validation.reasons.push(`מדריך חסום ביום ${['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'][dayOfWeek]} - ${constraint.details || 'אילוץ קבוע'}`);
+      } else {
+        // For manual assignments, auto-scheduling constraints are just warnings
+        validation.warnings.push(`אזהרה: ${constraint.details} - שיבוץ ידני מותר`);
+      }
     }
     
     // Check vacation constraints
@@ -653,6 +674,11 @@ async function validateAssignment(guideId, date, slotType, assignmentType) {
 async function createManualAssignment({ date, guide1_id, guide2_id, type, created_by }) {
   // This will use the existing POST /api/schedule/manual logic
   // For now, we'll implement a simplified version
+  
+  // Ensure created_by is null if not provided or invalid
+  if (!created_by || typeof created_by !== 'number') {
+    created_by = null;
+  }
   
   const jsDate = new Date(date);
   const hebrewWeekdays = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];

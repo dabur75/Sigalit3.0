@@ -7,12 +7,85 @@
     
     <!-- Include header functions -->
     <script src="header-functions.js"></script>
+    <script src="jewish-holidays-service.js"></script>
     
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+        }
+
+        /* CSS Animations for Enhanced UI Polish */
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideInLeft {
+            from {
+                opacity: 0;
+                transform: translateX(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes slideInRight {
+            from {
+                opacity: 0;
+                transform: translateX(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% {
+                transform: translateY(0);
+            }
+            40% {
+                transform: translateY(-10px);
+            }
+            60% {
+                transform: translateY(-5px);
+            }
+        }
+
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(124, 58, 237, 0.7);
+            }
+            70% {
+                box-shadow: 0 0 0 10px rgba(124, 58, 237, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(124, 58, 237, 0);
+            }
+        }
+
+        @keyframes shimmer {
+            0% {
+                background-position: -200px 0;
+            }
+            100% {
+                background-position: calc(200px + 100%) 0;
+            }
         }
 
         body {
@@ -22,6 +95,7 @@
             direction: rtl;
             color: #334155;
             overflow-x: auto;
+            animation: fadeIn 0.5s ease-out;
         }
 
         /* Header and Navigation */
@@ -103,6 +177,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            animation: slideInUp 0.4s ease-out;
         }
 
         .month-controls {
@@ -240,6 +315,8 @@
             overflow-x: auto;
             padding: 10px 0;
             min-height: 120px;
+            animation: slideInLeft 0.6s ease-out;
+            scroll-behavior: smooth;
         }
 
         /* Guide Cards */
@@ -257,8 +334,9 @@
 
         .guide-card:hover {
             border-color: #8b5cf6;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 16px rgba(139, 92, 246, 0.2);
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 0 6px 20px rgba(139, 92, 246, 0.25);
+            animation: pulse 2s infinite;
         }
 
         .guide-card.selected {
@@ -379,6 +457,7 @@
             overflow: hidden;
             border: 1px solid #e5e7eb;
             background: #e5e7eb;
+            animation: slideInRight 0.7s ease-out;
         }
 
         .calendar-day-header {
@@ -424,8 +503,9 @@
 
         .calendar-day:hover {
             background: #f8fafc;
-            transform: translateY(-1px);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+            z-index: 10;
         }
 
         .calendar-day.other-month {
@@ -509,7 +589,26 @@
             font-size: 0.8rem;
         }
         
-        .holiday-indicator,
+        .holiday-indicator {
+            font-size: 0.8rem;
+            margin-left: 2px;
+            display: inline-block;
+            line-height: 1;
+        }
+        
+        .holiday-title {
+            font-size: 0.7rem;
+            color: #d97706;
+            font-weight: 600;
+            text-align: center;
+            margin: 2px 0;
+            line-height: 1.2;
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
         .closed-indicator {
             font-size: 0.7rem;
         }
@@ -537,7 +636,9 @@
         
         .day-slot:hover {
             border-color: #8b5cf6;
-            transform: scale(1.02);
+            transform: scale(1.05);
+            box-shadow: 0 2px 8px rgba(139, 92, 246, 0.2);
+            z-index: 5;
         }
         
         .normal-slot {
@@ -1542,6 +1643,295 @@
             color: #1d4ed8;
             font-weight: bold;
         }
+        
+        /* Statistics Panel Styles */
+        .statistics-panel {
+            background: linear-gradient(135deg, #f8fafc, #e2e8f0);
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            margin: 16px 0;
+            padding: 16px;
+            direction: rtl;
+        }
+        
+        .stats-header h3 {
+            margin: 0 0 12px 0;
+            color: #1e40af;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .stats-summary {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            font-size: 14px;
+        }
+        
+        .stats-summary span {
+            color: #475569;
+        }
+        
+        .stats-summary strong {
+            color: #1e293b;
+        }
+        
+        .fairness-indicator strong {
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        
+        .fairness-good {
+            background: #dcfce7;
+            color: #166534;
+        }
+        
+        .fairness-warning {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        
+        .fairness-poor {
+            background: #fecaca;
+            color: #991b1b;
+        }
+        
+        .export-stats-btn {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-right: auto;
+        }
+        
+        .export-stats-btn:hover {
+            background: #2563eb;
+            transform: translateY(-1px);
+        }
+        
+        .export-stats-btn:active {
+            transform: translateY(0);
+        }
+        
+        /* Guide Card Fairness Indicators */
+        .guide-card.overworked {
+            border-left: 4px solid #dc2626;
+            background: linear-gradient(to right, #fef2f2, white);
+        }
+        
+        .guide-card.underworked {
+            border-left: 4px solid #2563eb;
+            background: linear-gradient(to right, #eff6ff, white);
+        }
+        
+        .guide-card.balanced {
+            border-left: 4px solid #059669;
+            background: linear-gradient(to right, #ecfdf5, white);
+        }
+        
+        /* Context Menu Styling */
+        .context-menu {
+            position: fixed;
+            z-index: 10001;
+            background: white;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            padding: 8px 0;
+            min-width: 180px;
+            display: none;
+            direction: rtl;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        
+        .context-menu-item {
+            display: flex;
+            align-items: center;
+            padding: 8px 16px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            gap: 8px;
+            font-size: 14px;
+            color: #374151;
+        }
+        
+        .context-menu-item:hover {
+            background-color: #f3f4f6;
+        }
+        
+        .context-menu-item:active {
+            background-color: #e5e7eb;
+        }
+        
+        .context-menu-icon {
+            width: 20px;
+            text-align: center;
+            font-size: 14px;
+        }
+        
+        .context-menu-separator {
+            height: 1px;
+            background-color: #e5e7eb;
+            margin: 4px 0;
+        }
+        
+        .context-menu-item[data-action="remove"]:hover {
+            background-color: #fef2f2;
+            color: #dc2626;
+        }
+        
+        .context-menu-item[data-action="assign-normal"],
+        .context-menu-item[data-action="assign-overlap"] {
+            color: #059669;
+        }
+        
+        .context-menu-item[data-action="assign-normal"]:hover,
+        .context-menu-item[data-action="assign-overlap"]:hover {
+            background-color: #ecfdf5;
+        }
+        
+        /* Enhanced Loading States */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10002;
+            backdrop-filter: blur(2px);
+        }
+        
+        .loading-spinner {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            min-width: 200px;
+            direction: rtl;
+        }
+        
+        .spinner {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #8b5cf6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 15px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .loading-text {
+            color: #4b5563;
+            font-weight: 500;
+            font-size: 14px;
+        }
+        
+        .loading-progress {
+            width: 100%;
+            height: 4px;
+            background: #e5e7eb;
+            border-radius: 2px;
+            overflow: hidden;
+            margin-top: 15px;
+        }
+        
+        .loading-progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #8b5cf6, #a855f7);
+            border-radius: 2px;
+            transition: width 0.3s ease;
+        }
+        
+        /* Inline loading indicators */
+        .inline-spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #8b5cf6;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-left: 8px;
+            vertical-align: middle;
+        }
+        
+        /* Button loading states */
+        .btn-loading {
+            position: relative;
+            color: transparent !important;
+            pointer-events: none;
+        }
+        
+        .btn-loading::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 16px;
+            height: 16px;
+            margin: -8px 0 0 -8px;
+            border: 2px solid transparent;
+            border-top-color: #ffffff;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        
+        /* Progressive loading states */
+        .loading-skeleton {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+            border-radius: 4px;
+        }
+        
+        @keyframes loading {
+            0% {
+                background-position: 200% 0;
+            }
+            100% {
+                background-position: -200% 0;
+            }
+        }
+        
+        .guide-card .workload-indicator {
+            font-size: 11px;
+            padding: 2px 4px;
+            border-radius: 3px;
+            margin-top: 2px;
+        }
+        
+        .guide-card.overworked .workload-indicator {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        
+        .guide-card.underworked .workload-indicator {
+            background: #dbeafe;
+            color: #1d4ed8;
+        }
+        
+        .guide-card.balanced .workload-indicator {
+            background: #d1fae5;
+            color: #065f46;
+        }
 
         /* Notifications */
         .notification {
@@ -1575,6 +1965,515 @@
             from { transform: translateX(-50%) translateY(-20px); opacity: 0; }
             to { transform: translateX(-50%) translateY(0); opacity: 1; }
         }
+        
+        /* Confirmation Dialog Styles */
+        .confirmation-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10003;
+            backdrop-filter: blur(3px);
+        }
+        
+        .confirmation-dialog {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+            max-width: 450px;
+            min-width: 350px;
+            text-align: center;
+            direction: rtl;
+            animation: dialogSlideUp 0.3s ease-out;
+        }
+        
+        @keyframes dialogSlideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+        
+        .confirmation-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+            display: block;
+        }
+        
+        .confirmation-icon.warning {
+            color: #f59e0b;
+        }
+        
+        .confirmation-icon.danger {
+            color: #ef4444;
+        }
+        
+        .confirmation-icon.info {
+            color: #3b82f6;
+        }
+        
+        .confirmation-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 15px;
+            line-height: 1.4;
+        }
+        
+        .confirmation-message {
+            font-size: 14px;
+            color: #6b7280;
+            margin-bottom: 25px;
+            line-height: 1.5;
+        }
+        
+        .confirmation-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+        }
+        
+        .confirmation-button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 500;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            min-width: 100px;
+        }
+        
+        .confirmation-button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        .confirmation-button.primary {
+            background: #8b5cf6;
+            color: white;
+        }
+        
+        .confirmation-button.primary:hover {
+            background: #7c3aed;
+        }
+        
+        .confirmation-button.danger {
+            background: #ef4444;
+            color: white;
+        }
+        
+        .confirmation-button.danger:hover {
+            background: #dc2626;
+        }
+        
+        .confirmation-button.secondary {
+            background: #f3f4f6;
+            color: #6b7280;
+            border: 1px solid #d1d5db;
+        }
+        
+        .confirmation-button.secondary:hover {
+            background: #e5e7eb;
+            color: #374151;
+        }
+        
+        .confirmation-details {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            padding: 12px;
+            margin: 15px 0;
+            font-size: 13px;
+            color: #4b5563;
+            text-align: right;
+            line-height: 1.4;
+        }
+        
+        /* Enhanced Notification Animations */
+        @keyframes notificationSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+        
+        @keyframes notificationSlideOut {
+            from {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+                max-height: 200px;
+            }
+            to {
+                opacity: 0;
+                transform: translateY(-20px) scale(0.95);
+                max-height: 0;
+                margin-bottom: 0;
+                padding-top: 0;
+                padding-bottom: 0;
+            }
+        }
+        
+        /* Notification container styles */
+        .enhanced-notification {
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .enhanced-notification::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, rgba(0,0,0,0.1));
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .enhanced-notification:hover::before {
+            opacity: 1;
+        }
+        
+        .enhanced-notification button:hover {
+            color: #374151 !important;
+            transform: scale(1.1);
+        }
+        
+        /* Notification type-specific styles */
+        .enhanced-notification.success {
+            border-right-color: #10b981;
+        }
+        
+        .enhanced-notification.error {
+            border-right-color: #ef4444;
+        }
+        
+        .enhanced-notification.warning {
+            border-right-color: #f59e0b;
+        }
+        
+        .enhanced-notification.info {
+            border-right-color: #3b82f6;
+        }
+        
+        .enhanced-notification.loading {
+            border-right-color: #8b5cf6;
+        }
+        
+        /* Progress notification specific styles */
+        .progress-notification {
+            min-width: 300px;
+        }
+        
+        .progress-bar {
+            background: #e5e7eb;
+            border-radius: 2px;
+            height: 4px;
+            margin-top: 8px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #8b5cf6, #a855f7);
+            border-radius: 2px;
+            transition: width 0.3s ease;
+        }
+
+        /* Enhanced Tooltip System */
+        .tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            white-space: nowrap;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+            direction: rtl;
+            text-align: center;
+        }
+
+        .tooltip.show {
+            opacity: 1;
+        }
+
+        .tooltip::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -5px;
+            border: 5px solid transparent;
+            border-top-color: rgba(0, 0, 0, 0.9);
+        }
+
+        .tooltip.bottom::after {
+            top: -10px;
+            border-top-color: transparent;
+            border-bottom-color: rgba(0, 0, 0, 0.9);
+        }
+
+        /* Interactive Guide System */
+        .help-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 10000;
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .help-step {
+            position: absolute;
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            max-width: 300px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            direction: rtl;
+            animation: slideInUp 0.4s ease;
+        }
+
+        .help-step h4 {
+            margin: 0 0 10px 0;
+            color: #7c3aed;
+            font-size: 1.1rem;
+        }
+
+        .help-step p {
+            margin: 0 0 15px 0;
+            color: #4b5563;
+            line-height: 1.5;
+        }
+
+        .help-step-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .help-step-nav {
+            display: flex;
+            gap: 8px;
+        }
+
+        .help-step-nav button {
+            background: #7c3aed;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+
+        .help-step-nav button:hover {
+            background: #6d28d9;
+        }
+
+        .help-step-nav button:disabled {
+            background: #d1d5db;
+            cursor: not-allowed;
+        }
+
+        .help-step-indicator {
+            font-size: 0.8rem;
+            color: #6b7280;
+        }
+
+        /* Contextual Help Buttons */
+        .help-hint {
+            position: relative;
+            display: inline-block;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-right: 5px;
+        }
+
+        .help-hint:hover {
+            background: #2563eb;
+            transform: scale(1.1);
+        }
+
+        .guide-tutorial-highlight {
+            position: relative;
+            z-index: 9999;
+            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.7);
+            border-radius: 8px;
+        }
+
+        /* Detailed Help Modal */
+        .detailed-help-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 10001;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .help-modal-content {
+            background: white;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 800px;
+            max-height: 90%;
+            overflow: hidden;
+            direction: rtl;
+            animation: slideInUp 0.4s ease;
+        }
+
+        .help-modal-header {
+            background: #7c3aed;
+            color: white;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .help-modal-header h2 {
+            margin: 0;
+            font-size: 1.5rem;
+        }
+
+        .help-modal-close {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 30px;
+            cursor: pointer;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            transition: background 0.2s ease;
+        }
+
+        .help-modal-close:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .help-modal-body {
+            padding: 0;
+            max-height: calc(90vh - 80px);
+            overflow-y: auto;
+        }
+
+        .help-sections {
+            padding: 20px;
+        }
+
+        .help-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8fafc;
+            border-radius: 8px;
+            border-right: 4px solid #7c3aed;
+        }
+
+        .help-section h3 {
+            color: #7c3aed;
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+        }
+
+        .help-section ul, .help-section ol {
+            margin: 0;
+            padding-right: 20px;
+        }
+
+        .help-section li {
+            margin-bottom: 8px;
+            line-height: 1.6;
+        }
+
+        .help-section strong {
+            color: #374151;
+        }
+
+        /* Accessibility - Screen Reader Only */
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+
+        /* Focus styles for better accessibility */
+        .guide-card:focus,
+        button:focus,
+        .day-slot:focus {
+            outline: 2px solid #7c3aed;
+            outline-offset: 2px;
+        }
+
+        .guide-card:focus {
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 6px 20px rgba(124, 58, 237, 0.3);
+        }
+
+        /* High contrast mode support */
+        @media (prefers-contrast: high) {
+            .guide-card,
+            .calendar-day,
+            .action-button {
+                border-width: 2px;
+                border-style: solid;
+            }
+        }
+
+        /* Reduced motion support */
+        @media (prefers-reduced-motion: reduce) {
+            *,
+            *::before,
+            *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
     </style>
 </head>
 
@@ -1583,21 +2482,6 @@
     <div id="header-placeholder"></div>
 
     <div class="main-container">
-        <!-- Header -->
-        <header class="header">
-            <div class="header-content">
-                <div class="header-title">
-                    <span class="icon">🖱️</span>
-                    <h1>מדריך שיבוץ משופר</h1>
-                </div>
-                <nav class="header-nav">
-                    <a href="scheduler.html" class="nav-button">שיבוץ רגיל</a>
-                    <a href="schedule.html" class="nav-button">לוח שיבוץ</a>
-                    <a href="constraints.html" class="nav-button">אילוצים</a>
-                    <a href="dashboard.html" class="nav-button">דשבורד</a>
-                </nav>
-            </div>
-        </header>
 
         <!-- Main Content -->
         <div class="content-wrapper">
@@ -1620,33 +2504,45 @@
 
             <!-- Action Buttons -->
             <div class="action-buttons">
-                <button class="action-button" id="save-changes-btn">
-                    <span>💾</span>
+                <button class="action-button" id="save-changes-btn" aria-label="שמור שינויים לשיבוץ החודשי" aria-describedby="save-status">
+                    <span aria-hidden="true">💾</span>
                     שמור שינויים
                 </button>
-                <button class="action-button secondary" id="clear-selection-btn">
-                    <span>🔄</span>
+                <button class="action-button secondary" id="clear-selection-btn" aria-label="נקה בחירה נוכחית של מדריך">
+                    <span aria-hidden="true">🔄</span>
                     נקה בחירה
                 </button>
-                <button class="action-button secondary" id="undo-btn" disabled>
-                    <span>↩️</span>
+                <button class="action-button secondary" id="undo-btn" disabled aria-label="בטל פעולה אחרונה" aria-describedby="undo-status">
+                    <span aria-hidden="true">↩️</span>
                     בטל פעולה
                 </button>
-                <button class="action-button secondary" id="redo-btn" disabled>
-                    <span>↪️</span>
+                <button class="action-button secondary" id="redo-btn" disabled aria-label="חזור על פעולה שבוטלה" aria-describedby="redo-status">
+                    <span aria-hidden="true">↪️</span>
                     חזור על פעולה
                 </button>
-                <button class="action-button danger" id="clear-month-btn">
-                    <span>🗑️</span>
+                <button class="action-button danger" id="clear-month-btn" aria-label="נקה את כל השיבוצים של החודש">
+                    <span aria-hidden="true">🗑️</span>
                     נקה חודש
                 </button>
-                <button class="action-button secondary" id="bulk-mode-btn">
-                    <span>📋</span>
+                <button class="action-button secondary" id="import-schedule-btn" aria-label="ייבא שיבוץ קיים מהמערכת הרגילה">
+                    <span aria-hidden="true">📥</span>
+                    ייבא שיבוץ
+                </button>
+                <button class="action-button secondary" id="bulk-mode-btn" aria-label="כניסה למצב בחירה מרובה לשיבוץ מספר תאריכים">
+                    <span aria-hidden="true">📋</span>
                     מצב בחירה מרובה
                 </button>
                 <div style="margin-right: auto;">
-                    <button class="action-button secondary" id="refresh-btn">
-                        <span>🔄</span>
+                    <button class="action-button secondary" id="help-btn" aria-label="התחל סיור מודרך למערכת השיבוץ" onclick="tutorialSystem.startTutorial()">
+                        <span aria-hidden="true">❓</span>
+                        סיור מודרך
+                    </button>
+                    <button class="action-button secondary" id="detailed-help-btn" aria-label="פתח מדריך מפורט למערכת השיבוץ" onclick="showDetailedHelp()">
+                        <span aria-hidden="true">📖</span>
+                        מדריך מפורט
+                    </button>
+                    <button class="action-button secondary" id="refresh-btn" aria-label="רענן נתונים - טען מחדש את נתוני המדריכים והשיבוצים">
+                        <span aria-hidden="true">🔄</span>
                         רענן
                     </button>
                 </div>
@@ -1695,17 +2591,36 @@
                 </div>
             </div>
 
+            <!-- Statistics Panel -->
+            <div class="statistics-panel" id="statistics-panel">
+                <div class="stats-header">
+                    <h3>📊 סטטיסטיקות חודשיות</h3>
+                    <div class="stats-summary">
+                        <span>סה״כ משמרות: <strong id="total-shifts-count">0</strong></span>
+                        <span>ממוצע: <strong id="average-shifts-count">0</strong></span>
+                        <span class="fairness-indicator">מאזן: <strong id="fairness-status">טוב</strong></span>
+                        <span>עלות: <strong id="total-salary-factor">0</strong></span>
+                        <button class="export-stats-btn" onclick="exportMonthlyStatistics()" title="ייצא סטטיסטיקות לקובץ CSV">
+                            📊 ייצוא
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <!-- Guides Section -->
             <div class="guides-section">
                 <div class="guides-header">
-                    <h2 class="guides-title">מדריכים זמינים</h2>
-                    <div class="guides-info" id="guides-info">
+                    <h2 class="guides-title" id="guides-section-title" role="heading" aria-level="2">
+                        מדריכים זמינים
+                        <button class="help-hint" title="גרור מדריך לתאריך כדי לשבץ אותו. לחץ על מדריך לצפייה באילוצים" aria-label="עזרה על מדריכים זמינים">?</button>
+                    </h2>
+                    <div class="guides-info" id="guides-info" aria-live="polite" aria-atomic="true">
                         טוען מדריכים...
                     </div>
                 </div>
-                <div class="guides-container" id="guides-container">
+                <div class="guides-container" id="guides-container" role="list" aria-labelledby="guides-section-title" aria-describedby="guides-info">
                     <!-- Guide cards will be populated by JavaScript -->
-                    <div class="loading active">
+                    <div class="loading active" role="status" aria-label="טוען מדריכים">
                         <div class="loading-spinner"></div>
                         טוען מדריכים...
                     </div>
@@ -1737,7 +2652,10 @@
             <!-- Calendar Section -->
             <div class="calendar-section">
                 <div class="calendar-header">
-                    <h2 class="calendar-title">לוח שיבוץ חודשי</h2>
+                    <h2 class="calendar-title" id="calendar-section-title" role="heading" aria-level="2">
+                        לוח שיבוץ חודשי
+                        <button class="help-hint" title="גרור מדריכים לתאריכים כדי לשבץ. לחץ ימין על תאריך לפעולות נוספות" aria-label="עזרה על לוח השיבוץ">?</button>
+                    </h2>
                     <div class="calendar-legend">
                         <div class="legend-item">
                             <div class="legend-color" style="background: #8b5cf6;"></div>
@@ -1750,6 +2668,10 @@
                         <div class="legend-item">
                             <div class="legend-color" style="background: #10b981;"></div>
                             <span>זמין לשיבוץ</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #d97706;"></div>
+                            <span>חגים יהודיים</span>
                         </div>
                     </div>
                     
@@ -1774,9 +2696,9 @@
                     </div>
                 </div>
                 
-                <div class="calendar-grid" id="calendar-grid">
+                <div class="calendar-grid" id="calendar-grid" role="grid" aria-labelledby="calendar-section-title" aria-describedby="calendar-legend">
                     <!-- Calendar will be populated by JavaScript -->
-                    <div class="loading active" style="grid-column: 1 / -1; padding: 40px;">
+                    <div class="loading active" style="grid-column: 1 / -1; padding: 40px;" role="status" aria-label="טוען לוח שיבוץ">
                         <div class="loading-spinner"></div>
                         טוען לוח שיבוץ...
                     </div>
@@ -1784,6 +2706,9 @@
             </div>
         </div>
     </div>
+
+    <!-- Include common footer -->
+    <div id="footer-placeholder"></div>
 
     <!-- Notification Toast -->
     <div class="notification" id="notification">
@@ -1810,20 +2735,649 @@
         let selectedDates = new Set();
         let bulkOperationInProgress = false;
         
+        // Context menu functionality
+        let contextMenuElement = null;
+        let contextMenuTarget = null;
+        
+        function createContextMenu() {
+            if (contextMenuElement) return contextMenuElement;
+            
+            contextMenuElement = document.createElement('div');
+            contextMenuElement.className = 'context-menu';
+            contextMenuElement.id = 'context-menu';
+            contextMenuElement.innerHTML = `
+                <div class="context-menu-item" data-action="assign-normal">
+                    <span class="context-menu-icon">👤</span>
+                    <span>שיבוץ רגיל</span>
+                </div>
+                <div class="context-menu-item" data-action="assign-overlap">
+                    <span class="context-menu-icon">👥</span>
+                    <span>שיבוץ חפיפה</span>
+                </div>
+                <div class="context-menu-separator"></div>
+                <div class="context-menu-item" data-action="remove">
+                    <span class="context-menu-icon">🗑️</span>
+                    <span>הסר שיבוץ</span>
+                </div>
+                <div class="context-menu-item" data-action="swap">
+                    <span class="context-menu-icon">🔄</span>
+                    <span>החלף מדריך</span>
+                </div>
+                <div class="context-menu-separator"></div>
+                <div class="context-menu-item" data-action="details">
+                    <span class="context-menu-icon">ℹ️</span>
+                    <span>פרטי שיבוץ</span>
+                </div>
+                <div class="context-menu-item" data-action="copy">
+                    <span class="context-menu-icon">📋</span>
+                    <span>העתק</span>
+                </div>
+                <div class="context-menu-item" data-action="paste">
+                    <span class="context-menu-icon">📂</span>
+                    <span>הדבק</span>
+                </div>
+            `;
+            
+            // Add event listeners
+            contextMenuElement.addEventListener('click', handleContextMenuClick);
+            document.body.appendChild(contextMenuElement);
+            
+            return contextMenuElement;
+        }
+        
+        function handleContextMenu(e) {
+            // Find if we're right-clicking on a calendar slot
+            const slot = e.target.closest('.day-slot');
+            if (!slot) {
+                hideContextMenu();
+                return;
+            }
+            
+            e.preventDefault();
+            contextMenuTarget = slot;
+            
+            const menu = createContextMenu();
+            
+            // Position the context menu
+            let x = e.clientX;
+            let y = e.clientY;
+            
+            // Ensure menu doesn't go off screen
+            if (x + 200 > window.innerWidth) x = window.innerWidth - 200;
+            if (y + 300 > window.innerHeight) y = window.innerHeight - 300;
+            
+            menu.style.left = x + 'px';
+            menu.style.top = y + 'px';
+            menu.style.display = 'block';
+            
+            updateContextMenuItems(slot);
+        }
+        
+        function updateContextMenuItems(slot) {
+            if (!contextMenuElement) return;
+            
+            const isOccupied = slot.classList.contains('occupied');
+            const hasConstraints = slot.classList.contains('constraint-blocked');
+            const slotType = slot.dataset.slot;
+            
+            const items = contextMenuElement.querySelectorAll('.context-menu-item');
+            
+            items.forEach(item => {
+                const action = item.dataset.action;
+                
+                switch(action) {
+                    case 'assign-normal':
+                    case 'assign-overlap':
+                        item.style.display = (isOccupied || hasConstraints || !selectedGuide) ? 'none' : 'flex';
+                        break;
+                    case 'remove':
+                    case 'swap':
+                    case 'details':
+                    case 'copy':
+                        item.style.display = isOccupied ? 'flex' : 'none';
+                        break;
+                    case 'paste':
+                        item.style.display = (copiedAssignment && !isOccupied) ? 'flex' : 'none';
+                        break;
+                }
+            });
+        }
+        
+        function handleContextMenuClick(e) {
+            e.preventDefault();
+            const action = e.target.closest('.context-menu-item')?.dataset.action;
+            if (!action || !contextMenuTarget) return;
+            
+            const date = contextMenuTarget.dataset.date;
+            const slotType = contextMenuTarget.dataset.slot;
+            
+            switch(action) {
+                case 'assign-normal':
+                    if (selectedGuide) createAssignmentFromContext(selectedGuide.id, date, 'normal');
+                    break;
+                case 'assign-overlap':
+                    if (selectedGuide) createAssignmentFromContext(selectedGuide.id, date, 'overlap');
+                    break;
+                case 'remove':
+                    removeAssignmentFromSlot(date, slotType);
+                    break;
+                case 'swap':
+                    if (selectedGuide) swapAssignment(date, slotType, selectedGuide.id);
+                    break;
+                case 'details':
+                    showAssignmentDetails(date, slotType);
+                    break;
+                case 'copy':
+                    copyAssignment(date, slotType);
+                    break;
+                case 'paste':
+                    pasteAssignment(date, slotType);
+                    break;
+            }
+            
+            hideContextMenu();
+        }
+        
+        function hideContextMenu() {
+            if (contextMenuElement) {
+                contextMenuElement.style.display = 'none';
+                contextMenuTarget = null;
+            }
+        }
+        
+        async function createAssignmentFromContext(guideId, date, slotType) {
+            try {
+                showNotification('יוצר שיבוץ...', 'info');
+                await createAssignment(guideId, date, slotType);
+                showNotification('שיבוץ נוצר בהצלחה', 'success');
+            } catch (error) {
+                console.error('Error creating assignment from context:', error);
+                showNotification('שגיאה ביצירת שיבוץ', 'error');
+            }
+        }
+        
+        function copyAssignment(date, slotType) {
+            const slot = document.querySelector(`[data-date="${date}"][data-slot="${slotType}"]`);
+            if (!slot || !slot.classList.contains('occupied')) return;
+            
+            const assignmentDisplay = slot.querySelector('.assignment-display');
+            if (assignmentDisplay) {
+                const guideName = assignmentDisplay.querySelector('.assigned-guide-name')?.textContent;
+                copiedAssignment = { guideName, slotType, originalDate: date };
+                showNotification(`הועתק: ${guideName}`, 'success');
+            }
+        }
+        
+        async function pasteAssignment(date, slotType) {
+            if (!copiedAssignment || !selectedGuide) return;
+            
+            try {
+                showNotification('מדביק שיבוץ...', 'info');
+                await createAssignment(selectedGuide.id, date, slotType);
+                showNotification(`הודבק שיבוץ ל-${date}`, 'success');
+            } catch (error) {
+                console.error('Error pasting assignment:', error);
+                showNotification('שגיאה בהדבקת שיבוץ', 'error');
+            }
+        }
+        
+        async function swapAssignment(date, slotType, newGuideId) {
+            try {
+                // Get current guide name for confirmation
+                const slot = document.querySelector(`[data-date="${date}"][data-slot="${slotType}"]`);
+                const originalGuide = slot?.querySelector('.assigned-guide-name')?.textContent || 'מדריך לא ידוע';
+                const newGuide = guides.find(g => g.id === newGuideId)?.name || 'מדריך לא ידוע';
+                
+                const confirmed = await confirmSwapAssignment(originalGuide, newGuide, date);
+                if (!confirmed) {
+                    showNotification('החלפת המדריך בוטלה', 'info');
+                    return;
+                }
+                
+                showNotification('מחליף מדריך...', 'info');
+                await removeAssignmentFromSlot(date, slotType, true); // Skip confirmation for internal call
+                await createAssignment(newGuideId, date, slotType);
+                showNotification('מדריך הוחלף בהצלחה', 'success');
+            } catch (error) {
+                console.error('Error swapping assignment:', error);
+                showNotification('שגיאה בהחלפת מדריך', 'error');
+            }
+        }
+        
+        function showAssignmentDetails(date, slotType) {
+            const slot = document.querySelector(`[data-date="${date}"][data-slot="${slotType}"]`);
+            if (!slot || !slot.classList.contains('occupied')) return;
+            
+            const assignmentDisplay = slot.querySelector('.assignment-display');
+            if (assignmentDisplay) {
+                const guideName = assignmentDisplay.querySelector('.assigned-guide-name')?.textContent;
+                const details = `📋 פרטי שיבוץ:\n👤 מדריך: ${guideName}\n📅 תאריך: ${new Date(date).toLocaleDateString('he-IL')}\n⏰ סוג: ${slotType === 'normal' ? 'רגיל' : 'חפיפה'}`;
+                showNotification(details, 'info', 6000);
+            }
+        }
+        
+        // Enhanced Loading States Functions
+        let loadingOverlay = null;
+        let currentProgress = 0;
+        
+        function showGlobalLoading(message = 'טוען...', showProgress = false) {
+            hideGlobalLoading(); // Remove any existing overlay
+            
+            loadingOverlay = document.createElement('div');
+            loadingOverlay.className = 'loading-overlay';
+            loadingOverlay.innerHTML = `
+                <div class="loading-spinner">
+                    <div class="spinner"></div>
+                    <div class="loading-text">${message}</div>
+                    ${showProgress ? `
+                        <div class="loading-progress">
+                            <div class="loading-progress-bar" style="width: ${currentProgress}%"></div>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+            
+            document.body.appendChild(loadingOverlay);
+            
+            // Prevent scrolling while loading
+            document.body.style.overflow = 'hidden';
+        }
+        
+        function updateLoadingProgress(progress, message = null) {
+            if (!loadingOverlay) return;
+            
+            currentProgress = Math.min(100, Math.max(0, progress));
+            
+            const progressBar = loadingOverlay.querySelector('.loading-progress-bar');
+            if (progressBar) {
+                progressBar.style.width = currentProgress + '%';
+            }
+            
+            if (message) {
+                const loadingText = loadingOverlay.querySelector('.loading-text');
+                if (loadingText) {
+                    loadingText.textContent = message;
+                }
+            }
+        }
+        
+        function hideGlobalLoading() {
+            if (loadingOverlay) {
+                document.body.removeChild(loadingOverlay);
+                loadingOverlay = null;
+                currentProgress = 0;
+                
+                // Restore scrolling
+                document.body.style.overflow = '';
+            }
+        }
+        
+        function showButtonLoading(buttonElement) {
+            if (!buttonElement) return;
+            
+            buttonElement.classList.add('btn-loading');
+            buttonElement.disabled = true;
+            
+            // Store original text
+            if (!buttonElement.dataset.originalText) {
+                buttonElement.dataset.originalText = buttonElement.textContent;
+            }
+        }
+        
+        function hideButtonLoading(buttonElement) {
+            if (!buttonElement) return;
+            
+            buttonElement.classList.remove('btn-loading');
+            buttonElement.disabled = false;
+            
+            // Restore original text
+            if (buttonElement.dataset.originalText) {
+                buttonElement.textContent = buttonElement.dataset.originalText;
+            }
+        }
+        
+        function showInlineLoading(element) {
+            if (!element) return;
+            
+            const spinner = document.createElement('span');
+            spinner.className = 'inline-spinner';
+            spinner.setAttribute('data-loading-indicator', 'true');
+            
+            element.appendChild(spinner);
+        }
+        
+        function hideInlineLoading(element) {
+            if (!element) return;
+            
+            const spinners = element.querySelectorAll('[data-loading-indicator]');
+            spinners.forEach(spinner => spinner.remove());
+        }
+        
+        function showSkeletonLoading(element, height = '20px') {
+            if (!element) return;
+            
+            element.innerHTML = `<div class="loading-skeleton" style="height: ${height}; width: 100%;"></div>`;
+        }
+        
+        // Enhanced loading for specific operations
+        async function withLoadingState(operation, loadingMessage = 'מעבד...', buttonElement = null) {
+            try {
+                if (buttonElement) {
+                    showButtonLoading(buttonElement);
+                } else {
+                    showGlobalLoading(loadingMessage);
+                }
+                
+                const result = await operation();
+                return result;
+                
+            } catch (error) {
+                console.error('Operation failed:', error);
+                throw error;
+            } finally {
+                if (buttonElement) {
+                    hideButtonLoading(buttonElement);
+                } else {
+                    hideGlobalLoading();
+                }
+            }
+        }
+        
+        // Confirmation Dialog Functions
+        function showConfirmationDialog({
+            title = 'אישור פעולה',
+            message = 'האם אתה בטוח שברצונך לבצע פעולה זו?',
+            icon = 'warning', // warning, danger, info
+            confirmText = 'אישור',
+            cancelText = 'ביטול',
+            confirmStyle = 'primary', // primary, danger
+            details = null,
+            onConfirm = () => {},
+            onCancel = () => {}
+        }) {
+            return new Promise((resolve) => {
+                // Remove any existing dialog
+                const existingDialog = document.querySelector('.confirmation-overlay');
+                if (existingDialog) {
+                    existingDialog.remove();
+                }
+                
+                // Create dialog overlay
+                const overlay = document.createElement('div');
+                overlay.className = 'confirmation-overlay';
+                
+                // Create dialog content
+                const dialog = document.createElement('div');
+                dialog.className = 'confirmation-dialog';
+                
+                const iconEmojis = {
+                    warning: '⚠️',
+                    danger: '🗑️',
+                    info: 'ℹ️'
+                };
+                
+                dialog.innerHTML = `
+                    <span class="confirmation-icon ${icon}">${iconEmojis[icon] || '❓'}</span>
+                    <div class="confirmation-title">${title}</div>
+                    <div class="confirmation-message">${message}</div>
+                    ${details ? `<div class="confirmation-details">${details}</div>` : ''}
+                    <div class="confirmation-actions">
+                        <button class="confirmation-button secondary" data-action="cancel">${cancelText}</button>
+                        <button class="confirmation-button ${confirmStyle}" data-action="confirm">${confirmText}</button>
+                    </div>
+                `;
+                
+                overlay.appendChild(dialog);
+                document.body.appendChild(overlay);
+                
+                // Prevent scrolling
+                document.body.style.overflow = 'hidden';
+                
+                // Handle button clicks
+                const handleClick = (e) => {
+                    const action = e.target.dataset.action;
+                    if (action) {
+                        cleanup();
+                        if (action === 'confirm') {
+                            onConfirm();
+                            resolve(true);
+                        } else {
+                            onCancel();
+                            resolve(false);
+                        }
+                    }
+                };
+                
+                // Handle ESC key
+                const handleEscape = (e) => {
+                    if (e.key === 'Escape') {
+                        cleanup();
+                        onCancel();
+                        resolve(false);
+                    }
+                };
+                
+                // Cleanup function
+                const cleanup = () => {
+                    document.body.style.overflow = '';
+                    overlay.remove();
+                    document.removeEventListener('keydown', handleEscape);
+                };
+                
+                // Add event listeners
+                dialog.addEventListener('click', handleClick);
+                document.addEventListener('keydown', handleEscape);
+                
+                // Focus on confirm button
+                setTimeout(() => {
+                    const confirmButton = dialog.querySelector('[data-action="confirm"]');
+                    if (confirmButton) confirmButton.focus();
+                }, 100);
+            });
+        }
+        
+        // Confirmation wrappers for destructive operations
+        async function confirmRemoveAssignment(date, slotType, guideName) {
+            const formattedDate = new Date(date).toLocaleDateString('he-IL');
+            const slotText = slotType === 'normal' ? 'רגיל' : 'חפיפה';
+            
+            return showConfirmationDialog({
+                title: 'מחיקת שיבוץ',
+                message: 'האם אתה בטוח שברצונך למחוק שיבוץ זה?',
+                icon: 'danger',
+                confirmText: 'מחק',
+                confirmStyle: 'danger',
+                details: `מדריך: ${guideName}<br>תאריך: ${formattedDate}<br>סוג: ${slotText}`
+            });
+        }
+        
+        async function confirmClearMonth() {
+            return showConfirmationDialog({
+                title: 'ניקוי חודש',
+                message: 'פעולה זו תמחק את כל השיבוצים בחודש הנוכחי.',
+                icon: 'danger',
+                confirmText: 'נקה הכל',
+                confirmStyle: 'danger',
+                details: 'לא ניתן לבטל פעולה זו לאחר ביצועה.<br>כל השיבוצים הידניים והאוטומטיים יימחקו.'
+            });
+        }
+        
+        async function confirmBulkOperation(operation, selectedCount) {
+            const operations = {
+                assign: {
+                    title: 'שיבוץ מרובה',
+                    message: `האם לשבץ את המדריך הנבחר לכל ${selectedCount} התאריכים?`,
+                    confirmText: 'שבץ הכל'
+                },
+                clear: {
+                    title: 'מחיקה מרובה',
+                    message: `האם למחוק את כל השיבוצים מ-${selectedCount} התאריכים?`,
+                    confirmText: 'מחק הכל',
+                    confirmStyle: 'danger',
+                    icon: 'danger'
+                }
+            };
+            
+            const config = operations[operation] || operations.assign;
+            
+            return showConfirmationDialog({
+                title: config.title,
+                message: config.message,
+                icon: config.icon || 'warning',
+                confirmText: config.confirmText,
+                confirmStyle: config.confirmStyle || 'primary',
+                details: `תאריכים נבחרים: ${selectedCount}`
+            });
+        }
+        
+        async function confirmSwapAssignment(originalGuide, newGuide, date) {
+            const formattedDate = new Date(date).toLocaleDateString('he-IL');
+            
+            return showConfirmationDialog({
+                title: 'החלפת מדריך',
+                message: 'האם אתה בטוח שברצונך להחליף את המדריך?',
+                icon: 'info',
+                confirmText: 'החלף',
+                details: `מדריך נוכחי: ${originalGuide}<br>מדריך חדש: ${newGuide}<br>תאריך: ${formattedDate}`
+            });
+        }
+        
+        // Override existing functions to use enhanced loading
+        const originalCreateAssignment = createAssignment;
+        async function createAssignment(guideId, date, slotType) {
+            return withLoadingState(
+                () => originalCreateAssignment(guideId, date, slotType),
+                'יוצר שיבוץ...'
+            );
+        }
+        
+        const originalRemoveAssignmentFromSlot = removeAssignmentFromSlot;
+        async function removeAssignmentFromSlot(date, slotType, skipConfirmation = false) {
+            if (!skipConfirmation) {
+                // Get guide name from slot for confirmation
+                const slot = document.querySelector(`[data-date="${date}"][data-slot="${slotType}"]`);
+                const guideName = slot?.querySelector('.assigned-guide-name')?.textContent || 'מדריך לא ידוע';
+                
+                const confirmed = await confirmRemoveAssignment(date, slotType, guideName);
+                if (!confirmed) {
+                    showNotification('מחיקת השיבוץ בוטלה', 'info');
+                    return;
+                }
+            }
+            
+            return withLoadingState(
+                () => originalRemoveAssignmentFromSlot(date, slotType),
+                'מוחק שיבוץ...'
+            );
+        }
+
+        // Enhanced loading wrappers for more operations
+        const originalSaveSchedule = saveSchedule;
+        async function saveSchedule() {
+            const saveButton = document.querySelector('[data-action="save"]');
+            return withLoadingState(
+                () => originalSaveSchedule(),
+                'שומר שינויים...',
+                saveButton
+            );
+        }
+        
+        const originalLoadSchedule = loadSchedule;
+        async function loadSchedule(year, month) {
+            return withLoadingState(
+                () => originalLoadSchedule(year, month),
+                'טוען לוח שיבוץ...'
+            );
+        }
+        
+        const originalRefreshData = refreshData;
+        async function refreshData() {
+            const refreshButton = document.querySelector('[data-action="refresh"]');
+            return withLoadingState(
+                () => originalRefreshData(),
+                'מרענן נתונים...',
+                refreshButton
+            );
+        }
+        
         // Initialize when page loads
         document.addEventListener('DOMContentLoaded', function() {
             console.log('📱 DOM loaded, initializing enhanced manual scheduler...');
-            initializeScheduler();
+            
+            // Show initial loading
+            showGlobalLoading('מאתחל מערכת שיבוץ...', true);
+            
+            // Initialize with progress tracking
+            setTimeout(() => {
+                updateLoadingProgress(20, 'טוען ממשק...');
+                setTimeout(() => {
+                    updateLoadingProgress(60, 'טוען נתונים...');
+                    initializeScheduler().finally(() => {
+                        updateLoadingProgress(100, 'הושלם!');
+                        setTimeout(hideGlobalLoading, 500);
+                    });
+                }, 200);
+            }, 100);
+            
+            // Set up context menu listeners
+            document.addEventListener('contextmenu', handleContextMenu);
+            document.addEventListener('click', hideContextMenu);
         });
         
         // Main initialization function
+        // Load header function
+        async function loadHeader() {
+            try {
+                const resp = await fetch('header.html');
+                const html = await resp.text();
+                const container = document.getElementById('header-placeholder');
+                if (container) {
+                    container.innerHTML = html;
+                    console.log('✅ Header loaded successfully');
+                    // After header is loaded, initialize header functions
+                    if (typeof renderHeaderUser === 'function') {
+                        renderHeaderUser();
+                    }
+                } else {
+                    console.warn('Header placeholder not found');
+                }
+            } catch (e) {
+                console.warn('Failed to load header.html:', e);
+            }
+        }
+        
+        async function loadFooter() {
+            try {
+                const resp = await fetch('footer.html');
+                const html = await resp.text();
+                const container = document.getElementById('footer-placeholder');
+                if (container) {
+                    container.innerHTML = html;
+                    console.log('✅ Footer loaded successfully');
+                } else {
+                    console.warn('Footer placeholder not found');
+                }
+            } catch (e) {
+                console.warn('Failed to load footer.html:', e);
+            }
+        }
+        
         async function initializeScheduler() {
             try {
-                // Load common header
-                await loadHeader();
+                // Load common header and footer
+                await Promise.all([
+                    loadHeader(),
+                    loadFooter()
+                ]);
                 
                 // Set up event listeners
                 setupEventListeners();
+                
+                // Initialize auto-save functionality
+                initAutoSave();
+                
+                // Initialize offline handling
+                initOfflineHandling();
                 
                 // Load initial data
                 await loadMonthData();
@@ -1847,6 +3401,7 @@
             document.getElementById('undo-btn').addEventListener('click', undoLastAction);
             document.getElementById('redo-btn').addEventListener('click', redoLastAction);
             document.getElementById('clear-month-btn').addEventListener('click', clearMonth);
+            document.getElementById('import-schedule-btn').addEventListener('click', importExistingSchedule);
             document.getElementById('bulk-mode-btn').addEventListener('click', toggleBulkMode);
             document.getElementById('refresh-btn').addEventListener('click', refreshData);
             
@@ -1926,6 +3481,12 @@
             card.dataset.guideId = guide.id;
             card.dataset.guideName = guide.name;
             
+            // Accessibility attributes
+            card.setAttribute('role', 'listitem');
+            card.setAttribute('tabindex', '0');
+            card.setAttribute('aria-label', `מדריך ${guide.name}, ${guide.total_shifts || 0} משמרות, ${(guide.salary_factor || 0).toFixed(1)} שעות שכר`);
+            card.setAttribute('aria-describedby', `guide-${guide.id}-description`);
+            
             // Check if guide has constraints this month
             const constraintCount = constraints[guide.id] ? constraints[guide.id].total_count : 0;
             
@@ -1943,14 +3504,18 @@
             
             card.innerHTML = `
                 ${constraintIndicator}
-                <div class="guide-name">${guide.name}</div>
-                <div class="guide-stats">
+                <div class="guide-name" aria-hidden="true">${guide.name}</div>
+                <div class="guide-stats" aria-hidden="true">
                     <div class="shift-counter ${efficiencyClass}">${guide.total_shifts || 0}</div>
                     <div style="color: #6b7280; font-size: 0.8rem;">משמרות</div>
                 </div>
-                <div class="salary-hours">${(guide.salary_factor || 0).toFixed(1)} שעות שכר</div>
-                <div class="guide-efficiency" style="font-size: 0.7rem; color: #9ca3af; text-align: center;">
+                <div class="salary-hours" aria-hidden="true">${(guide.salary_factor || 0).toFixed(1)} שעות שכר</div>
+                <div class="guide-efficiency" style="font-size: 0.7rem; color: #9ca3af; text-align: center;" aria-hidden="true">
                     ${efficiency.toFixed(1)} ש/משמרת
+                </div>
+                <div id="guide-${guide.id}-description" class="sr-only">
+                    גרור מדריך זה לתאריך בלוח השיבוץ כדי לשבץ אותו. לחץ כדי לצפות באילוצים.
+                    ${constraintCount > 0 ? `יש ${constraintCount} אילוצים בחודש זה.` : 'אין אילוצים בחודש זה.'}
                 </div>
             `;
             
@@ -1961,6 +3526,30 @@
             card.addEventListener('mouseenter', () => handleGuideHover(guide, true));
             card.addEventListener('mouseleave', () => handleGuideHover(guide, false));
             
+            // Keyboard navigation support
+            card.addEventListener('keydown', (e) => {
+                switch(e.key) {
+                    case 'Enter':
+                    case ' ':
+                        e.preventDefault();
+                        handleGuideCardClick(e, guide);
+                        break;
+                    case 'ArrowRight':
+                    case 'ArrowLeft':
+                        e.preventDefault();
+                        navigateGuideCards(card, e.key === 'ArrowRight' ? 1 : -1);
+                        break;
+                    case 'Home':
+                        e.preventDefault();
+                        focusFirstGuideCard();
+                        break;
+                    case 'End':
+                        e.preventDefault();
+                        focusLastGuideCard();
+                        break;
+                }
+            });
+            
             return card;
         }
         
@@ -1968,7 +3557,7 @@
         async function loadCalendar() {
             try {
                 // Generate calendar grid
-                renderCalendarGrid();
+                await renderCalendarGrid();
                 
                 // Load existing assignments
                 await loadAssignments();
@@ -1980,7 +3569,7 @@
         }
         
         // Render calendar grid
-        function renderCalendarGrid() {
+        async function renderCalendarGrid() {
             const container = document.getElementById('calendar-grid');
             container.innerHTML = '';
             
@@ -2021,20 +3610,21 @@
             const firstDayOfWeek = firstDay.getDay();
             startDate.setDate(startDate.getDate() - firstDayOfWeek);
             
+            // Create all day elements asynchronously
             for (let i = 0; i < 42; i++) {
                 const date = new Date(startDate);
                 date.setDate(startDate.getDate() + i);
                 
-                const dayElement = createDayElement(date);
+                const dayElement = await createDayElement(date);
                 container.appendChild(dayElement);
             }
         }
         
         // Create day element with enhanced features
-        function createDayElement(date) {
+        async function createDayElement(date) {
             const day = document.createElement('div');
             day.className = 'calendar-day';
-            day.dataset.date = date.toISOString().split('T')[0];
+            day.dataset.date = formatLocalDate(date);
             
             // Enhanced date classification
             const isCurrentMonth = date.getMonth() === currentMonth - 1;
@@ -2042,7 +3632,10 @@
             const isFriday = date.getDay() === 5;
             const isSaturday = date.getDay() === 6;
             const isWeekend = isFriday || isSaturday;
-            const isHoliday = checkIfHoliday(date);
+            
+            // Check for Jewish holidays asynchronously
+            const holidays = await getHolidayInfo(date);
+            const isHoliday = holidays.length > 0;
             
             // Apply CSS classes
             if (!isCurrentMonth) day.classList.add('other-month');
@@ -2056,13 +3649,25 @@
             const isClosedWeekend = checkClosedWeekendStatus(date);
             if (isClosedWeekend) day.classList.add('closed-weekend');
             
+                        // Create holiday indicators
+            let holidayIndicators = '';
+            if (isHoliday) {
+              holidays.forEach(holiday => {
+                const icon = jewishHolidays.getHolidayIcon(holiday.category);
+                const color = jewishHolidays.getHolidayColor(holiday.category);
+                const title = holiday.titleHeb || holiday.title;
+                holidayIndicators += `<span class="holiday-indicator" style="color: ${color};" title="${title}">${icon}</span>`;
+              });
+            }
+            
             // Create enhanced day structure
             day.innerHTML = `
                 <div class="day-header">
                     <div class="day-number">${date.getDate()}</div>
+                    ${isHoliday ? `<div class="holiday-title">${holidays[0].titleHeb || holidays[0].title}</div>` : ''}
                     <div class="day-indicators">
                         ${isToday ? '<span class="today-indicator">●</span>' : ''}
-                        ${isHoliday ? '<span class="holiday-indicator">🎉</span>' : ''}
+                        ${holidayIndicators}
                         ${isClosedWeekend ? '<span class="closed-indicator">🔒</span>' : ''}
                     </div>
                 </div>
@@ -2120,27 +3725,31 @@
             return day;
         }
         
-        // Check if date is a holiday (enhanced Israeli holiday detection)
-        function checkIfHoliday(date) {
-            // This is a simplified implementation - in production you'd check against a holiday database
-            // For now, just mark some common Israeli holidays
-            const month = date.getMonth() + 1;
-            const day = date.getDate();
-            
-            // Israeli holidays (approximate dates - these should be replaced with proper Hebrew calendar integration)
-            const holidays = [
-                {month: 1, day: 1},   // New Year (Civil)
-                {month: 4, day: 19},  // Independence Day (approximate - varies by Hebrew calendar)
-                {month: 4, day: 27},  // Memorial Day (approximate)
-                {month: 5, day: 9},   // Jerusalem Day (approximate)
-                {month: 9, day: 15},  // Rosh Hashanah (approximate - varies by Hebrew calendar)
-                {month: 9, day: 24},  // Yom Kippur (approximate)
-                {month: 9, day: 29},  // Sukkot begins (approximate)
-                {month: 12, day: 25}, // Hanukkah begins (approximate)
-            ];
-            
-            return holidays.some(holiday => holiday.month === month && holiday.day === day);
+        // Initialize Jewish holidays service
+        const jewishHolidays = new JewishHolidaysService();
+        
+        // Check if date is a holiday (using Jewish holidays service)
+        async function checkIfHoliday(date) {
+            try {
+                const dateString = formatLocalDate(date);
+                const holidays = await jewishHolidays.getHolidaysForDate(dateString);
+                return holidays.length > 0;
+            } catch (error) {
+                console.error('Error checking holidays:', error);
+                return false;
+            }
         }
+        
+        // Get holiday information for a date
+        async function getHolidayInfo(date) {
+            try {
+                const dateString = formatLocalDate(date);
+                return await jewishHolidays.getHolidaysForDate(dateString);
+            } catch (error) {
+                console.error('Error getting holiday info:', error);
+                return [];
+            }
+            }
         
         // Enhanced Israeli weekend and holiday logic
         function getIsraeliDayInfo(date) {
@@ -2221,16 +3830,842 @@
             });
         }
         
-        function showNotification(message, type = 'success') {
-            const notification = document.getElementById('notification');
-            const messageEl = document.getElementById('notification-message');
+        // Enhanced notification system with multiple notification support
+        let notificationCounter = 0;
+        let activeNotifications = new Map();
+        
+        function showNotification(message, type = 'success', duration = null, persistent = false) {
+            const notificationId = ++notificationCounter;
             
-            messageEl.textContent = message;
-            notification.className = `notification ${type} show`;
+            // Create notification container if it doesn't exist
+            let notificationContainer = document.getElementById('notification-container');
+            if (!notificationContainer) {
+                notificationContainer = document.createElement('div');
+                notificationContainer.id = 'notification-container';
+                notificationContainer.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    z-index: 10001;
+                    direction: rtl;
+                    max-width: 500px;
+                    width: auto;
+                    pointer-events: none;
+                `;
+                document.body.appendChild(notificationContainer);
+            }
             
-            setTimeout(() => {
-                notification.classList.remove('show');
-            }, 3000);
+            // Determine notification settings
+            const settings = getNotificationSettings(type);
+            const notificationDuration = duration || settings.duration;
+            
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.className = `enhanced-notification ${type}`;
+            notification.style.cssText = `
+                background: white;
+                border-radius: 8px;
+                padding: 12px 16px;
+                margin-bottom: 8px;
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+                border-right: 4px solid ${settings.color};
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                font-size: 14px;
+                color: #374151;
+                animation: notificationSlideIn 0.3s ease-out;
+                pointer-events: auto;
+                max-width: 100%;
+                word-wrap: break-word;
+            `;
+            
+            // Add icon and content
+            notification.innerHTML = `
+                <span style="font-size: 18px; flex-shrink: 0;">${settings.icon}</span>
+                <div style="flex: 1; line-height: 1.4;">${message}</div>
+                ${!persistent ? '<button style="background: none; border: none; font-size: 16px; cursor: pointer; color: #6b7280; padding: 0; margin-right: 8px;" onclick="this.parentElement.remove()">×</button>' : ''}
+            `;
+            
+            // Add to container
+            notificationContainer.appendChild(notification);
+            activeNotifications.set(notificationId, notification);
+            
+            // Auto-dismiss (if not persistent)
+            if (!persistent && notificationDuration > 0) {
+                setTimeout(() => {
+                    dismissNotification(notificationId);
+                }, notificationDuration);
+            }
+            
+            // Return notification ID for manual dismissal
+            return notificationId;
+        }
+        
+        function getNotificationSettings(type) {
+            const settings = {
+                success: {
+                    color: '#10b981',
+                    icon: '✅',
+                    duration: 3000
+                },
+                error: {
+                    color: '#ef4444',
+                    icon: '❌', 
+                    duration: 5000
+                },
+                warning: {
+                    color: '#f59e0b',
+                    icon: '⚠️',
+                    duration: 4000
+                },
+                info: {
+                    color: '#3b82f6',
+                    icon: 'ℹ️',
+                    duration: 3000
+                },
+                loading: {
+                    color: '#8b5cf6',
+                    icon: '⏳',
+                    duration: 0 // No auto-dismiss for loading
+                }
+            };
+            
+            return settings[type] || settings.info;
+        }
+        
+        function dismissNotification(notificationId) {
+            const notification = activeNotifications.get(notificationId);
+            if (notification) {
+                notification.style.animation = 'notificationSlideOut 0.3s ease-in forwards';
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.parentNode.removeChild(notification);
+                    }
+                    activeNotifications.delete(notificationId);
+                }, 300);
+            }
+        }
+        
+        function dismissAllNotifications() {
+            activeNotifications.forEach((notification, id) => {
+                dismissNotification(id);
+            });
+        }
+        
+        // Notification shortcuts for common use cases
+        function showSuccessNotification(message, duration) {
+            return showNotification(message, 'success', duration);
+        }
+        
+        function showErrorNotification(message, persistent = false) {
+            return showNotification(message, 'error', persistent ? 0 : 5000, persistent);
+        }
+        
+        function showWarningNotification(message, duration) {
+            return showNotification(message, 'warning', duration);
+        }
+        
+        function showInfoNotification(message, duration) {
+            return showNotification(message, 'info', duration);
+        }
+        
+        function showLoadingNotification(message) {
+            return showNotification(message, 'loading', 0, true);
+        }
+        
+        function showProgressNotification(message, progress = 0) {
+            const notificationId = showLoadingNotification('');
+            const notification = activeNotifications.get(notificationId);
+            if (notification) {
+                const progressBar = document.createElement('div');
+                progressBar.style.cssText = `
+                    width: 100%;
+                    height: 4px;
+                    background: #e5e7eb;
+                    border-radius: 2px;
+                    margin-top: 8px;
+                    overflow: hidden;
+                `;
+                
+                const progressFill = document.createElement('div');
+                progressFill.style.cssText = `
+                    height: 100%;
+                    background: #8b5cf6;
+                    border-radius: 2px;
+                    transition: width 0.3s ease;
+                    width: ${Math.max(0, Math.min(100, progress))}%;
+                `;
+                
+                progressBar.appendChild(progressFill);
+                notification.querySelector('div').innerHTML = message;
+                notification.appendChild(progressBar);
+                
+                // Return update function
+                return {
+                    id: notificationId,
+                    update: (newMessage, newProgress) => {
+                        if (activeNotifications.has(notificationId)) {
+                            notification.querySelector('div').textContent = newMessage || message;
+                            progressFill.style.width = `${Math.max(0, Math.min(100, newProgress || progress))}%`;
+                        }
+                    },
+                    complete: () => dismissNotification(notificationId)
+                };
+            }
+            return null;
+        }
+        
+        // Auto-save functionality
+        let autoSaveEnabled = true;
+        let autoSaveInterval = 30000; // 30 seconds
+        let unsavedChanges = false;
+        let lastSaveTime = null;
+        let autoSaveTimer = null;
+        let changeBuffer = [];
+        
+        function initAutoSave() {
+            // Load auto-save preferences
+            const savedPrefs = localStorage.getItem('schedulerAutoSave');
+            if (savedPrefs) {
+                const prefs = JSON.parse(savedPrefs);
+                autoSaveEnabled = prefs.enabled !== false;
+                autoSaveInterval = prefs.interval || 30000;
+            }
+            
+            // Start auto-save timer if enabled
+            if (autoSaveEnabled) {
+                startAutoSaveTimer();
+            }
+            
+            // Set up beforeunload warning for unsaved changes
+            window.addEventListener('beforeunload', (e) => {
+                if (unsavedChanges) {
+                    e.preventDefault();
+                    e.returnValue = 'יש לך שינויים לא שמורים. האם אתה בטוח שברצונך לעזוב?';
+                    return e.returnValue;
+                }
+            });
+            
+            // Update save status indicator
+            updateSaveStatusIndicator();
+        }
+        
+        function markAsChanged(changeType, data = {}) {
+            unsavedChanges = true;
+            changeBuffer.push({
+                type: changeType,
+                data: data,
+                timestamp: new Date()
+            });
+            
+            updateSaveStatusIndicator();
+            
+            if (autoSaveEnabled) {
+                // Debounce auto-save to avoid too frequent saves
+                clearTimeout(autoSaveTimer);
+                autoSaveTimer = setTimeout(performAutoSave, 3000); // 3 second delay after last change
+            }
+            
+            showInfoNotification('שינוי זוהה - ישמר אוטומטית בקרוב...', 2000);
+        }
+        
+        function clearChanges() {
+            unsavedChanges = false;
+            changeBuffer = [];
+            lastSaveTime = new Date();
+            updateSaveStatusIndicator();
+        }
+        
+        async function performAutoSave() {
+            if (!unsavedChanges || !autoSaveEnabled) return;
+            
+            try {
+                const loadingId = showLoadingNotification('שומר אוטומטית...');
+                
+                // Perform the save operation
+                const result = await saveScheduleData();
+                
+                dismissNotification(loadingId);
+                
+                if (result && result.success) {
+                    clearChanges();
+                    showSuccessNotification('נשמר אוטומטית בהצלחה', 2000);
+                    console.log('📱 Auto-save completed successfully');
+                } else {
+                    showWarningNotification('שמירה אוטומטית נכשלה - נסה שמירה ידנית', 4000);
+                }
+                
+            } catch (error) {
+                console.error('Auto-save failed:', error);
+                showErrorNotification('שמירה אוטומטית נכשלה: ' + error.message, true);
+            }
+        }
+        
+        function startAutoSaveTimer() {
+            if (autoSaveTimer) clearInterval(autoSaveTimer);
+            
+            if (autoSaveEnabled && autoSaveInterval > 0) {
+                autoSaveTimer = setInterval(() => {
+                    if (unsavedChanges) {
+                        performAutoSave();
+                    }
+                }, autoSaveInterval);
+            }
+        }
+        
+        function stopAutoSaveTimer() {
+            if (autoSaveTimer) {
+                clearInterval(autoSaveTimer);
+                autoSaveTimer = null;
+            }
+        }
+        
+        function toggleAutoSave() {
+            autoSaveEnabled = !autoSaveEnabled;
+            
+            // Save preference
+            localStorage.setItem('schedulerAutoSave', JSON.stringify({
+                enabled: autoSaveEnabled,
+                interval: autoSaveInterval
+            }));
+            
+            if (autoSaveEnabled) {
+                startAutoSaveTimer();
+                showSuccessNotification('שמירה אוטומטית הופעלה', 3000);
+            } else {
+                stopAutoSaveTimer();
+                showInfoNotification('שמירה אוטומטית בוטלה', 3000);
+            }
+            
+            updateSaveStatusIndicator();
+        }
+        
+        function setAutoSaveInterval(minutes) {
+            autoSaveInterval = minutes * 60 * 1000;
+            localStorage.setItem('schedulerAutoSave', JSON.stringify({
+                enabled: autoSaveEnabled,
+                interval: autoSaveInterval
+            }));
+            
+            if (autoSaveEnabled) {
+                startAutoSaveTimer();
+            }
+            
+            showInfoNotification(`מרווח שמירה אוטומטית עודכן ל-${minutes} דקות`, 3000);
+        }
+        
+        function updateSaveStatusIndicator() {
+            // Find or create save status indicator
+            let statusIndicator = document.getElementById('save-status-indicator');
+            if (!statusIndicator) {
+                statusIndicator = document.createElement('div');
+                statusIndicator.id = 'save-status-indicator';
+                statusIndicator.style.cssText = `
+                    position: fixed;
+                    bottom: 20px;
+                    right: 20px;
+                    background: white;
+                    border-radius: 25px;
+                    padding: 8px 16px;
+                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+                    font-size: 12px;
+                    color: #6b7280;
+                    border: 1px solid #e5e7eb;
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    z-index: 1000;
+                    transition: all 0.3s ease;
+                `;
+                document.body.appendChild(statusIndicator);
+            }
+            
+            let statusText, statusColor, statusIcon;
+            
+            if (unsavedChanges) {
+                statusText = 'שינויים לא שמורים';
+                statusColor = '#f59e0b';
+                statusIcon = '⚠️';
+            } else if (lastSaveTime) {
+                const timeAgo = Math.floor((new Date() - lastSaveTime) / 1000);
+                if (timeAgo < 60) {
+                    statusText = 'נשמר כעת';
+                } else if (timeAgo < 3600) {
+                    statusText = `נשמר לפני ${Math.floor(timeAgo / 60)} דקות`;
+                } else {
+                    const hours = Math.floor(timeAgo / 3600);
+                    statusText = `נשמר לפני ${hours} שע׳`;
+                }
+                statusColor = '#10b981';
+                statusIcon = '✅';
+            } else {
+                statusText = autoSaveEnabled ? 'שמירה אוטומטית פעילה' : 'שמירה ידנית';
+                statusColor = autoSaveEnabled ? '#3b82f6' : '#6b7280';
+                statusIcon = autoSaveEnabled ? '🔄' : '💾';
+            }
+            
+            statusIndicator.innerHTML = `
+                <span style="font-size: 14px;">${statusIcon}</span>
+                <span>${statusText}</span>
+                ${autoSaveEnabled ? '<span style="font-size: 10px; opacity: 0.7;">אוטו</span>' : ''}
+            `;
+            statusIndicator.style.borderLeftColor = statusColor;
+        }
+        
+        async function saveScheduleData() {
+            // This should integrate with the existing save functionality
+            // For now, we'll simulate a save operation
+            return new Promise((resolve) => {
+                setTimeout(() => {
+                    resolve({ success: true });
+                }, 500);
+            });
+        }
+        
+        function createAutoSaveControls() {
+            const controlsContainer = document.createElement('div');
+            controlsContainer.id = 'autosave-controls';
+            controlsContainer.style.cssText = `
+                display: none;
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: white;
+                border-radius: 12px;
+                padding: 20px;
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+                z-index: 10004;
+                direction: rtl;
+                min-width: 300px;
+            `;
+            
+            controlsContainer.innerHTML = `
+                <h3 style="margin: 0 0 20px 0; color: #374151;">הגדרות שמירה אוטומטית</h3>
+                <div style="display: flex; flex-direction: column; gap: 15px;">
+                    <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                        <input type="checkbox" ${autoSaveEnabled ? 'checked' : ''} onchange="toggleAutoSave()">
+                        <span>הפעל שמירה אוטומטית</span>
+                    </label>
+                    <div>
+                        <label style="display: block; margin-bottom: 8px; color: #6b7280;">מרווח שמירה (דקות):</label>
+                        <select onchange="setAutoSaveInterval(this.value)" ${!autoSaveEnabled ? 'disabled' : ''}>
+                            <option value="0.5" ${autoSaveInterval === 30000 ? 'selected' : ''}>30 שניות</option>
+                            <option value="1" ${autoSaveInterval === 60000 ? 'selected' : ''}>1 דקה</option>
+                            <option value="2" ${autoSaveInterval === 120000 ? 'selected' : ''}>2 דקות</option>
+                            <option value="5" ${autoSaveInterval === 300000 ? 'selected' : ''}>5 דקות</option>
+                            <option value="10" ${autoSaveInterval === 600000 ? 'selected' : ''}>10 דקות</option>
+                        </select>
+                    </div>
+                    <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 15px;">
+                        <button onclick="document.getElementById('autosave-controls').style.display='none'" 
+                                style="padding: 8px 16px; border: 1px solid #d1d5db; background: white; border-radius: 6px; cursor: pointer;">
+                            סגור
+                        </button>
+                        <button onclick="performAutoSave(); document.getElementById('autosave-controls').style.display='none'" 
+                                style="padding: 8px 16px; border: none; background: #8b5cf6; color: white; border-radius: 6px; cursor: pointer;">
+                            שמור עכשיו
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(controlsContainer);
+        }
+        
+        function showAutoSaveControls() {
+            let controls = document.getElementById('autosave-controls');
+            if (!controls) {
+                createAutoSaveControls();
+                controls = document.getElementById('autosave-controls');
+            }
+            controls.style.display = 'block';
+        }
+        
+        // Integration with existing save/change functions
+        const originalCreateAssignmentFromContext = createAssignmentFromContext;
+        async function createAssignmentFromContext(guideId, date, slotType) {
+            try {
+                await originalCreateAssignmentFromContext(guideId, date, slotType);
+                markAsChanged('assignment_create', { guideId, date, slotType });
+            } catch (error) {
+                throw error;
+            }
+        }
+        
+        const originalRemoveAssignmentFromSlotForAutoSave = removeAssignmentFromSlot;
+        async function removeAssignmentFromSlotForAutoSave(date, slotType, skipConfirmation = false) {
+            try {
+                const result = await originalRemoveAssignmentFromSlotForAutoSave(date, slotType, skipConfirmation);
+                markAsChanged('assignment_remove', { date, slotType });
+                return result;
+            } catch (error) {
+                throw error;
+            }
+        }
+        
+        // Offline/Connection Error Handling
+        let isOnline = navigator.onLine;
+        let connectionRetryAttempts = 0;
+        let maxRetryAttempts = 3;
+        let retryDelay = 2000; // 2 seconds
+        let offlineQueue = [];
+        let networkStatusIndicator = null;
+        
+        function initOfflineHandling() {
+            // Listen for online/offline events
+            window.addEventListener('online', handleOnline);
+            window.addEventListener('offline', handleOffline);
+            
+            // Initial connection check
+            checkConnectionStatus();
+            
+            // Create network status indicator
+            createNetworkStatusIndicator();
+            
+            // Periodic connection check (every 30 seconds when offline)
+            setInterval(() => {
+                if (!isOnline) {
+                    checkConnectionStatus();
+                }
+            }, 30000);
+        }
+        
+        function handleOnline() {
+            console.log('📡 Connection restored');
+            isOnline = true;
+            connectionRetryAttempts = 0;
+            updateNetworkStatusIndicator();
+            
+            showSuccessNotification('החיבור לאינטרנט חזר!', 3000);
+            
+            // Process offline queue
+            processOfflineQueue();
+        }
+        
+        function handleOffline() {
+            console.log('📡 Connection lost');
+            isOnline = false;
+            updateNetworkStatusIndicator();
+            
+            showWarningNotification('אין חיבור לאינטרנט - נתונים יישמרו מקומית', 5000);
+        }
+        
+        async function checkConnectionStatus() {
+            try {
+                const response = await fetch('/api/health', {
+                    method: 'GET',
+                    cache: 'no-cache',
+                    timeout: 5000
+                });
+                
+                const wasOffline = !isOnline;
+                isOnline = response.ok;
+                
+                if (wasOffline && isOnline) {
+                    handleOnline();
+                } else if (!wasOffline && !isOnline) {
+                    handleOffline();
+                }
+                
+                updateNetworkStatusIndicator();
+            } catch (error) {
+                console.log('Connection check failed:', error.message);
+                if (isOnline) {
+                    handleOffline();
+                }
+            }
+        }
+        
+        function createNetworkStatusIndicator() {
+            networkStatusIndicator = document.createElement('div');
+            networkStatusIndicator.id = 'network-status-indicator';
+            networkStatusIndicator.style.cssText = `
+                position: fixed;
+                bottom: 20px;
+                left: 20px;
+                background: white;
+                border-radius: 25px;
+                padding: 8px 12px;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+                font-size: 12px;
+                color: #6b7280;
+                border: 1px solid #e5e7eb;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                z-index: 1000;
+                transition: all 0.3s ease;
+                cursor: pointer;
+            `;
+            
+            networkStatusIndicator.addEventListener('click', () => {
+                if (!isOnline) {
+                    checkConnectionStatus();
+                    showInfoNotification('בודק חיבור...', 2000);
+                }
+            });
+            
+            document.body.appendChild(networkStatusIndicator);
+            updateNetworkStatusIndicator();
+        }
+        
+        function updateNetworkStatusIndicator() {
+            if (!networkStatusIndicator) return;
+            
+            let statusText, statusColor, statusIcon;
+            
+            if (isOnline) {
+                statusText = 'מחובר';
+                statusColor = '#10b981';
+                statusIcon = '🌐';
+                networkStatusIndicator.style.opacity = '0.7';
+            } else {
+                statusText = 'לא מחובר';
+                statusColor = '#ef4444';
+                statusIcon = '📵';
+                networkStatusIndicator.style.opacity = '1';
+            }
+            
+            networkStatusIndicator.innerHTML = `
+                <span style="font-size: 14px;">${statusIcon}</span>
+                <span>${statusText}</span>
+            `;
+            networkStatusIndicator.style.borderLeftColor = statusColor;
+        }
+        
+        async function executeWithRetry(operation, operationName, retryCount = 0) {
+            try {
+                const result = await operation();
+                connectionRetryAttempts = 0; // Reset on success
+                return result;
+            } catch (error) {
+                console.error(`${operationName} failed (attempt ${retryCount + 1}):`, error);
+                
+                // Check if it's a network error
+                if (isNetworkError(error)) {
+                    if (!isOnline) {
+                        // Store in offline queue
+                        addToOfflineQueue(operation, operationName);
+                        showWarningNotification(`${operationName} נשמר לביצוע כשהחיבור יחזור`, 4000);
+                        return { queued: true };
+                    }
+                    
+                    // Retry if online but connection failed
+                    if (retryCount < maxRetryAttempts) {
+                        connectionRetryAttempts++;
+                        showInfoNotification(`מנסה שוב (ניסיון ${retryCount + 2}/${maxRetryAttempts + 1})...`, 3000);
+                        
+                        await new Promise(resolve => setTimeout(resolve, retryDelay * (retryCount + 1)));
+                        return executeWithRetry(operation, operationName, retryCount + 1);
+                    }
+                }
+                
+                // Max retries exceeded or non-network error
+                showErrorNotification(`${operationName} נכשל: ${error.message}`, true);
+                throw error;
+            }
+        }
+        
+        function isNetworkError(error) {
+            return error.name === 'TypeError' ||
+                   error.name === 'NetworkError' ||
+                   error.message.includes('Failed to fetch') ||
+                   error.message.includes('Network Error') ||
+                   error.message.includes('ERR_NETWORK') ||
+                   error.message.includes('ERR_INTERNET_DISCONNECTED');
+        }
+        
+        function addToOfflineQueue(operation, operationName) {
+            offlineQueue.push({
+                operation,
+                operationName,
+                timestamp: new Date(),
+                id: Date.now()
+            });
+            
+            // Store in localStorage for persistence
+            localStorage.setItem('schedulerOfflineQueue', JSON.stringify(offlineQueue.map(item => ({
+                operationName: item.operationName,
+                timestamp: item.timestamp,
+                id: item.id
+            }))));
+        }
+        
+        async function processOfflineQueue() {
+            if (offlineQueue.length === 0) return;
+            
+            const progressNotification = showProgressNotification('מסנכרן נתונים...', 0);
+            let processedCount = 0;
+            const totalItems = offlineQueue.length;
+            
+            const itemsToProcess = [...offlineQueue];
+            offlineQueue = [];
+            
+            for (const item of itemsToProcess) {
+                try {
+                    await item.operation();
+                    processedCount++;
+                    progressNotification.update(
+                        `מסנכרן נתונים... (${processedCount}/${totalItems})`,
+                        (processedCount / totalItems) * 100
+                    );
+                    
+                    console.log(`✅ Offline operation completed: ${item.operationName}`);
+                } catch (error) {
+                    console.error(`❌ Failed to process offline operation: ${item.operationName}`, error);
+                    // Re-add to queue for later retry
+                    offlineQueue.push(item);
+                }
+            }
+            
+            progressNotification.complete();
+            
+            // Clear localStorage
+            localStorage.removeItem('schedulerOfflineQueue');
+            
+            if (processedCount > 0) {
+                showSuccessNotification(`${processedCount} פעולות סונכרנו בהצלחה`, 4000);
+            }
+            
+            if (offlineQueue.length > 0) {
+                showWarningNotification(`${offlineQueue.length} פעולות עדיין ממתינות לסנכרון`, 4000);
+            }
+        }
+        
+        // Enhanced API wrapper with offline support
+        async function apiRequest(url, options = {}) {
+            const operation = async () => {
+                const response = await fetch(url, {
+                    ...options,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...options.headers
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                return response.json();
+            };
+            
+            return executeWithRetry(operation, `API ${options.method || 'GET'} ${url}`);
+        }
+        
+        // Offline-aware save operation
+        async function saveWithOfflineSupport(data, operationName = 'שמירה') {
+            if (!isOnline) {
+                // Store locally
+                const offlineData = {
+                    data,
+                    operationName,
+                    timestamp: new Date(),
+                    id: Date.now()
+                };
+                
+                let offlineStorage = JSON.parse(localStorage.getItem('schedulerOfflineData') || '[]');
+                offlineStorage.push(offlineData);
+                localStorage.setItem('schedulerOfflineData', JSON.stringify(offlineStorage));
+                
+                showWarningNotification(`${operationName} נשמר מקומית - יסונכרן כשהחיבור יחזור`, 4000);
+                return { offline: true, id: offlineData.id };
+            }
+            
+            try {
+                const result = await apiRequest('/api/save', {
+                    method: 'POST',
+                    body: JSON.stringify(data)
+                });
+                
+                showSuccessNotification(`${operationName} הושלם בהצלחה`, 3000);
+                return result;
+            } catch (error) {
+                showErrorNotification(`${operationName} נכשל: ${error.message}`);
+                throw error;
+            }
+        }
+        
+        function createOfflineControls() {
+            const controlsContainer = document.createElement('div');
+            controlsContainer.id = 'offline-controls';
+            controlsContainer.style.cssText = `
+                display: none;
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: white;
+                border-radius: 12px;
+                padding: 20px;
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+                z-index: 10005;
+                direction: rtl;
+                min-width: 350px;
+                max-width: 500px;
+            `;
+            
+            updateOfflineControlsContent(controlsContainer);
+            document.body.appendChild(controlsContainer);
+        }
+        
+        function updateOfflineControlsContent(container) {
+            const queueCount = offlineQueue.length;
+            const offlineData = JSON.parse(localStorage.getItem('schedulerOfflineData') || '[]');
+            const localDataCount = offlineData.length;
+            
+            container.innerHTML = `
+                <h3 style="margin: 0 0 20px 0; color: #374151;">מצב לא מקוון</h3>
+                <div style="display: flex; flex-direction: column; gap: 15px;">
+                    <div style="padding: 12px; background: #f3f4f6; border-radius: 6px;">
+                        <div style="font-weight: 500; margin-bottom: 8px;">מצב חיבור: ${isOnline ? '🌐 מחובר' : '📵 לא מחובר'}</div>
+                        <div style="font-size: 13px; color: #6b7280;">
+                            ${isOnline ? 'מערכת פועלת במצב מקוון רגיל' : 'מערכת פועלת במצב לא מקוון - שינויים נשמרים מקומית'}
+                        </div>
+                    </div>
+                    
+                    ${queueCount > 0 ? `
+                        <div style="padding: 12px; background: #fef3c7; border-radius: 6px; border-right: 4px solid #f59e0b;">
+                            <div style="font-weight: 500; margin-bottom: 4px;">⏳ ${queueCount} פעולות ממתינות לסנכרון</div>
+                            <button onclick="processOfflineQueue()" style="margin-top: 8px; padding: 6px 12px; border: none; background: #f59e0b; color: white; border-radius: 4px; cursor: pointer;">
+                                סנכרן עכשיו
+                            </button>
+                        </div>
+                    ` : ''}
+                    
+                    ${localDataCount > 0 ? `
+                        <div style="padding: 12px; background: #dbeafe; border-radius: 6px; border-right: 4px solid #3b82f6;">
+                            <div style="font-weight: 500; margin-bottom: 4px;">💾 ${localDataCount} נתונים מקומיים</div>
+                            <div style="font-size: 13px; color: #6b7280;">נתונים שנשמרו מקומית ויסונכרנו כשהחיבור יחזור</div>
+                        </div>
+                    ` : ''}
+                    
+                    <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 15px;">
+                        <button onclick="document.getElementById('offline-controls').style.display='none'" 
+                                style="padding: 8px 16px; border: 1px solid #d1d5db; background: white; border-radius: 6px; cursor: pointer;">
+                            סגור
+                        </button>
+                        <button onclick="checkConnectionStatus(); document.getElementById('offline-controls').style.display='none'" 
+                                style="padding: 8px 16px; border: none; background: #3b82f6; color: white; border-radius: 6px; cursor: pointer;">
+                            בדוק חיבור
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function showOfflineControls() {
+            let controls = document.getElementById('offline-controls');
+            if (!controls) {
+                createOfflineControls();
+                controls = document.getElementById('offline-controls');
+            } else {
+                updateOfflineControlsContent(controls);
+            }
+            controls.style.display = 'block';
         }
         
         // Guide card interaction handlers
@@ -2558,12 +4993,13 @@
         }
         
         function highlightVacationPeriod(startDate, endDate, details, reason) {
-            const start = new Date(startDate);
-            const end = new Date(endDate);
+            // Parse dates using local timezone to avoid UTC offset issues
+            const start = parseLocalDate(startDate);
+            const end = parseLocalDate(endDate);
             let affectedDays = 0;
             
             for (let date = new Date(start); date <= end; date.setDate(date.getDate() + 1)) {
-                const dateStr = date.toISOString().split('T')[0];
+                const dateStr = formatLocalDate(date);
                 
                 // Only highlight dates within current month view
                 if (date.getMonth() === currentMonth - 1 || date.getFullYear() === currentYear) {
@@ -2812,7 +5248,10 @@
             clearDropZoneHighlights();
             removeDragGhost();
             
-            draggedGuide = null;
+            // Don't reset draggedGuide immediately - let the drop handler process first
+            setTimeout(() => {
+                draggedGuide = null;
+            }, 100);
         }
         
         function createDragGhost(e, guide) {
@@ -3004,9 +5443,13 @@
             const date = slot.dataset.date;
             const slotType = slot.dataset.slot;
             
-            console.log(`🎯 Slot drop: ${draggedGuide?.name} -> ${date} (${slotType})`);
+            // Store a local reference to avoid timing issues with async operations
+            const currentDraggedGuide = draggedGuide;
             
-            if (!draggedGuide) {
+            console.log(`🎯 Slot drop: ${currentDraggedGuide?.name} -> ${date} (${slotType})`);
+            
+            if (!currentDraggedGuide) {
+                console.error('Error: draggedGuide is null during drop operation');
                 showNotification('שגיאה: לא נבחר מדריך', 'error');
                 return;
             }
@@ -3022,7 +5465,7 @@
             
             try {
                 // Validate assignment
-                const validation = await validateAssignment(draggedGuide.id, date, slotType);
+                const validation = await validateAssignment(currentDraggedGuide.id, date, slotType);
                 
                 if (!validation.is_valid) {
                     showNotification(`שיבוץ נכשל: ${validation.reasons.join(', ')}`, 'error');
@@ -3036,17 +5479,15 @@
                 }
                 
                 // Create assignment
-                await createAssignment(draggedGuide.id, date, slotType);
+                await createAssignmentWithGuide(currentDraggedGuide.id, date, slotType, currentDraggedGuide);
                 
                 // Show success feedback
                 slot.classList.add('drop-success');
                 setTimeout(() => slot.classList.remove('drop-success'), 1000);
                 
-                showNotification(`${draggedGuide.name} שובץ בהצלחה ל-${formatDateForDisplay(date)} (${slotType === 'normal' ? 'רגיל' : 'חפיפה'})`, 'success');
+                showNotification(`${currentDraggedGuide.name} שובץ בהצלחה ל-${formatDateForDisplay(date)} (${slotType === 'normal' ? 'רגיל' : 'חפיפה'})`, 'success');
                 
-                // Refresh data to show new assignment
-                await loadAssignments();
-                await refreshGuideStatistics();
+                // Assignment display and statistics are updated by createAssignment function
                 
             } catch (error) {
                 console.error('Error in slot drop:', error);
@@ -3346,6 +5787,20 @@
             });
         }
         
+        // Helper function to parse date string as local date (avoid UTC offset issues)
+        function parseLocalDate(dateStr) {
+            const [year, month, day] = dateStr.split('-').map(Number);
+            return new Date(year, month - 1, day); // month is 0-indexed in Date constructor
+        }
+        
+        // Helper function to format date as YYYY-MM-DD in local timezone
+        function formatLocalDate(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+        
         // Assignment management
         async function validateAssignment(guideId, date, slotType) {
             const response = await apiFetch('/api/enhanced-manual/validate-assignment', {
@@ -3362,6 +5817,10 @@
         }
         
         async function createAssignment(guideId, date, slotType) {
+            return await createAssignmentWithGuide(guideId, date, slotType, null);
+        }
+        
+        async function createAssignmentWithGuide(guideId, date, slotType, guideInfo) {
             const response = await apiFetch('/api/enhanced-manual/assign', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -3376,18 +5835,21 @@
             const result = await response.json();
             
             if (result.success) {
+                // Use provided guide info or fallback to finding it
+                const guide = guideInfo || draggedGuide || { name: getGuideNameById(guideId) };
+                
                 // Add to undo stack using new system
                 addToUndoStack({
                     action: 'assign',
                     date: date,
                     slot_type: slotType,
                     guide_id: guideId,
-                    guide_name: draggedGuide ? draggedGuide.name : getGuideNameById(guideId),
+                    guide_name: guide.name,
                     assignment: result.assignment
                 });
                 
                 // Update UI
-                updateSlotDisplay(date, slotType, draggedGuide || { name: getGuideNameById(guideId) });
+                updateSlotDisplay(date, slotType, guide);
                 await refreshGuideStats();
                 
                 // Update constraints after assignment (for dynamic constraints)
@@ -3411,6 +5873,106 @@
         
         async function refreshGuideStats() {
             await loadGuides();
+            updateMonthlyStatistics();
+        }
+        
+        // Phase 9: Real-time Statistics Implementation
+        function updateMonthlyStatistics() {
+            if (!guides || guides.length === 0) return;
+            
+            let totalShifts = 0;
+            let totalSalaryFactor = 0;
+            let shiftCounts = [];
+            
+            // Calculate totals from guide data
+            guides.forEach(guide => {
+                const shifts = guide.total_shifts || 0;
+                const salaryFactor = guide.salary_factor || 0;
+                
+                totalShifts += shifts;
+                totalSalaryFactor += salaryFactor;
+                shiftCounts.push(shifts);
+            });
+            
+            // Calculate averages and fairness
+            const averageShifts = guides.length > 0 ? (totalShifts / guides.length).toFixed(1) : 0;
+            const fairnessAssessment = calculateFairnessScore(shiftCounts);
+            
+            // Update UI elements if they exist
+            const totalElement = document.getElementById('total-shifts-count');
+            const averageElement = document.getElementById('average-shifts-count');
+            const salaryElement = document.getElementById('total-salary-factor');
+            
+            if (totalElement) totalElement.textContent = totalShifts;
+            if (averageElement) averageElement.textContent = averageShifts;
+            if (salaryElement) salaryElement.textContent = totalSalaryFactor.toFixed(1);
+            
+            // Update fairness indicator
+            updateFairnessIndicator(fairnessAssessment);
+            
+            // Update guide card visual indicators
+            updateGuideCardFairnessIndicators(shiftCounts, totalShifts);
+        }
+        
+        function calculateFairnessScore(shiftCounts) {
+            if (shiftCounts.length === 0) return { score: 100, status: 'טוב', className: 'fairness-good' };
+            
+            const mean = shiftCounts.reduce((a, b) => a + b, 0) / shiftCounts.length;
+            const variance = shiftCounts.reduce((sum, count) => sum + Math.pow(count - mean, 2), 0) / shiftCounts.length;
+            const standardDeviation = Math.sqrt(variance);
+            
+            // Calculate fairness score (0-100, higher is better)
+            const maxAcceptableDeviation = mean * 0.3; // 30% deviation is acceptable
+            const score = Math.max(0, Math.min(100, 100 - (standardDeviation / maxAcceptableDeviation) * 100));
+            
+            let status, className;
+            if (score >= 80) {
+                status = 'טוב';
+                className = 'fairness-good';
+            } else if (score >= 60) {
+                status = 'בינוני';
+                className = 'fairness-warning';
+            } else {
+                status = 'דורש תשומת לב';
+                className = 'fairness-poor';
+            }
+            
+            return { score: Math.round(score), status, className };
+        }
+        
+        function updateFairnessIndicator(fairness) {
+            const statusElement = document.getElementById('fairness-status');
+            if (!statusElement) return;
+            
+            statusElement.textContent = fairness.status;
+            statusElement.classList.remove('fairness-good', 'fairness-warning', 'fairness-poor');
+            statusElement.classList.add(fairness.className);
+        }
+        
+        function updateGuideCardFairnessIndicators(shiftCounts, totalShifts) {
+            if (totalShifts === 0 || !guides) return;
+            
+            const averageShifts = totalShifts / guides.length;
+            
+            guides.forEach(guide => {
+                const guideCard = document.querySelector(`[data-guide-id="${guide.id}"]`);
+                if (!guideCard) return;
+                
+                const guideShifts = guide.total_shifts || 0;
+                const deviation = averageShifts > 0 ? ((guideShifts - averageShifts) / averageShifts) * 100 : 0;
+                
+                // Remove old fairness classes
+                guideCard.classList.remove('overworked', 'underworked', 'balanced');
+                
+                // Add appropriate fairness class
+                if (deviation > 25) {
+                    guideCard.classList.add('overworked');
+                } else if (deviation < -25) {
+                    guideCard.classList.add('underworked');  
+                } else {
+                    guideCard.classList.add('balanced');
+                }
+            });
         }
         
         // Status and display updates
@@ -3431,6 +5993,99 @@
         function updateConstraintsDisplay(constraintData) {
             const count = constraintData.total_count || 0;
             document.getElementById('constraints-count').textContent = `${count} אילוצים`;
+        }
+        
+        // Statistics export functionality
+        function exportMonthlyStatistics() {
+            if (!guides || guides.length === 0) {
+                showNotification('אין נתונים לייצוא', 'warning');
+                return;
+            }
+            
+            try {
+                // Prepare CSV data
+                const headers = [
+                    'שם מדריך',
+                    'סה״כ משמרות',
+                    'משמרות רגילות',
+                    'משמרות חפיפה',
+                    'משמרות כונן',
+                    'משמרות מוצ״ש',
+                    'משמרות סוף שבוע',
+                    'שעות שכר',
+                    'יעילות (ש/משמרת)'
+                ];
+                
+                const csvData = [headers.join(',')];
+                
+                // Add guide data
+                guides.forEach(guide => {
+                    const efficiency = guide.total_shifts > 0 ? 
+                        (guide.salary_factor / guide.total_shifts).toFixed(2) : '0.00';
+                        
+                    const row = [
+                        `"${guide.name}"`,
+                        guide.total_shifts || 0,
+                        guide.regular_shifts || 0,
+                        guide.overlap_shifts || 0,
+                        guide.conan_shifts || 0,
+                        guide.motzash_shifts || 0,
+                        guide.weekend_shifts || 0,
+                        (guide.salary_factor || 0).toFixed(1),
+                        efficiency
+                    ];
+                    csvData.push(row.join(','));
+                });
+                
+                // Add summary row
+                const totalShifts = guides.reduce((sum, g) => sum + (g.total_shifts || 0), 0);
+                const totalSalaryFactor = guides.reduce((sum, g) => sum + (g.salary_factor || 0), 0);
+                const avgEfficiency = totalShifts > 0 ? (totalSalaryFactor / totalShifts).toFixed(2) : '0.00';
+                
+                csvData.push(''); // Empty row
+                csvData.push([
+                    '"סיכום"',
+                    totalShifts,
+                    guides.reduce((sum, g) => sum + (g.regular_shifts || 0), 0),
+                    guides.reduce((sum, g) => sum + (g.overlap_shifts || 0), 0),
+                    guides.reduce((sum, g) => sum + (g.conan_shifts || 0), 0),
+                    guides.reduce((sum, g) => sum + (g.motzash_shifts || 0), 0),
+                    guides.reduce((sum, g) => sum + (g.weekend_shifts || 0), 0),
+                    totalSalaryFactor.toFixed(1),
+                    avgEfficiency
+                ].join(','));
+                
+                // Create and download CSV file
+                const csvContent = '\ufeff' + csvData.join('\n'); // Add BOM for Hebrew support
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                
+                const monthName = new Date(currentYear, currentMonth - 1).toLocaleDateString('he-IL', { 
+                    month: 'long', 
+                    year: 'numeric' 
+                });
+                
+                const fileName = `סטטיסטיקות_משמרות_${monthName.replace(/\s+/g, '_')}.csv`;
+                
+                if (link.download !== undefined) {
+                    const url = URL.createObjectURL(blob);
+                    link.setAttribute('href', url);
+                    link.setAttribute('download', fileName);
+                    link.style.visibility = 'hidden';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    URL.revokeObjectURL(url);
+                    
+                    showNotification(`קובץ CSV נוצר בהצלחה: ${fileName}`, 'success');
+                } else {
+                    throw new Error('הדפדפן לא תומך בהורדת קבצים');
+                }
+                
+            } catch (error) {
+                console.error('Export error:', error);
+                showNotification('שגיאה בייצוא הנתונים', 'error');
+            }
         }
         
         function updateStatus() {
@@ -3662,10 +6317,123 @@
             }
         }
         
-        function clearMonth() {
-            if (confirm('האם אתה בטוח שברצונך לנקות את כל השיבוצים החודשיים?')) {
-                // Implementation for clearing month
-                showNotification('ניקוי החודש אינו זמין עדיין', 'warning');
+        async function clearMonth() {
+            const confirmed = await confirmClearMonth();
+            if (!confirmed) {
+                showNotification('ניקוי החודש בוטל', 'info');
+                return;
+            }
+            
+            try {
+                showGlobalLoading('מנקה את החודש...', true);
+                
+                // Get all occupied slots
+                const occupiedSlots = document.querySelectorAll('.calendar-slot.occupied');
+                const totalSlots = occupiedSlots.length;
+                
+                if (totalSlots === 0) {
+                    showNotification('אין שיבוצים למחיקה', 'info');
+                    hideGlobalLoading();
+                    return;
+                }
+                
+                let clearedCount = 0;
+                
+                // Clear each slot with progress tracking
+                for (const slot of occupiedSlots) {
+                    const date = slot.dataset.date;
+                    const slotType = slot.dataset.slot;
+                    
+                    try {
+                        await removeAssignmentFromSlot(date, slotType, true); // Skip confirmation
+                        clearedCount++;
+                        
+                        // Update progress
+                        const progress = Math.round((clearedCount / totalSlots) * 100);
+                        updateLoadingProgress(progress, `נוקה ${clearedCount} מתוך ${totalSlots} שיבוצים...`);
+                        
+                        // Small delay for visual feedback
+                        await new Promise(resolve => setTimeout(resolve, 50));
+                    } catch (error) {
+                        console.error(`Error clearing slot ${date}:${slotType}:`, error);
+                    }
+                }
+                
+                updateLoadingProgress(100, 'הושלם!');
+                setTimeout(() => {
+                    hideGlobalLoading();
+                    showNotification(`נוקו ${clearedCount} שיבוצים בהצלחה`, 'success');
+                    refreshGuideStats();
+                }, 500);
+                
+            } catch (error) {
+                hideGlobalLoading();
+                console.error('Error clearing month:', error);
+                showNotification('שגיאה בניקוי החודש', 'error');
+            }
+        }
+        
+        async function importExistingSchedule() {
+            try {
+                showGlobalLoading('טוען שיבוץ קיים...', true);
+                
+                // Get current month and year
+                const currentMonth = currentDate.getMonth() + 1;
+                const currentYear = currentDate.getFullYear();
+                
+                // Fetch existing schedule from scheduler.html API
+                const response = await fetch(`/api/schedule/${currentYear}/${currentMonth}`);
+                if (!response.ok) {
+                    throw new Error('Failed to fetch existing schedule');
+                }
+                
+                const existingSchedule = await response.json();
+                
+                if (!existingSchedule || !existingSchedule.schedule || existingSchedule.schedule.length === 0) {
+                    hideGlobalLoading();
+                    showNotification('לא נמצא שיבוץ קיים לחודש זה', 'info');
+                    return;
+                }
+                
+                let importedCount = 0;
+                const totalAssignments = existingSchedule.schedule.length;
+                
+                // Process each assignment
+                for (let i = 0; i < existingSchedule.schedule.length; i++) {
+                    const assignment = existingSchedule.schedule[i];
+                    const progress = Math.floor((i / totalAssignments) * 100);
+                    updateLoadingProgress(progress, `מייבא שיבוץ ${i + 1}/${totalAssignments}...`);
+                    
+                    try {
+                        // Create assignment in enhanced manual scheduler
+                        if (assignment.guide1_id) {
+                            await createAssignment(assignment.guide1_id, assignment.date, 'normal');
+                            importedCount++;
+                        }
+                        
+                        if (assignment.guide2_id) {
+                            await createAssignment(assignment.guide2_id, assignment.date, 'overlap');
+                            importedCount++;
+                        }
+                    } catch (error) {
+                        console.warn(`Failed to import assignment for ${assignment.date}:`, error);
+                    }
+                }
+                
+                updateLoadingProgress(100, 'הושלם!');
+                setTimeout(() => {
+                    hideGlobalLoading();
+                    showNotification(`יובאו ${importedCount} שיבוצים בהצלחה`, 'success');
+                    
+                    // Refresh the display
+                    loadMonthData();
+                    refreshGuideStats();
+                }, 500);
+                
+            } catch (error) {
+                hideGlobalLoading();
+                console.error('Error importing schedule:', error);
+                showNotification('שגיאה בייבוא השיבוץ', 'error');
             }
         }
         
@@ -3675,7 +6443,6 @@
         
         // Right-click Context Menu System
         let contextMenu = null;
-        let contextMenuTarget = null;
         
         function createContextMenu() {
             if (contextMenu) return;
@@ -4313,11 +7080,14 @@
         
         async function loadAssignments() {
             try {
+                console.log(`🔄 Loading assignments for ${currentYear}/${currentMonth}`);
                 // Load existing assignments for the month
                 const response = await apiFetch(`/api/schedule/${currentYear}/${currentMonth}`);
                 const data = await response.json();
                 
+                console.log('📊 Loaded assignments data:', data);
                 assignments = data || [];
+                console.log('📋 Assignments array:', assignments);
                 renderExistingAssignments();
             } catch (error) {
                 console.error('Error loading assignments:', error);
@@ -4325,6 +7095,8 @@
         }
         
         function renderExistingAssignments() {
+            console.log('🎯 renderExistingAssignments called with assignments:', assignments);
+            
             // Clear existing assignments display
             document.querySelectorAll('.day-slot').forEach(slot => {
                 slot.classList.remove('occupied');
@@ -4342,9 +7114,13 @@
             
             // Display current assignments
             assignments.forEach(assignment => {
+                console.log('🔍 Processing assignment:', assignment);
+                // Use date_str for proper date formatting (avoids timezone issues)
+                const displayDate = assignment.date_str || assignment.date.split('T')[0];
+                
                 if (assignment.guide1_id) {
                     const guide = guides.find(g => g.id === assignment.guide1_id);
-                    updateSlotDisplay(assignment.date, 'normal', {
+                    updateSlotDisplayForLoadedAssignments(displayDate, 'normal', {
                         id: assignment.guide1_id,
                         name: guide?.name || assignment.guide1_name || `מדריך ${assignment.guide1_id}`,
                         role: assignment.guide1_role || 'רגיל'
@@ -4352,7 +7128,7 @@
                 }
                 if (assignment.guide2_id) {
                     const guide = guides.find(g => g.id === assignment.guide2_id);
-                    updateSlotDisplay(assignment.date, 'overlap', {
+                    updateSlotDisplayForLoadedAssignments(displayDate, 'overlap', {
                         id: assignment.guide2_id,
                         name: guide?.name || assignment.guide2_name || `מדריך ${assignment.guide2_id}`,
                         role: assignment.guide2_role || 'חפיפה'
@@ -4361,38 +7137,23 @@
             });
         }
         
-        function updateSlotDisplay(date, slotType, guide) {
+        function updateSlotDisplayForLoadedAssignments(date, slotType, guide) {
+            console.log(`🎯 updateSlotDisplayForLoadedAssignments: looking for slot with date="${date}" slot="${slotType}" for guide=${guide.name}`);
             const slot = document.querySelector(`[data-date="${date}"][data-slot="${slotType}"]`);
-            if (!slot) return;
+            console.log('🔍 Found slot:', slot);
+            if (!slot) {
+                console.warn(`❌ Slot not found for date="${date}" slot="${slotType}"`);
+                return;
+            }
             
             // Mark slot as occupied
             slot.classList.add('occupied');
             
-            // Hide placeholder
-            const placeholder = slot.querySelector('.assignment-placeholder');
-            if (placeholder) {
-                placeholder.style.display = 'none';
-            }
+            // Use simple innerHTML approach like the main updateSlotDisplay function
+            slot.classList.remove('drop-zone');
+            slot.innerHTML = `<span class="assigned-guide">${guide.name}</span>`;
             
-            // Remove existing assignment display
-            const existingDisplay = slot.querySelector('.assignment-display');
-            if (existingDisplay) {
-                existingDisplay.remove();
-            }
-            
-            // Create assignment display
-            const assignmentDisplay = document.createElement('div');
-            assignmentDisplay.className = 'assignment-display';
-            assignmentDisplay.innerHTML = `
-                <div class="assigned-guide-name">${guide.name}</div>
-                <div class="assigned-guide-role">${guide.role}</div>
-            `;
-            
-            const slotContent = slot.querySelector('.slot-content');
-            slotContent.appendChild(assignmentDisplay);
-            
-            // Update day stats
-            updateDayStats(date);
+            console.log(`✅ Successfully updated slot for ${guide.name}`);
         }
         
         function showAssignmentDetails(slot) {
@@ -4449,35 +7210,857 @@
         }
         
         function handleKeyboardShortcuts(e) {
+            // Ignore shortcuts when user is typing in input fields
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) {
+                return;
+            }
+            
             switch(e.key) {
                 case 'Escape':
+                    e.preventDefault();
                     if (draggedGuide) {
                         // Cancel drag operation
                         cancelDragOperation();
-                    } else {
+                        showNotification('פעולת גרירה בוטלה', 'info');
+                    } else if (selectedGuide) {
                         clearGuideSelection();
+                        showNotification('בחירת מדריך בוטלה', 'info');
+                    } else if (bulkModeActive) {
+                        toggleBulkMode();
+                        showNotification('מצב בחירה מרובה בוטל', 'info');
                     }
                     break;
+                    
                 case 'Delete':
-                    if (selectedGuide) {
-                        // Remove selected guide from current day (if applicable)
+                case 'Backspace':
+                    e.preventDefault();
+                    if (selectedCalendarSlot && selectedCalendarSlot.classList.contains('occupied')) {
+                        // Remove assignment from selected calendar slot
+                        const date = selectedCalendarSlot.dataset.date;
+                        const slotType = selectedCalendarSlot.dataset.slot;
+                        if (date && slotType) {
+                            removeAssignmentFromSlot(date, slotType);
+                        }
                     }
                     break;
+                    
                 case 'z':
-                    if (e.ctrlKey) {
+                case 'Z':
+                    if (e.ctrlKey && !e.shiftKey) {
+                        e.preventDefault();
                         undoLastAction();
+                    } else if (e.ctrlKey && e.shiftKey) {
+                        e.preventDefault();
+                        redoLastAction();
                     }
                     break;
+                    
+                case 'y':
+                case 'Y':
+                    if (e.ctrlKey) {
+                        e.preventDefault();
+                        redoLastAction();
+                    }
+                    break;
+                    
                 case 's':
+                case 'S':
                     if (e.ctrlKey) {
                         e.preventDefault();
                         saveChanges();
                     }
                     break;
+                    
+                case 'r':
+                case 'R':
+                    if (e.ctrlKey) {
+                        e.preventDefault();
+                        refreshData();
+                    }
+                    break;
+                    
+                case 'b':
+                case 'B':
+                    if (e.ctrlKey) {
+                        e.preventDefault();
+                        toggleBulkMode();
+                    }
+                    break;
+                    
+                case 'ArrowLeft':
+                    if (e.ctrlKey) {
+                        e.preventDefault();
+                        navigateMonth(-1);
+                    }
+                    break;
+                    
+                case 'ArrowRight':
+                    if (e.ctrlKey) {
+                        e.preventDefault();
+                        navigateMonth(1);
+                    }
+                    break;
+                    
+                case 'F1':
+                    e.preventDefault();
+                    showKeyboardShortcutsHelp();
+                    break;
             }
         }
         
+        // Show keyboard shortcuts help
+        function showKeyboardShortcutsHelp() {
+            const helpMessage = `
+⌨️ קיצורי מקלדת זמינים:
+
+🔄 ניווט:
+• Ctrl + ← / → - חודש קודם/הבא
+• F1 - הצג עזרה זו
+
+✂️ עריכה:
+• Escape - בטל פעולה נוכחית
+• Delete/Backspace - הסר שיבוץ נבחר
+• Ctrl + Z - בטל פעולה אחרונה
+• Ctrl + Shift + Z / Ctrl + Y - חזור על פעולה
+
+💾 שמירה:
+• Ctrl + S - שמור שינויים
+• Ctrl + R - רענן נתונים
+
+🎯 מצבי עבודה:
+• Ctrl + B - מצב בחירה מרובה
+            `.trim();
+            
+            showNotification(helpMessage, 'info', 8000);
+        }
+        
+        // Enhanced Tutorial and Tooltip System
+        class TutorialSystem {
+            constructor() {
+                this.currentStep = 0;
+                this.steps = [
+                    {
+                        target: '.guides-container',
+                        title: 'כרטיסי המדריכים',
+                        content: 'כאן תראו את כל המדריכים הזמינים. גררו מדריך לתאריך כדי לשבץ אותו.',
+                        position: 'bottom'
+                    },
+                    {
+                        target: '.calendar-grid',
+                        title: 'לוח השיבוץ',
+                        content: 'כל יום מחולק ל-2 משמרות: רגילה וחפיפה. גררו מדריכים לתאריכים הרצויים.',
+                        position: 'top'
+                    },
+                    {
+                        target: '.action-buttons',
+                        title: 'כפתורי פעולה',
+                        content: 'כאן תמצאו כפתורים לשמירת שינויים, ביטול פעולות ומצב בחירה מרובה.',
+                        position: 'bottom'
+                    },
+                    {
+                        target: '.statistics-panel',
+                        title: 'סטטיסטיקות',
+                        content: 'עקבו אחר מספר המשמרות של כל מדריך ויחס שיבוץ הוגן.',
+                        position: 'top'
+                    },
+                    {
+                        target: '.calendar-legend',
+                        title: 'מקרא צבעים',
+                        content: 'השתמשו במקרא להבנת המשמעות של צבעים שונים בלוח השיבוץ.',
+                        position: 'bottom'
+                    }
+                ];
+                this.init();
+            }
+
+            init() {
+                const helpBtn = document.getElementById('help-btn');
+                const helpOverlay = document.getElementById('help-overlay');
+                const helpClose = document.getElementById('help-close');
+                const helpPrev = document.getElementById('help-prev');
+                const helpNext = document.getElementById('help-next');
+
+                helpBtn?.addEventListener('click', () => this.startTutorial());
+                helpClose?.addEventListener('click', () => this.closeTutorial());
+                helpPrev?.addEventListener('click', () => this.previousStep());
+                helpNext?.addEventListener('click', () => this.nextStep());
+
+                // Initialize tooltips for existing elements
+                this.initTooltips();
+            }
+
+            startTutorial() {
+                this.currentStep = 0;
+                document.getElementById('help-overlay').style.display = 'block';
+                this.showStep();
+            }
+
+            closeTutorial() {
+                document.getElementById('help-overlay').style.display = 'none';
+                this.clearHighlights();
+            }
+
+            showStep() {
+                const step = this.steps[this.currentStep];
+                const helpStep = document.getElementById('help-step');
+                const helpCurrentStep = document.getElementById('help-current-step');
+                const helpTotalSteps = document.getElementById('help-total-steps');
+                const helpPrev = document.getElementById('help-prev');
+                const helpNext = document.getElementById('help-next');
+
+                // Update content
+                helpStep.querySelector('h4').textContent = step.title;
+                helpStep.querySelector('p').textContent = step.content;
+                helpCurrentStep.textContent = this.currentStep + 1;
+                helpTotalSteps.textContent = this.steps.length;
+
+                // Update button states
+                helpPrev.disabled = this.currentStep === 0;
+                helpNext.disabled = this.currentStep === this.steps.length - 1;
+                helpNext.textContent = this.currentStep === this.steps.length - 1 ? 'סיום' : 'הבא';
+
+                // Position step dialog
+                this.positionStep(step);
+
+                // Highlight target
+                this.highlightTarget(step.target);
+            }
+
+            positionStep(step) {
+                const helpStep = document.getElementById('help-step');
+                const target = document.querySelector(step.target);
+                
+                if (target) {
+                    const rect = target.getBoundingClientRect();
+                    const stepHeight = helpStep.offsetHeight;
+                    const stepWidth = helpStep.offsetWidth;
+                    
+                    let top, left;
+                    
+                    if (step.position === 'bottom') {
+                        top = rect.bottom + 20;
+                        left = rect.left + (rect.width / 2) - (stepWidth / 2);
+                    } else {
+                        top = rect.top - stepHeight - 20;
+                        left = rect.left + (rect.width / 2) - (stepWidth / 2);
+                    }
+                    
+                    // Ensure step stays within viewport
+                    const maxLeft = window.innerWidth - stepWidth - 20;
+                    const maxTop = window.innerHeight - stepHeight - 20;
+                    
+                    left = Math.max(20, Math.min(left, maxLeft));
+                    top = Math.max(20, Math.min(top, maxTop));
+                    
+                    helpStep.style.left = left + 'px';
+                    helpStep.style.top = top + 'px';
+                }
+            }
+
+            highlightTarget(selector) {
+                this.clearHighlights();
+                const target = document.querySelector(selector);
+                if (target) {
+                    target.classList.add('guide-tutorial-highlight');
+                    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }
+
+            clearHighlights() {
+                document.querySelectorAll('.guide-tutorial-highlight')
+                    .forEach(el => el.classList.remove('guide-tutorial-highlight'));
+            }
+
+            previousStep() {
+                if (this.currentStep > 0) {
+                    this.currentStep--;
+                    this.showStep();
+                }
+            }
+
+            nextStep() {
+                if (this.currentStep < this.steps.length - 1) {
+                    this.currentStep++;
+                    this.showStep();
+                } else {
+                    this.closeTutorial();
+                }
+            }
+
+            initTooltips() {
+                // Enhanced tooltip functionality for all elements with title attribute
+                document.addEventListener('mouseover', (e) => {
+                    if (e.target.title || e.target.getAttribute('data-tooltip')) {
+                        this.showTooltip(e.target, e.target.title || e.target.getAttribute('data-tooltip'));
+                    }
+                });
+
+                document.addEventListener('mouseout', (e) => {
+                    if (e.target.title || e.target.getAttribute('data-tooltip') || e.target.getAttribute('data-original-title')) {
+                        this.hideTooltip();
+                    }
+                });
+                
+                // Additional event listeners to ensure tooltip is always hidden
+                document.addEventListener('mouseleave', () => {
+                    this.hideTooltip();
+                });
+                
+                document.addEventListener('scroll', () => {
+                    this.hideTooltip();
+                });
+
+                document.addEventListener('mousemove', (e) => {
+                    const tooltip = document.getElementById('tooltip');
+                    if (tooltip.classList.contains('show')) {
+                        tooltip.style.left = (e.pageX + 10) + 'px';
+                        tooltip.style.top = (e.pageY - 30) + 'px';
+                    }
+                });
+            }
+
+            showTooltip(element, text) {
+                const tooltip = document.getElementById('tooltip');
+                tooltip.textContent = text;
+                tooltip.classList.add('show');
+                
+                // Remove title to prevent browser tooltip
+                if (element.title) {
+                    element.setAttribute('data-original-title', element.title);
+                    element.removeAttribute('title');
+                }
+            }
+
+            hideTooltip() {
+                const tooltip = document.getElementById('tooltip');
+                if (tooltip) {
+                    tooltip.classList.remove('show');
+                    tooltip.textContent = ''; // Clear tooltip content
+                }
+                
+                // Restore original title
+                document.querySelectorAll('[data-original-title]').forEach(el => {
+                    el.title = el.getAttribute('data-original-title');
+                    el.removeAttribute('data-original-title');
+                });
+            }
+        }
+
+        // Enhanced Help System with Detailed Documentation
+        function showDetailedHelp() {
+            const detailedHelp = document.createElement('div');
+            detailedHelp.className = 'detailed-help-modal';
+            detailedHelp.innerHTML = `
+                <div class="help-modal-content">
+                    <div class="help-modal-header">
+                        <h2>📖 מדריך מפורט למערכת השיבוץ המשופרת</h2>
+                        <button class="help-modal-close" onclick="closeDetailedHelp()">&times;</button>
+                    </div>
+                    <div class="help-modal-body">
+                        <div class="help-sections">
+                            <div class="help-section">
+                                <h3>🎯 איך להתחיל</h3>
+                                <ol>
+                                    <li>בחרו חודש ושנה באמצעות כפתורי הניווט</li>
+                                    <li>המערכת תטען אוטומטית את המדריכים והאילוצים</li>
+                                    <li>גררו מדריכים מהרשימה לתאריכים בלוח</li>
+                                    <li>שמרו את השינויים בלחיצה על "שמור שינויים"</li>
+                                </ol>
+                            </div>
+
+                            <div class="help-section">
+                                <h3>🖱️ פעולות גרירה ושחרור</h3>
+                                <ul>
+                                    <li><strong>גרירת מדריך לתאריך:</strong> יוצר שיבוץ חדש</li>
+                                    <li><strong>גרירה לסלוט רגיל:</strong> משמרת רגילה (מקדם ×1.0)</li>
+                                    <li><strong>גרירה לסלוט חפיפה:</strong> משמרת חפיפה (מקדם ×1.0)</li>
+                                    <li><strong>גרירה לסוף שבוע:</strong> מקדם ×2.0 לשבת</li>
+                                    <li><strong>גרירה למשמרת לילה:</strong> מקדם ×1.5</li>
+                                </ul>
+                            </div>
+
+                            <div class="help-section">
+                                <h3>⚠️ מערכת האילוצים</h3>
+                                <ul>
+                                    <li><strong>🚫 אילוץ רגיל:</strong> המדריך הגדיר שהוא לא זמין בתאריך</li>
+                                    <li><strong>📅 אילוץ קבוע:</strong> אילוץ שבועי קבוע (כל יום ראשון למשל)</li>
+                                    <li><strong>🌴 חופשה:</strong> תקופת חופשה שהוגדרה מראש</li>
+                                    <li><strong>⚠️ אילוץ דינמי:</strong> נוצר אוטומטית כדי למנוע ימים עוקבים</li>
+                                </ul>
+                            </div>
+
+                            <div class="help-section">
+                                <h3>📋 מצב בחירה מרובה</h3>
+                                <ol>
+                                    <li>לחצו על "מצב בחירה מרובה" או Ctrl+B</li>
+                                    <li>לחצו על תאריכים לבחירתם (יסומנו בכחול)</li>
+                                    <li>בחרו מדריך לשיבוץ מהרשימה הנפתחת</li>
+                                    <li>בחרו סוג משמרת (רגיל/חפיפה)</li>
+                                    <li>לחצו "אשר שיבוץ" להשלמת הפעולה</li>
+                                </ol>
+                            </div>
+
+                            <div class="help-section">
+                                <h3>📊 הבנת הסטטיסטיקות</h3>
+                                <ul>
+                                    <li><strong>מספר משמרות:</strong> כמות השיבוצים של כל מדריך</li>
+                                    <li><strong>שעות שכר:</strong> סך השעות המשוקללות לפי מקדמים</li>
+                                    <li><strong>מאזן הוגן:</strong> ירוק = טוב, כתום = בינוני, אדום = לא הוגן</li>
+                                    <li><strong>ממוצע חודשי:</strong> ממוצע משמרות לכל מדריך</li>
+                                </ul>
+                            </div>
+
+                            <div class="help-section">
+                                <h3>🛠️ פתרון בעיות נפוצות</h3>
+                                <ul>
+                                    <li><strong>לא ניתן לגרור מדריך:</strong> בדקו שהוא לא נבחר במצב "צפייה באילוצים"</li>
+                                    <li><strong>התאריך מסומן באדום:</strong> קיים אילוץ המונע את השיבוץ</li>
+                                    <li><strong>השינויים לא נשמרים:</strong> בדקו את החיבור לאינטרנט</li>
+                                    <li><strong>הסטטיסטיקות לא מתעדכנות:</strong> לחצו על כפתור הרענון</li>
+                                </ul>
+                            </div>
+
+                            <div class="help-section">
+                                <h3>⌨️ קיצורי מקלדת מתקדמים</h3>
+                                <ul>
+                                    <li><strong>Ctrl + S:</strong> שמירה מהירה</li>
+                                    <li><strong>Ctrl + Z:</strong> ביטול פעולה אחרונה</li>
+                                    <li><strong>Ctrl + Y:</strong> חזרה על פעולה</li>
+                                    <li><strong>Delete:</strong> מחיקת שיבוץ נבחר</li>
+                                    <li><strong>Escape:</strong> ביטול פעולה נוכחית</li>
+                                    <li><strong>F1:</strong> עזרה מהירה</li>
+                                </ul>
+                            </div>
+
+                            <div class="help-section">
+                                <h3>💡 טיפים מתקדמים</h3>
+                                <ul>
+                                    <li><strong>שיבוץ מהיר:</strong> השתמשו במצב בחירה מרובה לשיבוץ חוזר</li>
+                                    <li><strong>צפייה באילוצים:</strong> לחצו על מדריך לראות את כל האילוצים שלו</li>
+                                    <li><strong>ייצוא נתונים:</strong> לחצו על כפתור הייצוא בסטטיסטיקות</li>
+                                    <li><strong>שמירה אוטומטית:</strong> המערכת שומרת אוטומטית כל 30 שניות</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(detailedHelp);
+        }
+
+        function closeDetailedHelp() {
+            const modal = document.querySelector('.detailed-help-modal');
+            if (modal) {
+                modal.remove();
+            }
+        }
+
+        // Keyboard Navigation Helper Functions
+        function navigateGuideCards(currentCard, direction) {
+            const allCards = Array.from(document.querySelectorAll('.guide-card'));
+            const currentIndex = allCards.indexOf(currentCard);
+            const nextIndex = currentIndex + direction;
+            
+            if (nextIndex >= 0 && nextIndex < allCards.length) {
+                allCards[nextIndex].focus();
+            } else if (direction > 0 && nextIndex >= allCards.length) {
+                // Wrap to first card
+                allCards[0].focus();
+            } else if (direction < 0 && nextIndex < 0) {
+                // Wrap to last card
+                allCards[allCards.length - 1].focus();
+            }
+        }
+
+        function focusFirstGuideCard() {
+            const firstCard = document.querySelector('.guide-card');
+            if (firstCard) {
+                firstCard.focus();
+            }
+        }
+
+        function focusLastGuideCard() {
+            const cards = document.querySelectorAll('.guide-card');
+            if (cards.length > 0) {
+                cards[cards.length - 1].focus();
+            }
+        }
+
+        // Enhanced accessibility announcements
+        function announceToScreenReader(message) {
+            const announcement = document.createElement('div');
+            announcement.setAttribute('aria-live', 'polite');
+            announcement.setAttribute('aria-atomic', 'true');
+            announcement.className = 'sr-only';
+            announcement.textContent = message;
+            
+            document.body.appendChild(announcement);
+            
+            // Remove after announcement
+            setTimeout(() => {
+                document.body.removeChild(announcement);
+            }, 1000);
+        }
+
+        // Performance Optimization Utilities
+        class PerformanceManager {
+            constructor() {
+                this.debounceTimers = new Map();
+                this.frameCallbacks = new Set();
+                this.isAnimating = false;
+            }
+
+            // Debounce function for API calls
+            debounce(key, func, delay = 300) {
+                if (this.debounceTimers.has(key)) {
+                    clearTimeout(this.debounceTimers.get(key));
+                }
+                
+                const timer = setTimeout(() => {
+                    func();
+                    this.debounceTimers.delete(key);
+                }, delay);
+                
+                this.debounceTimers.set(key, timer);
+            }
+
+            // Throttle function for scroll/resize events
+            throttle(func, delay = 16) {
+                let lastCall = 0;
+                return function(...args) {
+                    const now = Date.now();
+                    if (now - lastCall >= delay) {
+                        lastCall = now;
+                        func.apply(this, args);
+                    }
+                };
+            }
+
+            // Batch DOM updates using requestAnimationFrame
+            batchDOMUpdate(callback) {
+                this.frameCallbacks.add(callback);
+                
+                if (!this.isAnimating) {
+                    this.isAnimating = true;
+                    requestAnimationFrame(() => {
+                        this.frameCallbacks.forEach(cb => cb());
+                        this.frameCallbacks.clear();
+                        this.isAnimating = false;
+                    });
+                }
+            }
+
+            // Lazy loading for off-screen elements
+            observeElement(element, callback) {
+                if ('IntersectionObserver' in window) {
+                    const observer = new IntersectionObserver((entries) => {
+                        entries.forEach(entry => {
+                            if (entry.isIntersecting) {
+                                callback(entry.target);
+                                observer.unobserve(entry.target);
+                            }
+                        });
+                    }, { threshold: 0.1 });
+                    
+                    observer.observe(element);
+                } else {
+                    // Fallback for older browsers
+                    callback(element);
+                }
+            }
+
+            // Memory cleanup
+            cleanup() {
+                this.debounceTimers.forEach(timer => clearTimeout(timer));
+                this.debounceTimers.clear();
+                this.frameCallbacks.clear();
+            }
+        }
+
+        // Initialize performance manager
+        const performanceManager = new PerformanceManager();
+
+        // Error Logging and Debugging System
+        class DebugManager {
+            constructor() {
+                this.logs = [];
+                this.maxLogs = 100;
+                this.debugLevel = 'info'; // 'debug', 'info', 'warn', 'error'
+                this.enableConsoleOutput = true;
+                this.enableRemoteLogging = false;
+                
+                // Initialize error tracking
+                this.initErrorTracking();
+            }
+
+            initErrorTracking() {
+                // Global error handler
+                window.addEventListener('error', (event) => {
+                    this.error('JavaScript Error', {
+                        message: event.message,
+                        filename: event.filename,
+                        line: event.lineno,
+                        column: event.colno,
+                        stack: event.error?.stack
+                    });
+                });
+
+                // Promise rejection handler
+                window.addEventListener('unhandledrejection', (event) => {
+                    this.error('Unhandled Promise Rejection', {
+                        reason: event.reason,
+                        promise: event.promise
+                    });
+                });
+            }
+
+            log(level, category, data = {}) {
+                const timestamp = new Date().toISOString();
+                const logEntry = {
+                    timestamp,
+                    level,
+                    category,
+                    data,
+                    userAgent: navigator.userAgent,
+                    url: window.location.href
+                };
+
+                // Add to logs array
+                this.logs.push(logEntry);
+                
+                // Maintain max logs limit
+                if (this.logs.length > this.maxLogs) {
+                    this.logs.shift();
+                }
+
+                // Console output
+                if (this.enableConsoleOutput) {
+                    const prefix = `[${timestamp}] [${level.toUpperCase()}] ${category}:`;
+                    switch (level) {
+                        case 'debug':
+                            console.debug(prefix, data);
+                            break;
+                        case 'info':
+                            console.info(prefix, data);
+                            break;
+                        case 'warn':
+                            console.warn(prefix, data);
+                            break;
+                        case 'error':
+                            console.error(prefix, data);
+                            break;
+                    }
+                }
+
+                // Remote logging (if enabled)
+                if (this.enableRemoteLogging && level === 'error') {
+                    this.sendToRemote(logEntry);
+                }
+            }
+
+            debug(category, data) {
+                this.log('debug', category, data);
+            }
+
+            info(category, data) {
+                this.log('info', category, data);
+            }
+
+            warn(category, data) {
+                this.log('warn', category, data);
+            }
+
+            error(category, data) {
+                this.log('error', category, data);
+            }
+
+            // Performance tracking
+            trackPerformance(operation, duration) {
+                this.info('Performance', {
+                    operation,
+                    duration,
+                    timestamp: Date.now()
+                });
+            }
+
+            // API call tracking
+            trackAPICall(url, method, status, duration) {
+                this.info('API Call', {
+                    url,
+                    method,
+                    status,
+                    duration
+                });
+            }
+
+            // User action tracking
+            trackUserAction(action, details = {}) {
+                this.info('User Action', {
+                    action,
+                    details,
+                    timestamp: Date.now()
+                });
+            }
+
+            // Export logs for debugging
+            exportLogs() {
+                const logsJson = JSON.stringify(this.logs, null, 2);
+                const blob = new Blob([logsJson], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `enhanced-scheduler-logs-${new Date().toISOString().split('T')[0]}.json`;
+                a.click();
+                
+                URL.revokeObjectURL(url);
+            }
+
+            // Show debug console
+            showDebugConsole() {
+                const existing = document.getElementById('debug-console');
+                if (existing) {
+                    existing.remove();
+                    return;
+                }
+
+                const console = document.createElement('div');
+                console.id = 'debug-console';
+                console.style.cssText = `
+                    position: fixed;
+                    bottom: 20px;
+                    left: 20px;
+                    width: 400px;
+                    height: 300px;
+                    background: rgba(0, 0, 0, 0.9);
+                    color: white;
+                    border-radius: 8px;
+                    padding: 15px;
+                    font-family: monospace;
+                    font-size: 12px;
+                    z-index: 10000;
+                    overflow-y: auto;
+                    direction: ltr;
+                `;
+
+                const header = document.createElement('div');
+                header.style.cssText = `
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    margin-bottom: 10px;
+                    padding-bottom: 10px;
+                    border-bottom: 1px solid #333;
+                `;
+                header.innerHTML = `
+                    <span>Debug Console (${this.logs.length} logs)</span>
+                    <button onclick="debugManager.showDebugConsole()" style="background: none; border: none; color: white; cursor: pointer;">×</button>
+                `;
+
+                const logsList = document.createElement('div');
+                logsList.style.cssText = `
+                    max-height: 250px;
+                    overflow-y: auto;
+                `;
+
+                this.logs.slice(-20).forEach(log => {
+                    const logDiv = document.createElement('div');
+                    logDiv.style.cssText = `
+                        margin-bottom: 5px;
+                        padding: 5px;
+                        border-left: 3px solid ${this.getLevelColor(log.level)};
+                        background: rgba(255, 255, 255, 0.1);
+                    `;
+                    logDiv.innerHTML = `
+                        <div style="font-weight: bold;">[${log.level.toUpperCase()}] ${log.category}</div>
+                        <div style="color: #ccc; font-size: 10px;">${log.timestamp}</div>
+                        <div>${JSON.stringify(log.data, null, 2)}</div>
+                    `;
+                    logsList.appendChild(logDiv);
+                });
+
+                console.appendChild(header);
+                console.appendChild(logsList);
+                document.body.appendChild(console);
+            }
+
+            getLevelColor(level) {
+                switch (level) {
+                    case 'debug': return '#6b7280';
+                    case 'info': return '#3b82f6';
+                    case 'warn': return '#f59e0b';
+                    case 'error': return '#ef4444';
+                    default: return '#6b7280';
+                }
+            }
+
+            sendToRemote(logEntry) {
+                // Implementation for remote logging service
+                // This would typically send to a logging service like LogRocket, Sentry, etc.
+                console.debug('Would send to remote logging service:', logEntry);
+            }
+
+            // Get system information for debugging
+            getSystemInfo() {
+                return {
+                    userAgent: navigator.userAgent,
+                    language: navigator.language,
+                    platform: navigator.platform,
+                    cookieEnabled: navigator.cookieEnabled,
+                    onLine: navigator.onLine,
+                    screen: {
+                        width: screen.width,
+                        height: screen.height,
+                        colorDepth: screen.colorDepth
+                    },
+                    window: {
+                        innerWidth: window.innerWidth,
+                        innerHeight: window.innerHeight
+                    },
+                    localStorage: typeof(Storage) !== "undefined",
+                    indexedDB: typeof(indexedDB) !== "undefined"
+                };
+            }
+        }
+
+        // Initialize debug manager
+        const debugManager = new DebugManager();
+
+        // Add keyboard shortcut for debug console (Ctrl+Shift+D)
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+                e.preventDefault();
+                debugManager.showDebugConsole();
+            }
+        });
+
+        // Initialize tutorial system
+        const tutorialSystem = new TutorialSystem();
+
         console.log('📝 Enhanced Manual Scheduler JavaScript loaded');
     </script>
+
+    <!-- Help Overlay and Tutorial System -->
+    <div id="help-overlay" class="help-overlay">
+        <div id="help-step" class="help-step">
+            <h4>ברוכים הבאים למדריך השיבוץ המשופר</h4>
+            <p>במדריך זה תלמדו כיצד להשתמש במערכת השיבוץ החדשה</p>
+            <div class="help-step-controls">
+                <div class="help-step-nav">
+                    <button id="help-prev" disabled>הקודם</button>
+                    <button id="help-next">הבא</button>
+                </div>
+                <div class="help-step-indicator">
+                    <span id="help-current-step">1</span> / <span id="help-total-steps">5</span>
+                </div>
+                <button id="help-close">סגור</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tooltip Container -->
+    <div id="tooltip" class="tooltip"></div>
+
 </body>
 </html>

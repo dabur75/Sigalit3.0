@@ -87,6 +87,35 @@
             box-shadow: 0 1px 5px #e4e8f7cc;
         }
         .icon-btn:hover { background: #d8e8fb; }
+        
+        .reactivate-btn {
+            background: #28a745 !important;
+            color: white !important;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        
+        .reactivate-btn:hover {
+            background: #218838 !important;
+        }
+        
+        .inactive-guide {
+            opacity: 0.6;
+            background-color: #f8f9fa !important;
+        }
+        
+        .badge.inactive {
+            background: #6c757d;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+        }
+        
         .flex-row {
             display: flex;
             gap: 22px;
@@ -301,12 +330,13 @@
                     <th>טלפון</th>
                     <th>אימייל</th>
                     <th>תפקיד</th>
+                    <th>בית</th>
                     <th>אחוז משרה</th>
                     <th>פעולות</th>
                 </tr>
             </thead>
             <tbody id="guides-tbody">
-                <tr><td colspan="8" style="text-align:center;">טוען...</td></tr>
+                <tr><td colspan="9" style="text-align:center;">טוען...</td></tr>
             </tbody>
         </table>
     </div>
@@ -337,6 +367,12 @@
                         <option value="רכז">רכז</option>
                         <option value="רכזת">רכזת</option>
                         <option value="מדריכה">מדריכה</option>
+                    </select>
+                </label>
+                <label>בית:
+                    <select id="house_id" required>
+                        <option value="dror">דרור</option>
+                        <option value="havatzelet">חבצלת</option>
                     </select>
                 </label>
                 <label>אחוז משרה:
@@ -381,19 +417,38 @@
         }
     }
     async function renderGuides() {
-        // Include both מדריך and רכז roles
-        const guides = await apiFetch('/api/users/enhanced')
+        // Add timestamp to prevent caching
+        const timestamp = Date.now();
+
+        // Get active guides
+        const activeGuides = await apiFetch(`/api/guides/enhanced?_t=${timestamp}`)
             .then(r=>r.json())
             .then(list => list.filter(u => u.role === 'מדריך' || u.role === 'רכז' || u.role === 'רכזת'));
+
+        // Get inactive guides - explicitly request inactive users
+        const inactiveGuides = await apiFetch(`/api/users/enhanced?role=מדריך&is_active=false&_t=${timestamp}`)
+            .then(r=>r.json())
+            .catch(err => {
+                console.error('Error fetching inactive guides:', err);
+                return []; // Return empty array on error
+            });
+
+        console.log('Active guides:', activeGuides.length, activeGuides.map(g => `${g.name} (${g.id})`));
+        console.log('Inactive guides:', inactiveGuides.length, inactiveGuides.map(g => `${g.name} (${g.id})`));
+
         const tbody = document.getElementById('guides-tbody');
-        if (!guides.length) {
+        const userRole = localStorage.getItem('role');
+        
+        // Render active guides
+        if (!activeGuides.length && !inactiveGuides.length) {
             tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;">אין מדריכים</td></tr>`;
             return;
         }
-        tbody.innerHTML = "";
-        const userRole = localStorage.getItem('role');
         
-        for (const g of guides) {
+        tbody.innerHTML = "";
+        
+        // Add active guides
+        for (const g of activeGuides) {
             const constraints = await fetchGuideConstraints(g.id);
             
             const availabilityStatus = getAvailabilityStatus(g);
@@ -406,7 +461,7 @@
             const lastName = nameParts.slice(1).join(' ') || '';
             
             tbody.innerHTML += `
-            <tr>
+            <tr class="active-guide">
                 <td>${firstName}</td>
                 <td>${lastName}</td>
                 <td>${g.phone || '-'}</td>
@@ -414,6 +469,7 @@
                 <td>
                     <span class="badge${g.role === 'רכז' || g.role === 'רכזת' ? ' coordinator' : ''}">${g.role}</span>
                 </td>
+                <td>${(g.house_id || g.house) === 'dror' ? 'דרור' : (g.house_id || g.house) === 'havatzelet' ? 'חבצלת' : (g.house_id || g.house) || '-'}</td>
                 
                 <td>
                     <input class="percent-input" type="number" value="${g.percent || 100}" min="1" max="200" onchange="updatePercent(${g.id}, this.value)" ${userRole!=='רכז'&&userRole!=='רכזת'?'disabled':''}>% 
@@ -424,6 +480,32 @@
                     <button class="del-link" onclick="deleteGuide(${g.id}); return false;">מחק</button>
                     <button class="icon-btn" onclick="changePassword(${g.id})" title="שנה סיסמא">🔒</button>
                     <button class="icon-btn" onclick="manageConstraints(${g.id})" title="ניהול אילוצים">📅</button>
+                    ` : `<span style='color:#888;'>—</span>`}
+                </td>
+            </tr>
+            `;
+        }
+        
+        // Add inactive guides with reactivate button
+        for (const g of inactiveGuides) {
+            const nameParts = (g.name || '').split(' ');
+            const firstName = nameParts[0] || '';
+            const lastName = nameParts.slice(1).join(' ') || '';
+            
+            tbody.innerHTML += `
+            <tr class="inactive-guide" style="opacity: 0.6; background-color: #f8f9fa;">
+                <td>${firstName}</td>
+                <td>${lastName}</td>
+                <td>${g.phone || '-'}</td>
+                <td>${g.email || '-'}</td>
+                <td>
+                    <span class="badge inactive">לא פעיל</span>
+                </td>
+                <td>${(g.house_id || g.house) === 'dror' ? 'דרור' : (g.house_id || g.house) === 'havatzelet' ? 'חבצלת' : (g.house_id || g.house) || '-'}</td>
+                <td>-</td>
+                <td class="actions">
+                    ${userRole==='רכז'||userRole==='רכזת' ? `
+                    <button class="reactivate-btn" onclick="reactivateGuide(${g.id}); return false;" style="background: #28a745; color: white;">הפעל מחדש</button>
                     ` : `<span style='color:#888;'>—</span>`}
                 </td>
             </tr>
@@ -462,6 +544,7 @@
         document.getElementById('phone').value = guide ? guide.phone : '';
         document.getElementById('email').value = guide ? guide.email : '';
         document.getElementById('role').value = guide ? guide.role : 'מדריך';
+        document.getElementById('house_id').value = guide ? guide.house_id : 'dror'; // Set house_id
         
         document.getElementById('percent').value = guide ? (guide.percent||100) : 100;
         document.getElementById('password').value = ''; // מתחיל ריק תמיד
@@ -479,6 +562,7 @@
                 phone: document.getElementById('phone').value,
                 email: document.getElementById('email').value,
                 role: document.getElementById('role').value,
+                house_id: document.getElementById('house_id').value, // Add house_id
                 percent: Number(document.getElementById('percent').value)
             };
             if (password) g.password = password; // אם הוזנה סיסמה חדשה - שמור
@@ -512,6 +596,23 @@
         if (!confirm("למחוק את המדריך?")) return;
         await apiFetch('/api/guides/'+id, {method:'DELETE'});
         renderGuides();
+    }
+    
+    async function reactivateGuide(id) {
+        if (!confirm('האם אתה בטוח שברצונך להפעיל מחדש מדריך זה?')) return;
+
+        try {
+            const response = await apiFetch('/api/guides/'+id+'/reactivate', {method:'PATCH'});
+            if (response.ok) {
+                alert('המדריך הופעל מחדש בהצלחה ✅');
+                renderGuides();
+            } else {
+                throw new Error('Failed to reactivate guide');
+            }
+        } catch (error) {
+            console.error('Error reactivating guide:', error);
+            alert('שגיאה בהפעלה מחדש של המדריך ❌');
+        }
     }
     async function updatePercent(id, val) {
         val = Number(val);

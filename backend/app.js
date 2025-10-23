@@ -1597,23 +1597,37 @@ app.get('/api/users', async (req, res) => {
   }
 });
 
-// Get enhanced users with statistics
+// Get enhanced users with statistics (supports optional role and is_active filters)
 app.get('/api/users/enhanced', async (req, res) => {
   try {
-    const { role } = req.query;
-    let query = `
-      SELECT id, name, role, house_id, email, phone, is_active, created_at, updated_at
-      FROM users
-    `;
-    let params = [];
-    
+    const { role, is_active } = req.query;
+
+    const conditions = [];
+    const params = [];
+    let paramCount = 0;
+
     if (role) {
-      query += ` WHERE role = $1`;
+      paramCount++;
+      conditions.push(`role = $${paramCount}`);
       params.push(role);
     }
-    
-    query += ` ORDER BY role, name`;
-    
+
+    // Support is_active filter: 'true', 'false', or omit for all
+    if (is_active !== undefined) {
+      paramCount++;
+      conditions.push(`is_active = $${paramCount}`);
+      params.push(is_active === 'true');
+    }
+
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+    const query = `
+      SELECT id, name, role, house_id, email, phone, is_active, created_at, updated_at
+      FROM users
+      ${whereClause}
+      ORDER BY role, name
+    `;
+
     const result = await pool.query(query, params);
     res.json(result.rows);
   } catch (error) {
@@ -1791,41 +1805,6 @@ app.patch('/api/guides/:id/reactivate', async (req, res) => {
 // ============================================================================
 // PHASE 1: CORE API ENDPOINTS - MIGRATED TO POSTGRESQL
 // ============================================================================
-
-// Get users with enhanced statistics (supports optional role filter)
-app.get('/api/users/enhanced', async (req, res) => {
-  try {
-    const { role } = req.query; // optional
-    const roleFilter = role ? `WHERE u.role = $1 AND u.is_active = true` : `WHERE u.is_active = true`;
-    const params = role ? [role] : [];
-    const result = await pool.query(`
-      SELECT 
-        u.id,
-        u.name,
-        u.role,
-        u.house_id as house,
-        u.email,
-        u.phone,
-        u.is_active as status,
-        u.created_at,
-        u.updated_at,
-        COALESCE(u.accessible_houses, '{}'::jsonb) as metadata,
-        COUNT(s.id) as total_shifts,
-        COUNT(CASE WHEN s.guide1_role = 'מדריך ראשי' THEN 1 END) as lead_shifts,
-        COUNT(CASE WHEN s.guide2_role = 'מדריך שני' THEN 1 END) as second_shifts
-      FROM users u
-      LEFT JOIN schedule s ON u.id = s.guide1_id OR u.id = s.guide2_id
-      ${roleFilter}
-      GROUP BY u.id, u.name, u.role, u.house_id, u.email, u.phone, u.is_active, u.created_at, u.updated_at, u.accessible_houses
-      ORDER BY u.name
-    `, params);
-    
-    res.json(result.rows);
-  } catch (error) {
-    console.error('Error fetching enhanced users:', error);
-    res.status(500).json({ error: 'Failed to fetch users' });
-  }
-});
 
 // Back-compat: guides enhanced -> users enhanced filtered by מדריך
 app.get('/api/guides/enhanced', async (req, res) => {

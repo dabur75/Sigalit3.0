@@ -583,7 +583,7 @@
                 <div class="alerts">
                     <div class="alert">
                         <span class="alert-icon">💰</span>
-                        <span class="alert-text"><strong>הערה:</strong> פקטורי השכר מחושבים לפי: רגיל ×1.0, לילה ×1.5, שבת ×2.0, כונן ×0.3, כונן שבת ×0.6, מוצ"ש ×1.0</span>
+                        <span class="alert-text"><strong>הערה:</strong> פקטורי השכר מחושבים לפי תורת השיבוץ: רגיל ×1.0, לילה ×1.5, שבת ×2.0, כונן ×0.3, כונן שבת ×0.6. מוצ"ש היא שילוב של סוגי שעות קיימים (לא נפרד)</span>
                     </div>
                 </div>
 
@@ -596,7 +596,7 @@
                             <th>שעות שבת<br><small>(×2.0)</small></th>
                             <th>שעות כונן<br><small>(×0.3)</small></th>
                             <th>שעות כונן שבת<br><small>(×0.6)</small></th>
-                            <th>שעות מוצ"ש<br><small>(×1.0)</small></th>
+                            <th>שעות מוצ"ש<br><small>(שילוב)</small></th>
                             <th>סה"כ שעות נטו</th>
                             <th>פקטור שכר</th>
                             <th>% מהממוצע</th>
@@ -952,8 +952,8 @@
                     <td>${guide.regular_hours || 0}</td>
                     <td>${guide.night_hours || 0}</td>
                     <td>${guide.shabbat_hours || 0}</td>
-                    <td>${guide.conan_hours || 0}</td>
-                    <td>${guide.conan_shabbat_hours || 0}</td>
+                    <td>${guide.standby_hours || 0}</td>
+                    <td>${guide.standby_shabbat_hours || 0}</td>
                     <td>${guide.motzash_hours || 0}</td>
                     <td><strong>${guide.total_hours || 0}</strong></td>
                     <td><strong>${(guide.salary_factor || 0).toFixed(1)}</strong></td>
@@ -976,8 +976,8 @@
                 <td>${(data.averages?.regular_hours || 0).toFixed(1)}</td>
                 <td>${(data.averages?.night_hours || 0).toFixed(1)}</td>
                 <td>${(data.averages?.shabbat_hours || 0).toFixed(1)}</td>
-                <td>${(data.averages?.conan_hours || 0).toFixed(1)}</td>
-                <td>${(data.averages?.conan_shabbat_hours || 0).toFixed(1)}</td>
+                <td>${(data.averages?.standby_hours || 0).toFixed(1)}</td>
+                <td>${(data.averages?.standby_shabbat_hours || 0).toFixed(1)}</td>
                 <td>${(data.averages?.motzash_hours || 0).toFixed(1)}</td>
                 <td><strong>${(data.averages?.total_hours || 0).toFixed(1)}</strong></td>
                 <td><strong>${(data.averages?.salary_factor_per_guide || 0).toFixed(1)}</strong></td>

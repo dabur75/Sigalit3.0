@@ -14,14 +14,13 @@
 class SalaryCalculator {
   
   constructor() {
-    // Official salary factor multipliers
+    // Official salary factor multipliers (from SCHEDULING_BIBLE.md)
     this.MULTIPLIERS = {
-      regular: 1.0,
-      night: 1.5,
-      shabbat: 2.0,
-      conan: 0.3,          // כונן
-      conan_shabbat: 0.6,  // כונן שבת
-      motzash: 1.0         // מוצ״ש
+      regular: 1.0,         // רגיל - Standard weekday shifts
+      night: 1.5,           // לילה - Night shift hours (00:00-08:00)
+      shabbat: 2.0,         // שבת - Saturday/Shabbat hours
+      standby: 0.3,         // כונן - Weekday standby duty
+      standby_shabbat: 0.6  // כונן שבת - Saturday standby duty
     };
   }
   
@@ -50,9 +49,8 @@ class SalaryCalculator {
       regular_hours: 0,
       night_hours: 0,
       shabbat_hours: 0,
-      conan_hours: 0,
-      conan_shabbat_hours: 0,
-      motzash_hours: 0,
+      standby_hours: 0,
+      standby_shabbat_hours: 0,
       total_hours: 0,
       
       // Salary calculation
@@ -97,42 +95,39 @@ class SalaryCalculator {
    * @param {number} dayIndex - Index of day in schedule
    * @returns {Object} Hours breakdown
    */
-  calculateHoursForShift(day, role, weekendTypes = {}, schedule = [], dayIndex = 0) {
+  calculateHoursForShift(day, role, weekendTypes = {}, schedule = [], dayIndex = 0, isHoliday = false) {
     const hours = {
       regular: 0,
       night: 0,
       shabbat: 0,
-      conan: 0,
-      conan_shabbat: 0,
-      motzash: 0
+      standby: 0,
+      standby_shabbat: 0
     };
     
     const dayOfWeek = new Date(day.date).getDay();
     const isFriday = dayOfWeek === 5;
     const isSaturday = dayOfWeek === 6;
-    const isClosedSaturday = weekendTypes[day.date] === true;
+    const isClosedWeekend = weekendTypes[day.date] === true;
     
-    // Complex hour calculation logic based on role and day type
-    switch (role) {
-      case 'כונן':
-        this._calculateConanHours(hours, isFriday, isSaturday, isClosedSaturday);
-        break;
-        
-      case 'מוצ״ש':
-        this._calculateMotzashHours(hours, isSaturday, isClosedSaturday);
-        break;
-        
-      case 'רגיל':
-        this._calculateRegularHours(hours, dayOfWeek, isFriday, isSaturday, isClosedSaturday);
-        break;
-        
-      case 'חפיפה':
-        this._calculateOverlapHours(hours, dayOfWeek, isFriday, isSaturday);
-        break;
-        
-      default:
-        // Default fallback
-        hours.regular = 8;
+    // Hour calculation based on Scheduling Bible rules
+    if (isHoliday) {
+      // Holiday days - always 2 guides (1 רגיל + 1 חפיפה) with ×2.0 multiplier
+      this._calculateHolidayHours(hours, role);
+    } else if (isFriday && isClosedWeekend) {
+      // Closed Weekend Friday - only כונן role
+      this._calculateClosedFridayHours(hours, role);
+    } else if (isSaturday && isClosedWeekend) {
+      // Closed Weekend Saturday - former כונן + מוצ״ש
+      this._calculateClosedSaturdayHours(hours, role);
+    } else if (isFriday && !isClosedWeekend) {
+      // Open Weekend Friday
+      this._calculateOpenFridayHours(hours, role);
+    } else if (isSaturday && !isClosedWeekend) {
+      // Open Weekend Saturday
+      this._calculateOpenSaturdayHours(hours, role);
+    } else {
+      // Standard Weekdays (Sunday-Thursday)
+      this._calculateWeekdayHours(hours, role);
     }
     
     return hours;
@@ -147,9 +142,8 @@ class SalaryCalculator {
     return (hours.regular * this.MULTIPLIERS.regular) +
            (hours.night * this.MULTIPLIERS.night) +
            (hours.shabbat * this.MULTIPLIERS.shabbat) +
-           (hours.conan * this.MULTIPLIERS.conan) +
-           (hours.conan_shabbat * this.MULTIPLIERS.conan_shabbat) +
-           (hours.motzash * this.MULTIPLIERS.motzash);
+           (hours.standby * this.MULTIPLIERS.standby) +
+           (hours.standby_shabbat * this.MULTIPLIERS.standby_shabbat);
   }
   
   /**
@@ -159,7 +153,7 @@ class SalaryCalculator {
    */
   calculateTotalHours(hours) {
     return hours.regular + hours.night + hours.shabbat + 
-           hours.conan + hours.conan_shabbat + hours.motzash;
+           hours.standby + hours.standby_shabbat;
   }
   
   /**
@@ -221,17 +215,21 @@ class SalaryCalculator {
     stats.regular_hours += hours.regular;
     stats.night_hours += hours.night;
     stats.shabbat_hours += hours.shabbat;
-    stats.conan_hours += hours.conan;
-    stats.conan_shabbat_hours += hours.conan_shabbat;
-    stats.motzash_hours += hours.motzash;
+    stats.standby_hours += (hours.standby || 0);
+    stats.standby_shabbat_hours += (hours.standby_shabbat || 0);
   }
   
   _calculateDerivedMetrics(stats) {
-    // Calculate total hours
-    stats.total_hours = this.calculateTotalHours(stats);
+    // Calculate total hours from the stats object
+    stats.total_hours = stats.regular_hours + stats.night_hours + stats.shabbat_hours + 
+                        stats.standby_hours + stats.standby_shabbat_hours;
     
-    // Calculate salary factor
-    stats.salary_factor = this.calculateSalaryFactor(stats);
+    // Calculate salary factor with correct multipliers
+    stats.salary_factor = (stats.regular_hours * this.MULTIPLIERS.regular) + 
+                          (stats.night_hours * this.MULTIPLIERS.night) + 
+                          (stats.shabbat_hours * this.MULTIPLIERS.shabbat) + 
+                          (stats.standby_hours * this.MULTIPLIERS.standby) + 
+                          (stats.standby_shabbat_hours * this.MULTIPLIERS.standby_shabbat);
     
     // Calculate average hours per shift
     stats.average_hours_per_shift = stats.total_shifts > 0 ? 
@@ -241,63 +239,70 @@ class SalaryCalculator {
     stats.efficiency_ratio = this.calculateEfficiencyRatio(stats.salary_factor, stats.total_hours);
   }
   
-  _calculateConanHours(hours, isFriday, isSaturday, isClosedSaturday) {
-    if (isFriday && isClosedSaturday) {
-      // Friday conan for closed Saturday: Friday 09:00 - Saturday 17:00
-      hours.conan = 10;           // Friday 09:00-19:00 (10 hours weekday conan)
-      hours.conan_shabbat = 22;   // Friday 19:00 - Saturday 17:00 (22 hours Shabbat conan)
-    } else if (isSaturday && isClosedSaturday) {
-      // Continuing Saturday conan (should already be counted on Friday)
-      // This prevents double counting
-      hours.conan_shabbat = 0;
-    } else {
-      // Regular conan (shouldn't happen on weekdays but fallback)
-      hours.conan = 24;
+  // New calculation methods based on Scheduling Bible
+  
+  _calculateWeekdayHours(hours, role) {
+    // Standard Weekdays (Sunday-Thursday): Always 1 רגיל (24h) + 1 חפיפה (25h)
+    if (role === 'רגיל') {
+      hours.regular = 16;  // 09:00 - 01:00 next day (16 hours)
+      hours.night = 8;     // 01:00 - 09:00 next day (8 hours)
+    } else if (role === 'חפיפה') {
+      hours.regular = 17;  // 09:00 - 02:00 next day (17 hours, +1 for handover)
+      hours.night = 8;     // 02:00 - 10:00 next day (8 hours)
     }
   }
   
-  _calculateMotzashHours(hours, isSaturday, isClosedSaturday) {
-    if (isSaturday && isClosedSaturday) {
-      // Motzash for closed Saturday: Saturday 17:00 - Sunday 08:00
-      hours.shabbat = 2;     // Saturday 17:00-19:00 (2 hours Shabbat)
-      hours.regular = 5;     // Saturday 19:00-24:00 (5 hours regular)
-      hours.night = 8;       // Sunday 00:00-08:00 (8 hours night)
-      hours.motzash = 15;    // Total motzash hours for salary calculation
-    } else if (isSaturday && !isClosedSaturday) {
-      // Regular Saturday (open Shabbat) - shouldn't be motzash but fallback
-      hours.shabbat = 16;
-    } else {
-      // Shouldn't happen on other days
-      hours.regular = 8;
+  _calculateOpenFridayHours(hours, role) {
+    // Open Weekend Friday: 2 guides (1 רגיל + 1 חפיפה) 09:00 Friday - 10:00 Saturday
+    if (role === 'רגיל') {
+      hours.regular = 10;  // Friday 09:00-19:00
+      hours.shabbat = 14;  // Friday 19:00 - Saturday 09:00
+    } else if (role === 'חפיפה') {
+      hours.regular = 10;  // Friday 09:00-19:00
+      hours.shabbat = 15;  // Friday 19:00 - Saturday 10:00 (+1 handover)
     }
   }
   
-  _calculateRegularHours(hours, dayOfWeek, isFriday, isSaturday, isClosedSaturday) {
-    if (isFriday && !isClosedSaturday) {
-      // Regular Friday (open Shabbat)
-      hours.regular = 10;   // Friday 09:00-19:00
-      hours.shabbat = 14;   // Friday 19:00 - Saturday 09:00
-    } else if (isSaturday && !isClosedSaturday) {
-      // Regular Saturday (open Shabbat)
-      hours.shabbat = 24;   // Full Saturday shift
-    } else if (dayOfWeek >= 0 && dayOfWeek <= 4) {
-      // Weekday (Sunday-Thursday)
-      hours.regular = 16;   // Day shift 09:00 - next day 01:00 (16 hours)
-      hours.night = 8;      // Night shift 01:00 - 09:00 (8 hours)
-    } else {
-      // Fallback
-      hours.regular = 8;
+  _calculateOpenSaturdayHours(hours, role) {
+    // Open Weekend Saturday: 2 guides (1 רגיל + 1 חפיפה) 09:00 Saturday - 10:00 Sunday
+    if (role === 'רגיל') {
+      hours.shabbat = 24;  // Full Saturday 09:00 - 09:00 Sunday
+    } else if (role === 'חפיפה') {
+      hours.shabbat = 25;  // Saturday 09:00 - 10:00 Sunday (+1 handover)
     }
   }
   
-  _calculateOverlapHours(hours, dayOfWeek, isFriday, isSaturday) {
-    // Overlap/חפיפה typically adds extra hours
-    if (isFriday || isSaturday) {
-      // Weekend overlap - usually 1-2 hours
-      hours.shabbat = 1;
-    } else {
-      // Weekday overlap - usually 1 hour
-      hours.regular = 1;
+  _calculateClosedFridayHours(hours, role) {
+    // Closed Weekend Friday: 1 כונן guide ONLY, 09:00 Friday - 17:00 Saturday (32h)
+    if (role === 'כונן') {
+      hours.standby = 10;           // Friday 09:00-19:00 (10 hours weekday standby)
+      hours.standby_shabbat = 22;   // Friday 19:00 - Saturday 17:00 (22 hours Shabbat standby)
+    }
+  }
+  
+  _calculateClosedSaturdayHours(hours, role) {
+    // Closed Weekend Saturday: former כונן (17h) + מוצ״ש (16h)
+    if (role === 'כונן') {
+      // Former standby continues from 17:00 Saturday - 10:00 Sunday (17h)
+      hours.shabbat = 2;    // Saturday 17:00-19:00
+      hours.regular = 7;    // Saturday 19:00 - Sunday 02:00
+      hours.night = 8;      // Sunday 02:00-10:00 (+1 handover)
+    } else if (role === 'מוצ״ש') {
+      // New motzash guide: 17:00 Saturday - 09:00 Sunday (16h)
+      // Note: מוצ״ש is NOT a separate hour type - it's a combination of existing types
+      hours.shabbat = 2;    // Saturday 17:00-19:00 (×2.0 multiplier)
+      hours.regular = 6;    // Saturday 19:00 - Sunday 01:00 (×1.0 multiplier)
+      hours.night = 8;      // Sunday 01:00-09:00 (×1.5 multiplier)
+      // No separate motzash_hours field - it's calculated from the combination above
+    }
+  }
+  
+  _calculateHolidayHours(hours, role) {
+    // Holiday days: Always 2 guides (1 רגיל + 1 חפיפה) with ×2.0 multiplier
+    if (role === 'רגיל') {
+      hours.shabbat = 24;   // Full 24 hours at ×2.0 multiplier
+    } else if (role === 'חפיפה') {
+      hours.shabbat = 25;   // 25 hours at ×2.0 multiplier (+1 handover)
     }
   }
   
@@ -319,9 +324,8 @@ class SalaryCalculator {
       regular: Math.max(0, hours.regular || 0),
       night: Math.max(0, hours.night || 0),
       shabbat: Math.max(0, hours.shabbat || 0),
-      conan: Math.max(0, hours.conan || 0),
-      conan_shabbat: Math.max(0, hours.conan_shabbat || 0),
-      motzash: Math.max(0, hours.motzash || 0)
+      standby: Math.max(0, hours.standby || 0),
+      standby_shabbat: Math.max(0, hours.standby_shabbat || 0)
     };
     
     // Sanity check: total hours shouldn't exceed reasonable limits

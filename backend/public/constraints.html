@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>ניהול אילוצים - סיגלית</title>
+  <script src="jewish-holidays-service.js"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
@@ -14,16 +15,267 @@
     .tab-bar { display: flex; gap: 10px; margin-bottom: 24px;}
     .tab-btn { padding: 8px 22px; border-radius: 7px 7px 0 0; background: #e3f1fb; color: #2460b2; font-size: 16px; border: none; cursor: pointer;}
     .tab-btn.active { background: #4891ca; color: #fff; font-weight: bold;}
-    table { width: 100%; border-collapse: collapse; margin-top: 8px;}
-    th, td { border: 1px solid #d9e4ee; padding: 8px 7px; text-align: right;}
-    th { background: #e3f1fb;}
+    table { 
+      width: 100%; 
+      border-collapse: collapse; 
+      margin-top: 8px;
+      background: white;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    th, td { 
+      border: 1px solid #e5e7eb; 
+      padding: 12px 16px; 
+      text-align: right;
+      vertical-align: middle;
+    }
+    
+    th { 
+      background: #f8fafc;
+      font-weight: 600;
+      color: #374151;
+      border-bottom: 2px solid #e5e7eb;
+    }
+    
+    tr:hover {
+      background: #f9fafb;
+    }
+    
+    /* Hide empty hour columns when not needed */
+    .hour-column {
+      display: none;
+    }
+    
+    /* Improve note column */
+    .note-column {
+      max-width: 200px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    
+    /* Improve action buttons layout */
+    .action-buttons {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      align-items: center;
+    }
+    
+    .action-buttons .btn {
+      padding: 6px 12px;
+      font-size: 12px;
+      min-width: 60px;
+    }
+    
+    /* Improve constraint tags */
+    .constraint-tag {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 500;
+      text-align: center;
+      min-width: 50px;
+      white-space: nowrap;
+    }
+    
+    /* Constraint Summary Card Styles */
+    .constraint-info-header {
+      margin-bottom: 20px;
+    }
+    
+    .constraint-summary-card {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      padding: 24px;
+      background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+      border-radius: 16px;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .constraint-summary-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, #3b82f6, #8b5cf6, #06b6d4);
+    }
+    
+    .summary-icon {
+      font-size: 32px;
+      flex-shrink: 0;
+    }
+    
+    .summary-content {
+      flex: 1;
+    }
+    
+    .summary-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: #1e293b;
+      margin-bottom: 4px;
+    }
+    
+    .summary-month {
+      font-size: 14px;
+      color: #64748b;
+      margin-bottom: 8px;
+    }
+    
+    .summary-count {
+      font-size: 24px;
+      font-weight: 800;
+      color: #0f172a;
+    }
+    
+    .summary-count.at-limit {
+      color: #dc2626;
+    }
+    
+    .limit-warning {
+      font-size: 14px;
+      color: #dc2626;
+      font-weight: 600;
+    }
+    
+    .filter-status {
+      font-size: 13px;
+      color: #64748b;
+      margin-top: 8px;
+      padding: 4px 8px;
+      background: rgba(59, 130, 246, 0.1);
+      border-radius: 6px;
+      display: inline-block;
+    }
+    
+    .summary-progress {
+      flex-shrink: 0;
+      width: 120px;
+    }
+    
+    .progress-bar {
+      width: 100%;
+      height: 8px;
+      background: #e2e8f0;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #10b981, #3b82f6);
+      border-radius: 4px;
+      transition: width 0.3s ease;
+    }
+    
+    .summary-stats {
+      display: flex;
+      gap: 16px;
+      flex-shrink: 0;
+    }
+    
+    .stat-item {
+      text-align: center;
+      padding: 12px;
+      background: rgba(255, 255, 255, 0.7);
+      border-radius: 8px;
+      border: 1px solid rgba(226, 232, 240, 0.5);
+    }
+    
+    .stat-label {
+      display: block;
+      font-size: 11px;
+      color: #64748b;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .stat-value {
+      display: block;
+      font-size: 20px;
+      font-weight: 800;
+      color: #0f172a;
+      margin-top: 4px;
+    }
+    
+    /* Improve table responsiveness */
+    @media (max-width: 768px) {
+      .hour-column {
+        display: none;
+      }
+      
+      .note-column {
+        max-width: 120px;
+      }
+      
+      .action-buttons {
+        flex-direction: column;
+        gap: 4px;
+      }
+      
+      .action-buttons .btn {
+        min-width: 50px;
+        font-size: 11px;
+        padding: 4px 8px;
+      }
+      
+      .constraint-summary-card {
+        flex-direction: column;
+        gap: 16px;
+        padding: 20px;
+        text-align: center;
+      }
+      
+      .summary-stats {
+        justify-content: center;
+      }
+      
+      .summary-progress {
+        width: 100%;
+        max-width: 200px;
+      }
+    }
     .btn { background: #4891ca; color: #fff; padding: 6px 17px; border: none; border-radius: 8px; cursor: pointer;}
     .btn:hover { background: #3077b8;}
     .modal { display: none; position:fixed; top:0;right:0;left:0;bottom:0; background:#0004; z-index:99; align-items:center; justify-content:center;}
     .modal .form-content {background:#fff;padding:22px 34px;max-width:400px;border-radius:15px;box-shadow:0 2px 20px #356aad44;}
-    .status-approved { color: #228d46; font-weight: bold;}
-    .status-pending { color: #b78c04; font-weight: bold;}
-    .status-declined { color: #d03d3d; font-weight: bold;}
+    .status-approved { 
+      color: #16a34a; 
+      font-weight: 600;
+      background: #f0fdf4;
+      padding: 4px 8px;
+      border-radius: 6px;
+      border: 1px solid #bbf7d0;
+    }
+    
+    .status-pending { 
+      color: #ca8a04; 
+      font-weight: 600;
+      background: #fefce8;
+      padding: 4px 8px;
+      border-radius: 6px;
+      border: 1px solid #fef08a;
+    }
+    
+    .status-declined { 
+      color: #dc2626; 
+      font-weight: 600;
+      background: #fef2f2;
+      padding: 4px 8px;
+      border-radius: 6px;
+      border: 1px solid #fecaca;
+    }
     .vacation-constraint { background: #f0f8ff !important; }
     .vacation-constraint td { color: #2e7d32; }
     
@@ -80,12 +332,12 @@
       justify-content: flex-start;
       align-items: center;
       gap: 15px;
-      margin-bottom: 15px;
-      padding: 12px 16px;
-      background: #f8f9fa;
-      border-radius: 8px;
-      border: 1px solid #dee2e6;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+      padding: 16px 20px;
+      background: #f8fafc;
+      border-radius: 12px;
+      border: 1px solid #e5e7eb;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     }
     
     .guide-filter-section label {
@@ -135,12 +387,12 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 15px;
-      padding: 12px 16px;
-      background: #f8f9fa;
-      border-radius: 8px;
-      border: 1px solid #dee2e6;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+      padding: 16px 20px;
+      background: #f8fafc;
+      border-radius: 12px;
+      border: 1px solid #e5e7eb;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     }
 
     .bulk-controls {
@@ -351,6 +603,15 @@
     .date-input-group {
       position: relative;
       display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      min-width: 0; /* Prevent flex item overflow */
+      width: 100%;
+    }
+    
+    .date-input-wrapper {
+      position: relative;
+      display: flex;
       align-items: center;
     }
     
@@ -376,14 +637,17 @@
     }
     
     /* Add extra padding to inputs with date picker buttons */
-    .date-input-group .modern-input {
+    .date-input-wrapper .modern-input {
       padding-right: 48px;
+      min-width: 0; /* Prevent input overflow */
+      overflow: hidden; /* Hide any overflow */
+      width: 100%;
     }
     
     /* Date Range Styles */
     .date-range-inputs {
       margin-top: 16px;
-      padding: 16px;
+      padding: 20px;
       background: #f9fafb;
       border-radius: 12px;
       border: 1px solid #e5e7eb;
@@ -392,7 +656,26 @@
     .date-range-row {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 16px;
+      gap: 24px;
+      align-items: start;
+    }
+    
+    /* Responsive design for date range */
+    @media (max-width: 768px) {
+      .date-range-row {
+        grid-template-columns: 1fr;
+        gap: 20px;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      .date-range-inputs {
+        padding: 16px;
+      }
+      
+      .date-range-row {
+        gap: 16px;
+      }
     }
     
     .date-range-label {
@@ -401,12 +684,25 @@
       color: #6b7280;
       margin-bottom: 6px;
       display: block;
+      white-space: nowrap; /* Prevent label wrapping */
+    }
+    
+    /* Ensure proper spacing in date range inputs */
+    .date-range-inputs .date-input-group {
+      margin-bottom: 8px;
+    }
+    
+    .date-range-inputs .date-input-group:last-child {
+      margin-bottom: 0;
     }
     
     /* Checkbox Styles */
     .checkbox-label {
       cursor: pointer;
       user-select: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
     
     .modern-checkbox {
@@ -423,6 +719,7 @@
       border-radius: 6px;
       margin-right: 8px;
       transition: all 0.2s ease;
+      flex-shrink: 0;
     }
     
     .modern-checkbox:checked + .checkmark {
@@ -514,10 +811,11 @@
       background: white;
       border-radius: 12px;
       box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
-      padding: 16px;
+      padding: 20px;
       z-index: 1001;
-      min-width: 280px;
+      min-width: 320px;
       border: 1px solid #e5e7eb;
+      margin-top: 8px;
     }
     
     .date-picker-header {
@@ -543,12 +841,14 @@
       border: none;
       color: #6b7280;
       cursor: pointer;
-      padding: 6px;
+      padding: 8px;
       border-radius: 6px;
       transition: all 0.2s ease;
       display: flex;
       align-items: center;
       justify-content: center;
+      min-width: 32px;
+      min-height: 32px;
     }
     
     .date-picker-nav-btn:hover {
@@ -559,8 +859,8 @@
     .date-picker-weekdays {
       display: grid;
       grid-template-columns: repeat(7, 1fr);
-      gap: 4px;
-      margin-bottom: 8px;
+      gap: 8px;
+      margin-bottom: 12px;
     }
     
     .date-picker-weekday {
@@ -568,23 +868,33 @@
       font-size: 12px;
       font-weight: 600;
       color: #6b7280;
-      padding: 8px 4px;
+      padding: 10px 6px;
+      min-height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
     
     .date-picker-days {
       display: grid;
       grid-template-columns: repeat(7, 1fr);
-      gap: 4px;
+      gap: 8px;
     }
     
     .date-picker-day {
       text-align: center;
-      padding: 8px 4px;
+      padding: 10px 6px;
       border-radius: 8px;
       cursor: pointer;
       transition: all 0.2s ease;
       font-size: 14px;
       color: #374151;
+      min-height: 36px;
+      min-width: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-sizing: border-box;
     }
     
     .date-picker-day:hover {
@@ -606,6 +916,30 @@
       font-weight: 600;
     }
     
+    .date-picker-day.has-holiday {
+      border: 2px solid #d97706;
+      background: linear-gradient(135deg, #fff7ed 0%, #fed7aa 100%);
+    }
+    
+    .date-picker-day {
+      position: relative;
+      flex-direction: column;
+      gap: 2px;
+    }
+    
+    .day-number {
+      flex-shrink: 0;
+    }
+    
+    .holiday-indicator {
+      font-size: 10px;
+      line-height: 1;
+      position: absolute;
+      top: 2px;
+      right: 2px;
+      z-index: 1;
+    }
+    
     .date-picker-footer {
       display: flex;
       justify-content: space-between;
@@ -619,10 +953,15 @@
       border: none;
       color: #6b7280;
       cursor: pointer;
-      padding: 8px 16px;
+      padding: 10px 18px;
       border-radius: 8px;
       font-size: 14px;
       transition: all 0.2s ease;
+      min-width: 60px;
+      min-height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
     
     .date-picker-footer-btn:hover {
@@ -637,6 +976,27 @@
     
     .date-picker-footer-btn.primary:hover {
       background: #2563eb;
+    }
+    
+    /* Responsive design for date picker */
+    @media (max-width: 480px) {
+      .date-picker {
+        min-width: 280px;
+        padding: 16px;
+        left: -20px;
+      }
+      
+      .date-picker-day {
+        min-height: 32px;
+        min-width: 32px;
+        padding: 8px 4px;
+        font-size: 13px;
+      }
+      
+      .date-picker-weekday {
+        padding: 8px 4px;
+        font-size: 11px;
+      }
     }
     
     /* Constraint Tags and Buttons */
@@ -709,27 +1069,32 @@
     .calendar-grid {
       display: grid;
       grid-template-columns: repeat(7, 1fr);
-      gap: 1px;
+      gap: 2px;
       background: #e9ecef;
     }
     
     .calendar-weekday {
       background: #f8f9fa;
-      padding: 12px 8px;
+      padding: 16px 12px;
       text-align: center;
       font-weight: 600;
       color: #495057;
       border-bottom: 1px solid #dee2e6;
+      min-height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
     
     .calendar-day {
       background: white;
-      padding: 12px 8px;
-      min-height: 80px;
+      padding: 16px 12px;
+      min-height: 100px;
       border: 1px solid #e9ecef;
       position: relative;
       cursor: pointer;
       transition: all 0.2s ease;
+      box-sizing: border-box;
     }
     
     .calendar-day:hover {
@@ -760,6 +1125,11 @@
     .calendar-day.has-vacation {
       background: #d4edda;
       border-color: #28a745;
+    }
+    
+    .calendar-day.has-holiday {
+      background: linear-gradient(135deg, #fff7ed, #fed7aa);
+      border-color: #d97706;
     }
     
     .calendar-day.has-multiple {
@@ -794,6 +1164,24 @@
     
     .constraint-indicator.vacation {
       background: #28a745;
+    }
+    
+    .constraint-indicator.holiday {
+      background: #d97706;
+      color: white;
+    }
+    
+    .holiday-title {
+      font-size: 10px;
+      color: #d97706;
+      font-weight: 600;
+      text-align: center;
+      margin: 2px 0;
+      line-height: 1.2;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
     
     .calendar-legend {
@@ -873,17 +1261,17 @@
           <th style="width: 50px;">
             <input type="checkbox" id="header-checkbox" onchange="toggleAllConstraints()">
           </th>
-                  <th>שם מדריך</th>
-        <th>סוג</th>
-        <th>תאריך</th>
-        <th>משעה</th>
-        <th>עד שעה</th>
-        <th>הערה</th>
-        <th>פעולות</th>
+          <th>שם מדריך</th>
+          <th>סוג</th>
+          <th>תאריך</th>
+          <th class="hour-column">משעה</th>
+          <th class="hour-column">עד שעה</th>
+          <th>הערה</th>
+          <th style="width: 140px;">פעולות</th>
         </tr>
       </thead>
       <tbody id="constraints-tbody">
-        <tr><td colspan="8" style="text-align:center;">טוען...</td></tr>
+        <tr><td colspan="8" style="text-align:center; padding: 40px;">טוען...</td></tr>
       </tbody>
     </table>
   </div>
@@ -924,10 +1312,10 @@
           <th>שם מדריך</th>
           <th>סוג</th>
           <th>יום בשבוע</th>
-          <th>משעה</th>
-          <th>עד שעה</th>
+          <th class="hour-column">משעה</th>
+          <th class="hour-column">עד שעה</th>
           <th>הערה</th>
-          <th>פעולות</th>
+          <th style="width: 140px;">פעולות</th>
         </tr>
       </thead>
       <tbody id="fixed-tbody">
@@ -976,7 +1364,7 @@
           <th>הערה</th>
           <th>סטטוס</th>
           <th>הערת רכז</th>
-          <th>פעולות</th>
+          <th style="width: 140px;">פעולות</th>
         </tr>
       </thead>
       <tbody id="vacation-tbody">
@@ -1021,6 +1409,10 @@
         <span>חופשות</span>
       </div>
       <div class="legend-item">
+        <div class="legend-color" style="background: #d97706;"></div>
+        <span>חגים יהודיים</span>
+      </div>
+      <div class="legend-item">
         <div class="legend-color" style="background: #6c757d;"></div>
         <span>משולב</span>
       </div>
@@ -1063,13 +1455,15 @@
           תאריך
         </label>
         <div class="date-input-group">
-          <input type="text" id="constraintDate" class="form-input modern-input" placeholder="בחר תאריך" readonly required>
-          <button type="button" class="date-picker-btn" onclick="openDatePicker()">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M8 2V5M16 2V5M3.5 4H20.5C21.3284 4 22 4.67157 22 5.5V19.5C22 20.3284 21.3284 21 20.5 21H3.5C2.67157 21 2 20.3284 2 19.5V5.5C2 4.67157 2.67157 4 3.5 4Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M2 10H22" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </button>
+          <div class="date-input-wrapper">
+            <input type="text" id="constraintDate" class="form-input modern-input" placeholder="בחר תאריך" readonly required onclick="openDatePicker()">
+            <button type="button" class="date-picker-btn" onclick="openDatePicker()">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M8 2V5M16 2V5M3.5 4H20.5C21.3284 4 22 4.67157 22 5.5V19.5C22 20.3284 21.3284 21 20.5 21H3.5C2.67157 21 2 20.3284 2 19.5V5.5C2 4.67157 2.67157 4 3.5 4Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M2 10H22" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
       
@@ -1087,23 +1481,27 @@
           <div class="date-range-row">
             <div class="date-input-group">
               <label class="date-range-label">מתאריך</label>
-              <input type="text" id="dateStart" class="form-input modern-input" placeholder="תאריך התחלה" readonly>
-              <button type="button" class="date-picker-btn" onclick="openDatePicker('start')">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M8 2V5M16 2V5M3.5 4H20.5C21.3284 4 22 4.67157 22 5.5V19.5C22 20.3284 21.3284 21 20.5 21H3.5C2.67157 21 2 20.3284 2 19.5V5.5C2 4.67157 2.67157 4 3.5 4Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  <path d="M2 10H22" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-              </button>
+              <div class="date-input-wrapper">
+                <input type="text" id="dateStart" class="form-input modern-input" placeholder="תאריך התחלה" readonly>
+                <button type="button" class="date-picker-btn" onclick="openDatePicker('start')">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M8 2V5M16 2V5M3.5 4H20.5C21.3284 4 22 4.67157 22 5.5V19.5C22 20.3284 21.3284 21 20.5 21H3.5C2.67157 21 2 20.3284 2 19.5V5.5C2 4.67157 2.67157 4 3.5 4Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M2 10H22" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </button>
+              </div>
             </div>
             <div class="date-input-group">
               <label class="date-range-label">עד תאריך</label>
-              <input type="text" id="dateEnd" class="form-input modern-input" placeholder="תאריך סיום" readonly>
-              <button type="button" class="date-picker-btn" onclick="openDatePicker('end')">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M8 2V5M16 2V5M3.5 4H20.5C21.3284 4 22 4.67157 22 5.5V19.5C22 20.3284 21.3284 21 20.5 21H3.5C2.67157 21 2 20.3284 2 19.5V5.5C2 4.67157 2.67157 4 3.5 4Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  <path d="M2 10H22" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-              </button>
+              <div class="date-input-wrapper">
+                <input type="text" id="dateEnd" class="form-input modern-input" placeholder="תאריך סיום" readonly>
+                <button type="button" class="date-picker-btn" onclick="openDatePicker('end')">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M8 2V5M16 2V5M3.5 4H20.5C21.3284 4 22 4.67157 22 5.5V19.5C22 20.3284 21.3284 21 20.5 21H3.5C2.67157 21 2 20.3284 2 19.5V5.5C2 4.67157 2.67157 4 3.5 4Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M2 10H22" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -1785,33 +2183,84 @@ async function renderConstraints() {
   if (userData.role === "מדריך") {
     const constraintCount = list.length;
     const maxConstraints = 14;
-    constraintInfo = `<div style="margin-bottom:10px; padding:8px; background:#f0f8ff; border-radius:6px; font-size:0.9em;">
-      <strong>אילוצים חודשיים (${currentMonth}):</strong> ${constraintCount}/${maxConstraints} 
-      ${constraintCount >= maxConstraints ? '<span style="color:#d32f2f;">(הגעת למגבלה!)</span>' : ''}
-    </div>`;
+    const isAtLimit = constraintCount >= maxConstraints;
+    constraintInfo = `
+      <div class="constraint-summary-card guide-view">
+        <div class="summary-icon">📊</div>
+        <div class="summary-content">
+          <div class="summary-title">אילוצים חודשיים</div>
+          <div class="summary-month">${currentMonth}</div>
+          <div class="summary-count ${isAtLimit ? 'at-limit' : ''}">
+            ${constraintCount}/${maxConstraints}
+            ${isAtLimit ? ' <span class="limit-warning">(הגעת למגבלה!)</span>' : ''}
+          </div>
+        </div>
+        <div class="summary-progress">
+          <div class="progress-bar">
+            <div class="progress-fill" style="width: ${(constraintCount / maxConstraints) * 100}%"></div>
+          </div>
+        </div>
+      </div>
+    `;
   } else {
     // Show filter status for coordinators
     const totalConstraints = constraints.filter(c => c.date && c.date.startsWith(currentMonth)).length;
     const filteredCount = list.length;
     let filterStatus = '';
+    let filterIcon = '🔍';
+    
     if (selectedGuideFilter) {
       const selectedGuide = guides.find(g => g.id == selectedGuideFilter);
-      filterStatus = `<span style="color:#6c757d; font-size:0.9em;">(מסונן לפי: ${selectedGuide?.name || 'לא ידוע'})</span>`;
+      filterStatus = selectedGuide?.name || 'לא ידוע';
+      filterIcon = '👤';
     }
     
-    constraintInfo = `<div style="margin-bottom:10px; padding:8px; background:#f0f8ff; border-radius:6px; font-size:0.9em;">
-      <strong>אילוצים חודשיים (${currentMonth}):</strong> ${filteredCount}/${totalConstraints} ${filterStatus}
-    </div>`;
+    constraintInfo = `
+      <div class="constraint-summary-card coordinator-view">
+        <div class="summary-icon">📋</div>
+        <div class="summary-content">
+          <div class="summary-title">אילוצים חודשיים</div>
+          <div class="summary-month">${currentMonth}</div>
+          <div class="summary-count">
+            ${filteredCount}/${totalConstraints}
+          </div>
+          ${filterStatus ? `<div class="filter-status">${filterIcon} מסונן לפי: ${filterStatus}</div>` : ''}
+        </div>
+        <div class="summary-stats">
+          <div class="stat-item">
+            <span class="stat-label">סה"כ</span>
+            <span class="stat-value">${totalConstraints}</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">מוצג</span>
+            <span class="stat-value">${filteredCount}</span>
+          </div>
+        </div>
+      </div>
+    `;
   }
   
   // Render constraints
   tbody.innerHTML = '';
   
-  // Add constraint info header
-  tbody.innerHTML += constraintInfo;
+  // Add or update constraint info header above the table
+  let constraintInfoContainer = document.querySelector('.constraint-info-header');
+  
+  if (!constraintInfoContainer) {
+    // Create new container if it doesn't exist
+    constraintInfoContainer = document.createElement('div');
+    constraintInfoContainer.className = 'constraint-info-header';
+    
+    // Insert the info header before the table
+    const table = document.querySelector('#monthly-section table');
+    table.parentNode.insertBefore(constraintInfoContainer, table);
+  }
+  
+  // Update the content
+  constraintInfoContainer.innerHTML = constraintInfo;
   
   if (!list.length) {
-    tbody.innerHTML += `<tr><td colspan="8" style="text-align:center;">אין אילוצים חודשיים</td></tr>`;
+    tbody.innerHTML += `<tr><td colspan="8" style="text-align:center; padding: 40px; color: #6b7280;">אין אילוצים חודשיים</td></tr>`;
     // Hide bulk operations when no constraints
     document.getElementById('bulk-operations-container').style.display = 'none';
     return;
@@ -1833,12 +2282,14 @@ async function renderConstraints() {
         <td>${g.name}</td>
         <td>${typeTag}</td>
         <td>${c.date}</td>
-        <td>${c.hourStart || '-'}</td>
-        <td>${c.hourEnd || '-'}</td>
-        <td>${c.note || ''}</td>
+        <td class="hour-column">${c.hourStart || '-'}</td>
+        <td class="hour-column">${c.hourEnd || '-'}</td>
+        <td class="note-column" title="${c.note || ''}">${c.note || ''}</td>
         <td>
-          <button class="btn btn-edit" onclick="editConstraint(${c.id})">ערוך</button>
-          <button class="btn btn-delete" onclick="deleteConstraint(${c.id})">מחק</button>
+          <div class="action-buttons">
+            <button class="btn btn-edit" onclick="editConstraint(${c.id})">ערוך</button>
+            <button class="btn btn-delete" onclick="deleteConstraint(${c.id})">מחק</button>
+          </div>
         </td>
       </tr>
     `;
@@ -1910,10 +2361,14 @@ async function renderFixedConstraints() {
       <td>${g.name}</td>
       <td>${typeTag}</td>
       <td>${weekdays[Number(c.weekday)]}</td>
-      <td>${c.hourStart||"-"}</td>
-      <td>${c.hourEnd||"-"}</td>
-      <td>${c.note||""}</td>
-      <td>${actions}</td>
+      <td class="hour-column">${c.hourStart||"-"}</td>
+      <td class="hour-column">${c.hourEnd||"-"}</td>
+      <td class="note-column" title="${c.note||""}">${c.note||""}</td>
+      <td>
+        <div class="action-buttons">
+          ${actions}
+        </div>
+      </td>
     </tr>`;
   });
   
@@ -1976,10 +2431,14 @@ if (userData.role === "רכז") {
       <td>${typeTag}</td>
       <td>${v.dateStart}</td>
       <td>${v.dateEnd}</td>
-      <td>${v.note||""}</td>
+      <td class="note-column" title="${v.note||""}">${v.note||""}</td>
       <td class="${statusClass}">${statusLabel}</td>
-      <td>${v.responseNote||""}</td>
-      <td>${actions}</td>
+      <td class="note-column" title="${v.responseNote||""}">${v.responseNote||""}</td>
+      <td>
+        <div class="action-buttons">
+          ${actions}
+        </div>
+      </td>
     </tr>`;
   });
   
@@ -2013,10 +2472,22 @@ function switchTab(tab) {
 
 function toggleDateRange() {
   const checked = document.getElementById('dateRangeCheckbox').checked;
-  document.getElementById('dateRangeInputs').style.display = checked ? '' : 'none';
-  if (!checked) {
+  const dateRangeInputs = document.getElementById('dateRangeInputs');
+  const singleDateInput = document.getElementById('constraintDate');
+  
+  if (checked) {
+    // Show date range inputs
+    dateRangeInputs.style.display = 'block';
+    // Clear single date when switching to range
+    singleDateInput.value = '';
+    singleDateInput.disabled = true;
+  } else {
+    // Hide date range inputs
+    dateRangeInputs.style.display = 'none';
+    // Clear range dates and re-enable single date
     document.getElementById('dateStart').value = '';
     document.getElementById('dateEnd').value = '';
+    singleDateInput.disabled = false;
   }
 }
 // --- טופס אילוץ חודשי ---
@@ -2050,7 +2521,12 @@ function openConstraintForm(constraint=null) {
   document.getElementById('constraintDate').value = defaultDate;
   document.getElementById('constraintNote').value = constraint ? constraint.note || '' : '';
   document.getElementById('dateRangeCheckbox').checked = false;
-  toggleDateRange();
+  
+  // Initialize date range state
+  document.getElementById('dateStart').value = '';
+  document.getElementById('dateEnd').value = '';
+  document.getElementById('dateRangeInputs').style.display = 'none';
+  document.getElementById('constraintDate').disabled = false;
   
   document.getElementById('constraintForm').onsubmit = async function(e) {
     e.preventDefault();
@@ -2058,30 +2534,28 @@ function openConstraintForm(constraint=null) {
     
     // Validate form
     const guideId = Number(document.getElementById('constraintGuide').value);
-    const dateStart = document.getElementById('constraintDate').value;
     const note = document.getElementById('constraintNote').value;
     const isRange = document.getElementById('dateRangeCheckbox').checked;
     
-    if (!guideId || !dateStart) {
-      alert('יש למלא את כל השדות החובה');
+    if (!guideId) {
+      alert('יש לבחור מדריך');
       return;
     }
     
     let days = [];
-    if (!dateStart) {
-      alert('יש לבחור תאריך');
-      return;
-    }
     
     if (isRange) {
-      const dateEnd = document.getElementById('dateEnd').value;
-      if (!dateEnd) {
-        alert('יש לבחור תאריך סיום לטווח');
+      // Use period start and end dates for range constraints
+      const periodStart = document.getElementById('dateStart').value;
+      const periodEnd = document.getElementById('dateEnd').value;
+      
+      if (!periodStart || !periodEnd) {
+        alert('יש לבחור תאריך התחלה ותאריך סיום לטווח');
         return;
       }
       
-      const start = new Date(dateStart);
-      const end = new Date(dateEnd);
+      const start = new Date(periodStart);
+      const end = new Date(periodEnd);
       if (start > end) {
         alert('תאריך ההתחלה חייב להיות לפני תאריך הסיום');
         return;
@@ -2092,10 +2566,19 @@ function openConstraintForm(constraint=null) {
         days.push(new Date(d).toISOString().split('T')[0]);
       }
     } else {
-      days = [dateStart];
+      // Use single date field for single date constraints
+      const singleDate = document.getElementById('constraintDate').value;
+      if (!singleDate) {
+        alert('יש לבחור תאריך');
+        return;
+      }
+      days = [singleDate];
     }
     
     try {
+      console.log('Creating constraints for days:', days);
+      console.log('Guide ID:', guideId, 'Note:', note);
+      
       // Create constraints for each day
       const promises = days.map(date => 
         apiFetch('/api/constraints', {
@@ -2303,6 +2786,9 @@ async function deleteVacation(id) {
   renderVacations();
 }
 
+// Initialize the Jewish holidays service
+const jewishHolidays = new JewishHolidaysService();
+
 // --- Date Picker Functions ---
 let currentDatePickerMonth = new Date();
 let currentDatePickerTarget = null;
@@ -2349,7 +2835,7 @@ function changeMonth(delta) {
   renderDatePicker();
 }
 
-function renderDatePicker() {
+async function renderDatePicker() {
   const title = document.getElementById('datePickerTitle');
   const daysContainer = document.getElementById('datePickerDays');
   
@@ -2362,6 +2848,9 @@ function renderDatePicker() {
   ];
   
   title.textContent = `${monthNames[month]} ${year}`;
+  
+  // Get holidays for this month
+  const holidays = await jewishHolidays.getHolidaysForMonth(year, month + 1);
   
   // Get first day of month and number of days
   const firstDay = new Date(year, month, 1);
@@ -2380,16 +2869,38 @@ function renderDatePicker() {
     const isToday = currentDate.toDateString() === today.toDateString();
     const isSelected = isDateSelected(currentDate);
     
-    let classes = 'date-picker-day';
-    if (!isCurrentMonth) classes += ' other-month';
-    if (isToday) classes += ' today';
-    if (isSelected) classes += ' selected';
-    
     // Use local date string to avoid timezone issues
     const localDateString = currentDate.getFullYear() + '-' + 
                            String(currentDate.getMonth() + 1).padStart(2, '0') + '-' + 
                            String(currentDate.getDate()).padStart(2, '0');
-    html += `<div class="${classes}" onclick="selectDate('${localDateString}')">${currentDate.getDate()}</div>`;
+    
+    // Check for Jewish holidays on this date
+    const dayHolidays = holidays[localDateString] || [];
+    const hasHoliday = dayHolidays.length > 0;
+    
+    let classes = 'date-picker-day';
+    if (!isCurrentMonth) classes += ' other-month';
+    if (isToday) classes += ' today';
+    if (isSelected) classes += ' selected';
+    if (hasHoliday) classes += ' has-holiday';
+    
+    // Create holiday indicators
+    let holidayIndicators = '';
+    let holidayTitle = '';
+    if (hasHoliday) {
+      const primaryHoliday = dayHolidays[0];
+      const icon = jewishHolidays.getHolidayIcon(primaryHoliday.category);
+      const color = jewishHolidays.getHolidayColor(primaryHoliday.category);
+      holidayTitle = primaryHoliday.titleHeb || primaryHoliday.title;
+      
+      holidayIndicators = `<div class="holiday-indicator" style="color: ${color}" title="${holidayTitle}">${icon}</div>`;
+    }
+    
+    html += `<div class="${classes}" onclick="selectDate('${localDateString}')">
+      <span class="day-number">${currentDate.getDate()}</span>
+      ${holidayTitle ? `<div class="holiday-title">${holidayTitle}</div>` : ''}
+      ${holidayIndicators}
+    </div>`;
   }
   
   daysContainer.innerHTML = html;
@@ -2546,7 +3057,7 @@ async function loadMonthlyView() {
   }
 }
 
-function renderMonthlyCalendar(constraints, fixedConstraints, vacations) {
+async function renderMonthlyCalendar(constraints, fixedConstraints, vacations) {
   const container = document.getElementById('monthly-calendar-container');
   
   const [year, month] = monthlyViewMonth.split('-');
@@ -2555,6 +3066,9 @@ function renderMonthlyCalendar(constraints, fixedConstraints, vacations) {
     "ינואר", "פברואר", "מרץ", "אפריל", "מאי", "יוני",
     "יולי", "אוגוסט", "ספטמבר", "אוקטובר", "נובמבר", "דצמבר"
   ];
+  
+  // Get Jewish holidays for this month
+  const holidays = await jewishHolidays.getHolidaysForMonth(parseInt(year), parseInt(month));
   
   // Create calendar HTML
   let html = `
@@ -2600,13 +3114,29 @@ function renderMonthlyCalendar(constraints, fixedConstraints, vacations) {
       return currentDate >= start && currentDate <= end;
     });
     
+    // Check for Jewish holidays
+    const dayHolidays = holidays[dateString] || [];
+    const hasHoliday = dayHolidays.length > 0;
+    
     // Determine day classes and indicators
     let dayClasses = 'calendar-day';
     let indicators = '';
     
     if (!isCurrentMonth) dayClasses += ' other-month';
     if (isToday) dayClasses += ' today';
+    if (hasHoliday) dayClasses += ' has-holiday';
     
+    // Add holiday indicators first
+    if (hasHoliday) {
+      dayHolidays.forEach(holiday => {
+        const icon = jewishHolidays.getHolidayIcon(holiday.category);
+        const color = jewishHolidays.getHolidayColor(holiday.category);
+        const title = holiday.titleHeb || holiday.title;
+        indicators += `<span class="constraint-indicator holiday" style="background-color: ${color}; color: white;" title="${title}">${icon}</span>`;
+      });
+    }
+    
+    // Add constraint indicators
     if (dayConstraints.length > 0 || dayFixedConstraints.length > 0 || dayVacations.length > 0) {
       if (dayConstraints.length > 0 && dayFixedConstraints.length > 0 && dayVacations.length > 0) {
         dayClasses += ' has-multiple';
@@ -2637,9 +3167,17 @@ function renderMonthlyCalendar(constraints, fixedConstraints, vacations) {
       }
     }
     
+    // Create holiday title for the day
+    let holidayTitle = '';
+    if (hasHoliday) {
+      const primaryHoliday = dayHolidays[0];
+      holidayTitle = primaryHoliday.titleHeb || primaryHoliday.title;
+    }
+    
     html += `
       <div class="${dayClasses}" onclick="openConstraintFormForDate('${dateString}')">
         <div class="day-number">${currentDate.getDate()}</div>
+        ${holidayTitle ? `<div class="holiday-title">${holidayTitle}</div>` : ''}
         ${indicators}
       </div>
     `;
