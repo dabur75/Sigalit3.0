@@ -1,14 +1,17 @@
 const { Pool } = require('pg');
 
 // PostgreSQL connection pool configuration
-const poolConfig = process.env.DATABASE_URL ? 
+const poolConfig = process.env.DATABASE_URL ?
     {
         connectionString: process.env.DATABASE_URL,
-        max: 20,
+        max: 10,
         idleTimeoutMillis: 30000,
-        connectionTimeoutMillis: 5000,
+        connectionTimeoutMillis: 10000,
+        // Enable keepalive to prevent connection drops
+        keepAlive: true,
+        keepAliveInitialDelayMillis: 10000,
         ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
-    } : 
+    } :
     {
         host: process.env.DB_HOST || 'localhost',
         database: process.env.DB_NAME || 'sigalit_pg',
@@ -30,7 +33,8 @@ pool.on('connect', (client) => {
 
 pool.on('error', (err, client) => {
     console.error('❌ Unexpected error on idle client', err);
-    process.exit(-1);
+    // Don't exit - let the pool handle reconnection
+    // process.exit(-1);
 });
 
 // Health check function
